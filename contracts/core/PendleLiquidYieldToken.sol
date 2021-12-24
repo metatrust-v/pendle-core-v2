@@ -48,20 +48,25 @@ abstract contract PendleLiquidYieldToken is ERC20 {
 
     uint256 private constant _INITIAL_REWARD_INDEX = 1;
 
+    address public immutable yieldToken;
+    
     constructor(
         string memory _name,
         string memory _symbol,
         uint8 __decimals,
-        address[] memory _rewardTokens
+        address[] memory _rewardTokens,
+        address _yieldToken
     ) ERC20(_name, _symbol) {
-        rewardTokens = _rewardTokens;
         _decimals = __decimals;
+        rewardTokens = _rewardTokens;
         for (uint256 i = 0; i < _rewardTokens.length; i++) {
             globalReward.push(GlobalReward(_INITIAL_REWARD_INDEX, 0));
         }
+        yieldToken = _yieldToken;
     }
 
     // takes in yield bearing token, retuns some LYT
+    // qiUSDC -> LYT
     function mint(address to, uint256 amount) public virtual;
 
     // take in some LYT, returns yield bearing token
