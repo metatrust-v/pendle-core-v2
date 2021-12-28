@@ -1,2 +1,17 @@
-marginalExchangeRate = r_{marginal} = \frac{1}{f_{scalar}} \times ln(\frac{p}{1-p}) + r_{anchor}
+marginalExchangeRate = e_{marginal} = \frac{1}{f_{scalar}} \times ln(\frac{p}{1-p}) + r_{anchor}
 
+t = \frac{timeToExpiry}{contractDuration}
+
+f_{scalar} = \frac{f_{scalar0}}{t}
+
+r_{marginal} = (e_{marginal} - 1) \times \frac{1year}{timeToExpiry}
+
+r_{anchorNew} = r_{anchorOld} - (r_{beforeAdjustment} - r_{last}) \times \frac{timeToExpiry}{1year}
+
+p_{trade} = \frac{o + d_o}{o+a}
+
+f_{fees} = f_{fees0}\times t
+
+e_{trade} = \frac{1}{f_{scalar}} \times ln(\frac{p_{trade}}{1-p_{trade}}) + r_{anchor} \pm f_{fees}
+
+d_a = - \frac{d_o}{e_{trade}}
