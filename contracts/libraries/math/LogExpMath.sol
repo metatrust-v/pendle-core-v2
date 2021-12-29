@@ -12,9 +12,9 @@
 // COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-pragma solidity 0.8.9;
+pragma solidity ^0.8.0;
 
-import '../helpers/PendleErrors.sol';
+import "../helpers/PendleErrors.sol";
 
 /* solhint-disable */
 

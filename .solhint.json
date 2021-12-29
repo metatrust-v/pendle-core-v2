@@ -1,31 +1,53 @@
 {
   "extends": "solhint:recommended",
-  "plugins": [
-    "prettier"
-  ],
+  "plugins": [],
   "rules": {
-    "prettier/prettier": "error",
-    "max-line-length": [
+    "avoid-call-value": "error",
+    "avoid-low-level-calls": "off",
+    "avoid-sha3": "error",
+    "avoid-suicide": "error",
+    "avoid-throw": "error",
+    "avoid-tx-origin": "off",
+    "check-send-result": "error",
+    "compiler-version": [
       "error",
+      "^0.8.0"
+    ],
+    "const-name-snakecase": "error",
+    "func-name-mixedcase": "error",
+    "imports-on-top": "error",
+    "mark-callable-contracts": "off",
+    "max-line-length": [
+      "off",
       120
     ],
-    "func-param-name-mixedcase": "error",
-    "modifier-name-mixedcase": "error",
-    "private-vars-leading-underscore": "error",
-    "reason-string": [
-      "error",
-      {
-        "maxLength": 64
-      }
+    "max-states-count": [
+      "off",
+      20
     ],
-    "func-visibility": [
+    "multiple-sends": "error",
+    "no-complex-fallback": "error",
+    "no-empty-blocks": "off",
+    "no-inline-assembly": "off",
+    "no-unused-vars": "error",
+    "not-rely-on-block-hash": "error",
+    "not-rely-on-time": "off",
+    "ordering": "error",
+    "payable-fallback": "error",
+    "quotes": [
       "error",
+      "double"
+    ],
+    "reason-string": "error",
+    "reentrancy": "error",
+    "func-visibility": [
+      "warn",
       {
         "ignoreConstructors": true
       }
     ],
-    "compiler-version": [
-      "off"
-    ]
+    "use-forbidden-name": "error",
+    "var-name-mixedcase": "off",
+    "visibility-modifier-order": "error"
   }
 }
