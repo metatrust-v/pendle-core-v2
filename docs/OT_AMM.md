@@ -80,3 +80,6 @@
 * Liquidity is added/removed proportionally in terms of OT and accounting assets
 * As such, we need to convert accounting assets to and from LYT accordingly
 
+### TWAP for OT prices
+* Use the same approach as UniswapV3 to store the culmulative sums of `price * time` in an array
+* Link to Uniswap docs: https://uniswap.org/blog/uniswap-v3#advanced-oracles

@@ -67,7 +67,15 @@
       * For swapping exact out: have a `maxInAmount` setting
   * Deadline:
     * Beyond a certain timestamp, the trade will auto revert
-  * Limit orders:
-    * A user can sign a message to allow another address to submit their order, with a limit price (min price when buying, max price when selling)
-* TODO: RFQ orders
+  * [Nice to have, to be added later] Limit orders using 0x:
+    * A user can sign a limit order on 0x to trade YT/OT against anything
+    * Arbitragers can trigger these limit orders (if they are within the range of the AMM) to get the spread
+    * Market makers can use these limit orders to market make
+* [Nice to have, to be added later] 0x adapter:
+  * Any user can trade YT/OT against any token, by filling a 0x limit order
+  * The 0x adapter can split an order into 2 portions:
+    * One portion to fill a 0x limit order
+    * Another portion to use our AMM
+  * TODO: Study how 1inch does it
+  
 
