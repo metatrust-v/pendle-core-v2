@@ -25,7 +25,6 @@ pragma solidity ^0.8.0;
 pragma abicoder v2;
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "../libraries/math/FixedPoint.sol";
-import "../libraries/helpers/TrioTokensLib.sol";
 
 abstract contract PendleLiquidYieldToken is ERC20 {
     using FixedPoint for uint256;
@@ -43,7 +42,7 @@ abstract contract PendleLiquidYieldToken is ERC20 {
     uint8 private immutable _decimals;
     uint256 public exchangeRateStored;
 
-    TrioTokens public rewardTokens;
+    address[] public rewardTokens;
     GlobalReward[] public globalReward;
     mapping(address => UserReward[]) public userReward;
 
@@ -53,14 +52,20 @@ abstract contract PendleLiquidYieldToken is ERC20 {
         string memory _name,
         string memory _symbol,
         uint8 __decimals,
-        TrioTokens memory _rewardTokens
+        address[] memory _rewardTokens
     ) ERC20(_name, _symbol) {
         rewardTokens = _rewardTokens;
         _decimals = __decimals;
+        for (uint256 i = 0; i < _rewardTokens.length; i++) {
+            globalReward.push(GlobalReward(_INITIAL_REWARD_INDEX, 0));
+        }
     }
 
-    function getRewardTokens() external view returns (TrioTokens memory) {
-        return rewardTokens;
+    function getRewardTokens() external view returns (address[] memory res) {
+        res = new address[](rewardTokens.length);
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            res[i] = rewardTokens[i];
+        }
     }
 
     // takes in yield bearing token, retuns some LYT
@@ -79,7 +84,7 @@ abstract contract PendleLiquidYieldToken is ERC20 {
 
     function exchangeRateCurrent() public virtual returns (uint256);
 
-    function redeemReward() public virtual returns (TrioUints memory outAmounts);
+    function redeemReward() public virtual returns (uint256[] memory outAmounts);
 
     function updateGlobalReward() public virtual;
 
