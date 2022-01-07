@@ -45,6 +45,19 @@ library FixedPoint {
         return product / ONE;
     }
 
+    function mulDown(int256 a, int256 b) internal pure returns (int256) {
+        int256 product = a * b;
+        return product / toInt(ONE);
+    }
+
+    function mulDown(int256 a, uint256 b) internal pure returns (int256) {
+        return mulDown(a, toInt(b));
+    }
+
+    function mulDown(uint256 a, int256 b) internal pure returns (int256) {
+        return mulDown(toInt(a), b);
+    }
+
     function mulUp(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 product = a * b;
 
@@ -68,6 +81,23 @@ library FixedPoint {
             uint256 aInflated = a * ONE;
             return aInflated / b;
         }
+    }
+
+    function divDown(int256 a, int256 b) internal pure returns (int256) {
+        if (a == 0) {
+            return 0;
+        } else {
+            int256 aInflated = a * toInt(ONE);
+            return aInflated / b;
+        }
+    }
+
+    function divDown(uint256 a, int256 b) internal pure returns (int256) {
+        return divDown(toInt(a), b);
+    }
+
+    function divDown(int256 a, uint256 b) internal pure returns (int256) {
+        return divDown(a, toInt(b));
     }
 
     function divUp(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -119,5 +149,15 @@ library FixedPoint {
      */
     function complement(uint256 x) internal pure returns (uint256) {
         return (x < ONE) ? (ONE - x) : 0;
+    }
+
+    function toUint(int256 x) internal pure returns (uint256) {
+        require(x >= 0, "INVALID_CAST");
+        return uint256(x);
+    }
+
+    function toInt(uint256 x) internal pure returns (int256) {
+        require(x <= uint256(type(int256).max), "INVALID_CAST");
+        return int256(x);
     }
 }

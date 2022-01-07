@@ -19,9 +19,8 @@ contract PendleOwnershipToken is PendleBaseToken {
         string memory _name,
         string memory _symbol,
         uint8 __decimals,
-        uint256 _start,
         uint256 _expiry
-    ) PendleBaseToken(_name, _symbol, __decimals, _start, _expiry) {
+    ) PendleBaseToken(_name, _symbol, __decimals, _expiry) {
         LYT = _LYT;
     }
 

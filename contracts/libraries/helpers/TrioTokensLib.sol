@@ -54,9 +54,12 @@ library TrioTokensLib {
         address to,
         TrioUints memory amounts
     ) internal {
-        if (tokens.tokenA != ZERO && amounts.uintA != 0) IERC20(tokens.tokenA).safeTransfer(to, amounts.uintA);
-        if (tokens.tokenB != ZERO && amounts.uintB != 0) IERC20(tokens.tokenB).safeTransfer(to, amounts.uintB);
-        if (tokens.tokenC != ZERO && amounts.uintC != 0) IERC20(tokens.tokenC).safeTransfer(to, amounts.uintC);
+        if (tokens.tokenA != ZERO && amounts.uintA != 0)
+            IERC20(tokens.tokenA).safeTransfer(to, amounts.uintA);
+        if (tokens.tokenB != ZERO && amounts.uintB != 0)
+            IERC20(tokens.tokenB).safeTransfer(to, amounts.uintB);
+        if (tokens.tokenC != ZERO && amounts.uintC != 0)
+            IERC20(tokens.tokenC).safeTransfer(to, amounts.uintC);
     }
 
     function infinityApprove(TrioTokens memory tokens, address to) internal {
@@ -65,30 +68,50 @@ library TrioTokensLib {
         if (tokens.tokenC != ZERO) IERC20(tokens.tokenC).safeApprove(to, type(uint256).max);
     }
 
-    function allowance(TrioTokens memory tokens, address spender) internal view returns (TrioUints memory res) {
-        if (tokens.tokenA != ZERO) res.uintA = IERC20(tokens.tokenA).allowance(address(this), spender);
-        if (tokens.tokenB != ZERO) res.uintB = IERC20(tokens.tokenB).allowance(address(this), spender);
-        if (tokens.tokenC != ZERO) res.uintC = IERC20(tokens.tokenC).allowance(address(this), spender);
+    function allowance(TrioTokens memory tokens, address spender)
+        internal
+        view
+        returns (TrioUints memory res)
+    {
+        if (tokens.tokenA != ZERO)
+            res.uintA = IERC20(tokens.tokenA).allowance(address(this), spender);
+        if (tokens.tokenB != ZERO)
+            res.uintB = IERC20(tokens.tokenB).allowance(address(this), spender);
+        if (tokens.tokenC != ZERO)
+            res.uintC = IERC20(tokens.tokenC).allowance(address(this), spender);
     }
 
-    function balanceOf(TrioTokens memory tokens, address account) internal view returns (TrioUints memory balances) {
+    function balanceOf(TrioTokens memory tokens, address account)
+        internal
+        view
+        returns (TrioUints memory balances)
+    {
         if (tokens.tokenA != ZERO) balances.uintA = IERC20(tokens.tokenA).balanceOf(account);
         if (tokens.tokenB != ZERO) balances.uintB = IERC20(tokens.tokenB).balanceOf(account);
         if (tokens.tokenC != ZERO) balances.uintC = IERC20(tokens.tokenC).balanceOf(account);
     }
 
     function verify(TrioTokens memory a) internal pure {
-        if (a.tokenA != ZERO) require(a.tokenA != a.tokenB && a.tokenA != a.tokenC, "DUPLICATED_TOKENS");
+        if (a.tokenA != ZERO)
+            require(a.tokenA != a.tokenB && a.tokenA != a.tokenC, "DUPLICATED_TOKENS");
         if (a.tokenB != ZERO) require(a.tokenB != a.tokenC, "DUPLICATED_TOKENS");
     }
 
-    function add(TrioUints memory a, TrioUints memory b) internal pure returns (TrioUints memory res) {
+    function add(TrioUints memory a, TrioUints memory b)
+        internal
+        pure
+        returns (TrioUints memory res)
+    {
         res.uintA = a.uintA + b.uintA;
         res.uintB = a.uintB + b.uintB;
         res.uintC = a.uintC + b.uintC;
     }
 
-    function sub(TrioUints memory a, TrioUints memory b) internal pure returns (TrioUints memory res) {
+    function sub(TrioUints memory a, TrioUints memory b)
+        internal
+        pure
+        returns (TrioUints memory res)
+    {
         res.uintA = a.uintA - b.uintA;
         res.uintB = a.uintB - b.uintB;
         res.uintC = a.uintC - b.uintC;
@@ -99,7 +122,12 @@ library TrioTokensLib {
     }
 
     function min(TrioUints memory a, TrioUints memory b) internal pure returns (TrioUints memory) {
-        return TrioUints(Math.min(a.uintA, b.uintA), Math.min(a.uintB, b.uintB), Math.min(a.uintC, b.uintC));
+        return
+            TrioUints(
+                Math.min(a.uintA, b.uintA),
+                Math.min(a.uintB, b.uintB),
+                Math.min(a.uintC, b.uintC)
+            );
     }
 
     function mulDown(TrioUints memory a, uint256 b) internal pure returns (TrioUints memory res) {

@@ -35,9 +35,8 @@ contract PendleYieldToken is PendleBaseToken {
         string memory _name,
         string memory _symbol,
         uint8 __decimals,
-        uint256 _start,
         uint256 _expiry
-    ) PendleBaseToken(_name, _symbol, __decimals, _start, _expiry) {
+    ) PendleBaseToken(_name, _symbol, __decimals, _expiry) {
         LYT = _LYT;
         // require OT YT to be a match (can only in here or OT since we do create2)
         OT = _OT;
