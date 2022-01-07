@@ -139,7 +139,7 @@ contract XPendle {
         uint256 amount,
         uint256 expiry
     ) external {
-        require(expiry >= _currentTimestamp(), "INVALID_EXPIRY");
+        require(expiry >= block.timestamp, "INVALID_EXPIRY");
         require(expiry.mod(EPOCH_DURATION) == startTime.mod(EPOCH_DURATION), "INVALID_EXPIRY");
 
         UserLock storage userLock = locks[forAddr];
@@ -149,8 +149,8 @@ contract XPendle {
         userLock.unallocatedWeight = VOTES_PRECISION;
 
         userLock.balance.slope = amount;
-        userLock.balance.bias = amount.mul(expiry.sub(_currentTimestamp()));
-        userLock.balance.timestamp = _currentTimestamp();
+        userLock.balance.bias = amount.mul(expiry.sub(block.timestamp));
+        userLock.balance.timestamp = block.timestamp;
         userLock.balance.expiry = expiry;
 
         pendle.transferFrom(msg.sender, address(this), amount);
@@ -179,7 +179,7 @@ contract XPendle {
 
     function withdraw(address userAddr) external {
         UserLock storage userLock = locks[userAddr];
-        require(userLock.balance.expiry < _currentTimestamp(), "LOCK_UNEXPIRED");
+        require(userLock.balance.expiry < block.timestamp, "LOCK_UNEXPIRED");
         pendle.transfer(userAddr, userLock.balance.slope);
         userLock.balance.slope = uint256(0);
         userLock.balance.bias = uint256(0);
@@ -231,9 +231,5 @@ contract XPendle {
             .sub(gauge.balance.getCurrentLine())
             .add(newGaugeBal);
         gauge.balance = newGaugeBal;
-    }
-
-    function _currentTimestamp() internal view returns (uint256) {
-        return block.timestamp;
     }
 }
