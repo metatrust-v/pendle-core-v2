@@ -62,7 +62,7 @@ library LineHelper {
     }
 
     function getValueAt(Line memory a, uint256 t) internal pure returns (uint256 res) {
-        require(t >= a.timestamp, "INVALID_TIMESTAMP");
+        require(t > a.timestamp, "INVALID_TIMESTAMP");
         if (t < a.expiry) {
             uint256 updateValue = a.slope.mul(t.sub(a.timestamp));
             if (a.bias >= updateValue) {
@@ -72,7 +72,7 @@ library LineHelper {
     }
 
     function getLineAt(Line memory a, uint256 t) internal pure returns (Line memory res) {
-        require(t >= a.timestamp, "INVALID_TIMESTAMP");
+        require(t > a.timestamp, "INVALID_TIMESTAMP");
         res.slope = a.slope;
         res.bias = LineHelper.getValueAt(a, t);
         res.timestamp = t;
@@ -88,7 +88,7 @@ library LineHelper {
     }
 
     function isExpired(Line memory a) internal view returns (bool) {
-        return a.expiry >= block.timestamp;
+        return a.expiry > block.timestamp;
     }
 }
 
@@ -188,41 +188,49 @@ contract XPendle {
     function vote(address gaugeAddr, uint256 weight) external {
         UserLock storage userLock = locks[msg.sender];
         require(userLock.balance.getCurrentValue() > 0, "NO_LOCK");
+        
         VotedInfo storage votedInfo = userLock.votedInfos[gaugeAddr];
         Gauge storage gauge = gauges[gaugeAddr];
-
+        Line memory newGaugeBal = gauge.balance.getCurrentLine();
+        
         uint256 oldExpiry = votedInfo.votedBalance.expiry;
         uint256 newExpiry = userLock.balance.expiry;
 
+        // Remove old vote if not expired
         if (votedInfo.weight > 0 && !votedInfo.votedBalance.isExpired()) {
             gauge.expiredVotes[oldExpiry] = gauge.expiredVotes[oldExpiry].sub(
                 votedInfo.votedBalance.slope
             );
             userLock.unallocatedWeight = userLock.unallocatedWeight.add(votedInfo.weight);
+            newGaugeBal = newGaugeBal.sub(votedInfo.votedBalance.getCurrentLine());
         }
 
         votedInfo.votedBalance = userLock.balance.mul(weight).div(VOTES_PRECISION);
+        newGaugeBal = newGaugeBal.add(votedInfo.votedBalance);
+
         votedInfo.weight = weight;
         userLock.unallocatedWeight = userLock.unallocatedWeight.sub(weight);
+
         gauge.expiredVotes[newExpiry] = gauge.expiredVotes[newExpiry].add(
             votedInfo.votedBalance.slope
         );
 
-        _setGaugeBalance(gauge, votedInfo.votedBalance);
+        _setGaugeBalance(gauge, newGaugeBal);
     }
 
     function balanceOf(address account) public view returns (uint256) {
         return locks[account].balance.getCurrentValue();
     }
 
-    function _setGaugeBalance(Gauge storage gauge, Line memory newBalance) internal {
+    function _setGaugeBalance(Gauge storage gauge, Line memory newGaugeBal) internal {
+        newGaugeBal = newGaugeBal.getCurrentLine();
         GaugeGroup storage group = groups[gauge.gaugeType];
         group.totalBalance = group
             .totalBalance
             .getCurrentLine()
             .sub(gauge.balance.getCurrentLine())
-            .add(newBalance.getCurrentLine());
-        gauge.balance = newBalance.getCurrentLine();
+            .add(newGaugeBal);
+        gauge.balance = newGaugeBal;
     }
 
     function _currentTimestamp() internal view returns (uint256) {
