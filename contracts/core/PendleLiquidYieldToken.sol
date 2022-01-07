@@ -77,7 +77,10 @@ abstract contract PendleLiquidYieldToken is ERC20 {
 
     function exchangeRateCurrent() public virtual returns (uint256);
 
-    function redeemReward(bool[] memory doRedeem) public virtual returns (uint256[] memory outAmounts);
+    function redeemReward(bool[] memory doRedeem)
+        public
+        virtual
+        returns (uint256[] memory outAmounts);
 
     function updateGlobalReward() public virtual;
 

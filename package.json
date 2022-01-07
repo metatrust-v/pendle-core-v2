@@ -64,7 +64,8 @@
     "web3": "^1.6.1"
   },
   "scripts": {
-    "compile": "yarn hardhat compile"
+    "compile": "yarn hardhat compile",
+    "format-contracts": "yarn prettier --write \"contracts/**/*.sol\""
   },
   "packageManager": "yarn@3.1.1"
 }
