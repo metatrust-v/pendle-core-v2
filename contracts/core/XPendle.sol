@@ -188,11 +188,11 @@ contract XPendle {
     function vote(address gaugeAddr, uint256 weight) external {
         UserLock storage userLock = locks[msg.sender];
         require(userLock.balance.getCurrentValue() > 0, "NO_LOCK");
-        
+
         VotedInfo storage votedInfo = userLock.votedInfos[gaugeAddr];
         Gauge storage gauge = gauges[gaugeAddr];
         Line memory newGaugeBal = gauge.balance.getCurrentLine();
-        
+
         uint256 oldExpiry = votedInfo.votedBalance.expiry;
         uint256 newExpiry = userLock.balance.expiry;
 
@@ -206,7 +206,7 @@ contract XPendle {
         }
 
         votedInfo.votedBalance = userLock.balance.mul(weight).div(VOTES_PRECISION);
-        newGaugeBal = newGaugeBal.add(votedInfo.votedBalance);
+        newGaugeBal = newGaugeBal.add(votedInfo.votedBalance.getCurrentLine());
 
         votedInfo.weight = weight;
         userLock.unallocatedWeight = userLock.unallocatedWeight.sub(weight);
