@@ -14,7 +14,7 @@
       "^0.8.0"
     ],
     "const-name-snakecase": "error",
-    "func-name-mixedcase": "error",
+    "func-name-mixedcase": "off",
     "imports-on-top": "error",
     "mark-callable-contracts": "off",
     "max-line-length": [

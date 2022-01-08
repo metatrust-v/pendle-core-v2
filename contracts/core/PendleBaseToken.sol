@@ -3,8 +3,9 @@ pragma solidity ^0.8.0;
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/utils/cryptography/ECDSA.sol";
+import "../interfaces/IPBaseToken.sol";
 
-abstract contract PendleBaseToken is ERC20 {
+abstract contract PendleBaseToken is ERC20, IPBaseToken {
     uint256 public immutable timeCreated;
     uint256 public immutable expiry;
     uint8 private immutable _decimals;

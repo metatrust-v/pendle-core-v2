@@ -160,4 +160,16 @@ library FixedPoint {
         require(x <= uint256(type(int256).max), "INVALID_CAST");
         return int256(x);
     }
+
+    function neg(int256 x) internal pure returns (int256) {
+        return -x;
+    }
+
+    function max(uint256 x, uint256 y) internal pure returns (uint256) {
+        return (x > y ? x : y);
+    }
+
+    function min(uint256 x, uint256 y) internal pure returns (uint256) {
+        return (x < y ? x : y);
+    }
 }

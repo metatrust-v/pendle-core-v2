@@ -2,10 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "./PendleBaseToken.sol";
-import "./PendleOwnershipToken.sol";
-import "./PendleLiquidYieldToken.sol";
+import "../interfaces/IPLiquidYieldToken.sol";
+import "../interfaces/IPOwnershipToken.sol";
 import "../libraries/math/FixedPoint.sol";
-import "../libraries/helpers/WalletLib.sol";
 import "../libraries/helpers/ArrayLib.sol";
 import "openzeppelin-solidity/contracts/utils/math/Math.sol";
 
@@ -14,13 +13,13 @@ contract PendleYieldToken is PendleBaseToken {
     using FixedPoint for uint256;
     using ArrayLib for uint256[];
 
-    PendleLiquidYieldToken public immutable LYT;
-    PendleOwnershipToken public immutable OT;
+    address public immutable LYT;
+    address public immutable OT;
     uint256 public reserveLYT;
 
     uint256 public lastRateBeforeExpiry;
     mapping(address => uint256) public lastRate;
-    mapping(Wallet => mapping(address => uint256)) public contractDebt;
+    mapping(address => mapping(address => uint256)) public contractDebt;
 
     // rewards stuff
     mapping(address => uint256[]) public lastParamL;
@@ -30,8 +29,8 @@ contract PendleYieldToken is PendleBaseToken {
     uint256 public immutable lenRewards;
 
     constructor(
-        PendleLiquidYieldToken _LYT,
-        PendleOwnershipToken _OT,
+        address _LYT,
+        address _OT,
         string memory _name,
         string memory _symbol,
         uint8 __decimals,
@@ -41,7 +40,7 @@ contract PendleYieldToken is PendleBaseToken {
         // require OT YT to be a match (can only in here or OT since we do create2)
         OT = _OT;
 
-        address[] memory rewards = LYT.getRewardTokens();
+        address[] memory rewards = IPLiquidYieldToken(LYT).getRewardTokens();
         lenRewards = rewards.length;
 
         paramL = new uint256[](lenRewards);
@@ -53,7 +52,7 @@ contract PendleYieldToken is PendleBaseToken {
 
         uint256 amountToMint = _calcAmountToMint(amountToTokenize);
 
-        OT.mintByYT(to, amountToMint);
+        IPOwnershipToken(OT).mintByYT(to, amountToMint);
         _mint(to, amountToMint);
     }
 
@@ -65,9 +64,9 @@ contract PendleYieldToken is PendleBaseToken {
         );
 
         if (isYTExpired) {
-            OT.burnByYT(address(this), amountToRedeem);
+            IPOwnershipToken(OT).burnByYT(address(this), amountToRedeem);
         } else {
-            OT.burnByYT(address(this), amountToRedeem);
+            IPOwnershipToken(OT).burnByYT(address(this), amountToRedeem);
             // maybe skip the update here?
             _burn(address(this), amountToRedeem);
         }
@@ -79,10 +78,10 @@ contract PendleYieldToken is PendleBaseToken {
 
     function redeemDueInterest(address user) external returns (uint256 dueInterest) {
         _updateDueInterests(user);
-        dueInterest = contractDebt[Wallet.wrap(user)][address(LYT)];
-        contractDebt[Wallet.wrap(user)][address(LYT)] = 0;
+        dueInterest = contractDebt[user][address(LYT)];
+        contractDebt[user][address(LYT)] = 0;
 
-        LYT.transfer(user, dueInterest);
+        IERC20(LYT).transfer(user, dueInterest);
     }
 
     function redeemDueRewards(address user) external returns (uint256[] memory dueRewards) {
@@ -90,9 +89,9 @@ contract PendleYieldToken is PendleBaseToken {
         dueRewards = new uint256[](lenRewards);
 
         for (uint256 i = 0; i < lenRewards; i++) {
-            address rewardToken = LYT.rewardTokens(i);
-            dueRewards[i] = contractDebt[Wallet.wrap(user)][rewardToken];
-            contractDebt[Wallet.wrap(user)][rewardToken] = 0;
+            address rewardToken = IPLiquidYieldToken(LYT).rewardTokens(i);
+            dueRewards[i] = contractDebt[user][rewardToken];
+            contractDebt[user][rewardToken] = 0;
 
             IERC20(rewardToken).transfer(user, dueRewards[i]);
         }
@@ -102,7 +101,7 @@ contract PendleYieldToken is PendleBaseToken {
         if (block.timestamp > expiry) {
             return lastRateBeforeExpiry;
         }
-        lastRateBeforeExpiry = LYT.exchangeRateCurrent();
+        lastRateBeforeExpiry = IPLiquidYieldToken(LYT).exchangeRateCurrent();
     }
 
     function _updateDueInterests(address user) internal {
@@ -120,7 +119,7 @@ contract PendleYieldToken is PendleBaseToken {
             prevRate * currentRate
         );
 
-        contractDebt[Wallet.wrap(user)][address(LYT)] += interestFromYT;
+        contractDebt[user][address(LYT)] += interestFromYT;
     }
 
     function _updateDueRewards(address user) internal {
@@ -136,14 +135,14 @@ contract PendleYieldToken is PendleBaseToken {
         uint256[] memory rewardsFromYT = rewardsAmountPerYT.mulDown(principal);
 
         for (uint256 i = 0; i < lenRewards; i++) {
-            contractDebt[Wallet.wrap(user)][LYT.rewardTokens(i)] += rewardsFromYT[i];
+            contractDebt[user][IPLiquidYieldToken(LYT).rewardTokens(i)] += rewardsFromYT[i];
         }
 
         lastParamL[user] = paramL;
     }
 
     function _updateParamL() internal {
-        uint256[] memory incomeRewards = LYT.redeemReward();
+        uint256[] memory incomeRewards = IPLiquidYieldToken(LYT).redeemReward();
         // this part can check if it has already expired then move all the rewards to treasury
         // but also, need to make sure near expiry there is a redeem to update everthing
 

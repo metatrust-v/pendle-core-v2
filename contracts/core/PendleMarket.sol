@@ -2,27 +2,33 @@
 pragma solidity ^0.8.0;
 
 import "./PendleBaseToken.sol";
-import "./PendleOwnershipToken.sol";
+import "../interfaces/IPVault.sol";
+import "../interfaces/IPCoreSwapRouter.sol";
+import "../interfaces/IPOwnershipToken.sol";
+import "../interfaces/IPLiquidYieldToken.sol";
+
 import "../libraries/math/LogExpMath.sol";
+import "../libraries/math/FixedPoint.sol";
 
 // solhint-disable reason-string
 contract PendleMarket is PendleBaseToken {
     using FixedPoint for uint256;
     using FixedPoint for int256;
-    using Math for uint256;
     using LogExpMath for uint256;
     // make it ultra simple
     // the start variable is kinda off, it should be set to the time that the market is bootstrapped
     // Code first, then integrate with vault later
 
+    // careful, the reserve of the market shouldn't be interferred by external factors
     string private constant NAME = "Pendle Market";
     string private constant SYMBOL = "PENDLE-LPT";
     uint256 private constant MINIMUM_LIQUIDITY = 10**3;
     uint8 private constant DECIMALS = 18;
     int256 internal constant RATE_PRECISION = 1e9;
 
-    PendleOwnershipToken public immutable OT;
-    PendleLiquidYieldToken public immutable LYT;
+    address public immutable OT;
+    address public immutable LYT;
+    address public immutable vault;
 
     uint256 public reserveOT;
     uint256 public reserveLYT;
@@ -36,13 +42,15 @@ contract PendleMarket is PendleBaseToken {
     uint256 public savedIntRate;
 
     constructor(
-        PendleOwnershipToken _OT,
+        address _OT,
+        address _vault,
         uint256 _feeRateRoot,
         uint256 _scalarRoot,
         int256 _anchorRoot
-    ) PendleBaseToken(NAME, SYMBOL, 18, _OT.expiry()) {
+    ) PendleBaseToken(NAME, SYMBOL, 18, IPOwnershipToken(_OT).expiry()) {
         OT = _OT;
-        LYT = OT.LYT();
+        LYT = IPOwnershipToken(_OT).LYT();
+        vault = _vault;
         feeRateRoot = _feeRateRoot;
         scalarRoot = _scalarRoot;
         savedAnchorRate = _anchorRoot;
@@ -51,17 +59,16 @@ contract PendleMarket is PendleBaseToken {
     function mint(address to) external returns (uint256 liquidity) {
         require(block.timestamp < expiry, "MARKET_EXPIRED");
 
-        uint256 amountOT = OT.balanceOf(address(this)) - reserveOT;
-        uint256 amountLYT = LYT.balanceOf(address(this)) - reserveLYT;
+        uint256 amountOT = IPVault(vault).callerBalance(address(OT)) - reserveOT;
+        uint256 amountLYT = IPVault(vault).callerBalance(address(LYT)) - reserveLYT;
 
         if (totalSupply() == 0) {
             start = block.timestamp;
             marketDuration = expiry - start;
-
-            liquidity = amountLYT.mulDown(LYT.exchangeRateCurrent()) - MINIMUM_LIQUIDITY;
+            liquidity = amountLYT.mulDown(_lytExchangeRate()) - MINIMUM_LIQUIDITY;
             _mint(address(1), MINIMUM_LIQUIDITY);
         } else {
-            liquidity = Math.min(
+            liquidity = FixedPoint.min(
                 (amountOT * totalSupply()) / reserveOT,
                 (amountLYT * totalSupply()) / reserveLYT
             );
@@ -79,14 +86,18 @@ contract PendleMarket is PendleBaseToken {
         require(amountOT > 0 && amountLYT > 0, "INSUFFICIENT_LIQUIDITY_BURNED");
 
         _burn(address(this), liquidity);
-        OT.transfer(to, amountOT);
-        LYT.transfer(to, amountLYT);
+        IERC20(OT).transfer(to, amountOT);
+        IERC20(LYT).transfer(to, amountLYT);
 
         _updateReserve();
     }
 
     // doing call back?
-    function swap(address, int256 amountOTIn) external returns (int256 amountAccUnitsIn) {
+    function swap(
+        address recipient,
+        int256 amountOTIn,
+        bytes calldata data
+    ) external returns (int256 amountLYTIn) {
         require(block.timestamp < expiry, "MARKET_EXPIRED");
         require(reserveOT.toInt() + amountOTIn > 0, "INSUFFICIENT_LIQUIDITY");
 
@@ -100,9 +111,24 @@ contract PendleMarket is PendleBaseToken {
 
         require(excRateTrade >= (FixedPoint.ONE).toInt(), "NEGATIVE_RATE");
 
-        amountAccUnitsIn = -amountOTIn.divDown(excRateTrade);
+        int256 amountAccUnitsIn = amountOTIn.divDown(excRateTrade).neg();
 
-        // TODO: move Tokens here
+        // the exchangeRate is get twice, not nice
+        amountLYTIn = amountAccUnitsIn.divDown(_lytExchangeRate());
+
+        if (amountOTIn > 0) {
+            // need to pull OT & push LYT
+            IPCoreSwapRouter(msg.sender).marketCallback(address(OT), amountOTIn.toUint(), data);
+            require(IPVault(vault).callerBalance(address(OT)) - reserveOT >= amountOTIn.toUint());
+            IPVault(vault).withdrawTo(recipient, address(LYT), amountLYTIn.neg().toUint());
+        } else {
+            // need to pull LYT
+            IPCoreSwapRouter(msg.sender).marketCallback(address(LYT), amountLYTIn.toUint(), data);
+            require(
+                IPVault(vault).callerBalance(address(LYT)) - reserveLYT >= amountLYTIn.toUint()
+            );
+            IPVault(vault).withdrawTo(recipient, address(OT), amountOTIn.neg().toUint());
+        }
 
         savedIntRate = getIntRate();
         // TODO: also need to transfer the money to treasury
@@ -122,7 +148,7 @@ contract PendleMarket is PendleBaseToken {
     }
 
     function getTotalAccUnits() public returns (uint256 totalAccUnits) {
-        totalAccUnits = reserveLYT.mulDown(LYT.exchangeRateCurrent());
+        totalAccUnits = reserveLYT.mulDown(_lytExchangeRate());
     }
 
     function getProportion() public returns (uint256 proportion) {
@@ -163,7 +189,11 @@ contract PendleMarket is PendleBaseToken {
     }
 
     function _updateReserve() internal {
-        reserveLYT = LYT.balanceOf(address(this));
-        reserveOT = OT.balanceOf(address(this));
+        reserveLYT = IPVault(vault).callerBalance(address(LYT));
+        reserveOT = IPVault(vault).callerBalance(address(OT));
+    }
+
+    function _lytExchangeRate() internal returns (uint256 rate) {
+        rate = IPLiquidYieldToken(LYT).exchangeRateCurrent();
     }
 }

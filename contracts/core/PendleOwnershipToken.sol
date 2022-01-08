@@ -2,12 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "./PendleBaseToken.sol";
-import "./PendleLiquidYieldToken.sol";
-import "./PendleYieldToken.sol";
 
 contract PendleOwnershipToken is PendleBaseToken {
-    PendleLiquidYieldToken public immutable LYT;
-    PendleYieldToken public YT;
+    address public immutable LYT;
+    address public YT;
 
     modifier onlyYT() {
         require(msg.sender == address(YT), "ONLY_YT");
@@ -15,7 +13,7 @@ contract PendleOwnershipToken is PendleBaseToken {
     }
 
     constructor(
-        PendleLiquidYieldToken _LYT,
+        address _LYT,
         string memory _name,
         string memory _symbol,
         uint8 __decimals,
@@ -24,17 +22,17 @@ contract PendleOwnershipToken is PendleBaseToken {
         LYT = _LYT;
     }
 
-    function initialize(PendleYieldToken _YT) external {
+    function initialize(address _YT) external {
         require(msg.sender == factory, "FORBIDDEN"); // sufficient check
         YT = _YT;
     }
 
-    function burnByYT(address user, uint256 amount) public onlyYT {
+    function burnByYT(address user, uint256 amount) external onlyYT {
         _burn(user, amount);
         emit Burn(user, amount);
     }
 
-    function mintByYT(address user, uint256 amount) public onlyYT {
+    function mintByYT(address user, uint256 amount) external onlyYT {
         // lock mint
         _mint(user, amount);
         emit Mint(user, amount);
