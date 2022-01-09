@@ -2,13 +2,19 @@
 pragma solidity ^0.8.0;
 
 import "./PendleBaseToken.sol";
+import "../interfaces/IPOwnershipToken.sol";
 
-contract PendleOwnershipToken is PendleBaseToken {
+contract PendleOwnershipToken is PendleBaseToken, IPOwnershipToken {
     address public immutable LYT;
     address public YT;
 
     modifier onlyYT() {
         require(msg.sender == address(YT), "ONLY_YT");
+        _;
+    }
+
+    modifier onlyFactory() {
+        require(msg.sender == factory, "ONLY_FACTORY");
         _;
     }
 
@@ -22,8 +28,7 @@ contract PendleOwnershipToken is PendleBaseToken {
         LYT = _LYT;
     }
 
-    function initialize(address _YT) external {
-        require(msg.sender == factory, "FORBIDDEN"); // sufficient check
+    function initialize(address _YT) external onlyFactory {
         YT = _YT;
     }
 

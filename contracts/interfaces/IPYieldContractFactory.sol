@@ -22,16 +22,9 @@
  */
 
 pragma solidity ^0.8.0;
-import "openzeppelin-solidity/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-interface IPLiquidYieldToken is IERC20Metadata {
-    function redeemReward() external returns (uint256[] memory outAmounts);
+interface IPYieldContractFactory {
+    function getOT(address LYT, uint256 expiry) external view returns (address);
 
-    function exchangeRateCurrent() external returns (uint256);
-
-    function underlyingDecimals() external view returns (uint8);
-
-    function rewardTokens(uint256) external view returns (address);
-
-    function getRewardTokens() external view returns (address[] memory res);
+    function getYT(address LYT, uint256 expiry) external view returns (address);
 }

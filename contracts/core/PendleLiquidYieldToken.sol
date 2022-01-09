@@ -39,6 +39,7 @@ abstract contract PendleLiquidYieldToken is ERC20 {
     }
 
     uint8 private immutable _decimals;
+    uint8 public immutable underlyingDecimals;
     uint256 public exchangeRateStored;
 
     address[] public rewardTokens;
@@ -51,10 +52,12 @@ abstract contract PendleLiquidYieldToken is ERC20 {
         string memory _name,
         string memory _symbol,
         uint8 __decimals,
+        uint8 _underlyingDecimals,
         address[] memory _rewardTokens
     ) ERC20(_name, _symbol) {
         rewardTokens = _rewardTokens;
         _decimals = __decimals;
+        underlyingDecimals = _underlyingDecimals;
         for (uint256 i = 0; i < _rewardTokens.length; i++) {
             globalReward.push(GlobalReward(_INITIAL_REWARD_INDEX, 0));
         }

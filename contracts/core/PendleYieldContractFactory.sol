@@ -23,41 +23,60 @@
 
 pragma solidity ^0.8.0;
 
-import "../libraries/helpers/ExpiryUtilsLib.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/utils/structs/EnumerableSet.sol";
+import "../libraries/helpers/ExpiryUtilsLib.sol";
 
-contract PendleYieldContractFactory {
+import "../interfaces/IPLiquidYieldToken.sol";
+import "../interfaces/IPYieldContractFactory.sol";
+
+import "./PendleOwnershipToken.sol";
+import "./PendleYieldToken.sol";
+
+contract PendleYieldContractFactory is IPYieldContractFactory {
     using ExpiryUtils for string;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     string public constant OT_PREFIX = "OT";
     string public constant YT_PREFIX = "YT";
+
+    // LYT => expiry => address
+    mapping(address => mapping(uint256 => address)) public getOT;
+    mapping(address => mapping(uint256 => address)) public getYT;
 
     function newYieldContracts(address LYT, uint256 expiry)
         external
         returns (address OT, address YT)
     {
-        // uint8 yieldTokenDecimals = ERC20(address(LYT)).decimals();
-        // OT = new PendleOwnershipToken(LYT, )
-        // PendleLiquidYieldToken _LYT,
-        // PendleYieldToken _YT,
-        // string memory _name,
-        // string memory _symbol,
-        // uint8 __decimals,
-        // uint256 _start,
-        // uint256 _expiry
-        // createOwnershipToken(
-        //
-        //     OT_PREFIX.concat(ERC20(address(LYT)).name(), expiry, " "),
-        //     OT_PREFIX.concat(ERC20(address(LYT)).symbol(), expiry, "-"),
-        //     yieldTokenDecimals,
-        //     expiry
-        // );
-        // YT = createYieldToken(
-        //     LYT,
-        //     YT_PREFIX.concat(ERC20(address(LYT)).name(), expiry, " "),
-        //     YT_PREFIX.concat(ERC20(address(LYT)).symbol(), expiry, "-"),
-        //     yieldTokenDecimals,
-        //     expiry
-        // );
+        // add conditions for expiry
+        require(getOT[LYT][expiry] == address(0), "OT_EXISTED");
+
+        uint8 underlyingAssetDecimals = IPLiquidYieldToken(LYT).underlyingDecimals();
+
+        OT = address(
+            new PendleOwnershipToken(
+                LYT,
+                OT_PREFIX.concat(IPLiquidYieldToken(LYT).name(), expiry, " "),
+                OT_PREFIX.concat(IPLiquidYieldToken(LYT).symbol(), expiry, "-"),
+                underlyingAssetDecimals,
+                expiry
+            )
+        );
+
+        YT = address(
+            new PendleYieldToken(
+                LYT,
+                OT,
+                YT_PREFIX.concat(IPLiquidYieldToken(LYT).name(), expiry, " "),
+                YT_PREFIX.concat(IPLiquidYieldToken(LYT).symbol(), expiry, "-"),
+                underlyingAssetDecimals,
+                expiry
+            )
+        );
+
+        IPOwnershipToken(OT).initialize(YT);
+
+        getOT[LYT][expiry] = OT;
+        getYT[LYT][expiry] = YT;
     }
 }

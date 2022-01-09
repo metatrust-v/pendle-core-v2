@@ -35,14 +35,14 @@ contract PendleCoreSwapRouter is IPCoreSwapRouter {
     }
 
     function buyOT(
-        address recipient,
+        address receipient,
         address market,
         uint256 amountOTtoBuy,
         uint256 maxAmountLYTIn
     ) external returns (uint256 amountLYTIn) {
         amountLYTIn = (
             PendleMarket(market).swap(
-                recipient,
+                receipient,
                 amountOTtoBuy.toInt().neg(),
                 abi.encode(msg.sender)
             )
