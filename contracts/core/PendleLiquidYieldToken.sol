@@ -78,8 +78,24 @@ abstract contract PendleLiquidYieldToken is ERC20 {
     // qiUSDC -> LYT
     function mint(address to, uint256 amount) public virtual;
 
+    function mintFromBaseToken(
+        address to,
+        address token,
+        uint256 amount,
+        uint256 minAmountLYTOut,
+        bytes memory data
+    ) public virtual;
+
     // take in some LYT, returns yield bearing token
     function burn(address to, uint256 amount) public virtual;
+
+    function burnToBaseToken(
+        address to,
+        address token,
+        uint256 amount,
+        uint256 minAmountTokenOut,
+        bytes memory data
+    ) public virtual;
 
     // strictly not overridable to guarantee the definition of baseBalanceOf & exchangeRate
     function baseBalanceOf(address account) public returns (uint256) {
