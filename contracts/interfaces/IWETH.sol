@@ -20,10 +20,15 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  */
-
 pragma solidity ^0.8.0;
+
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
-interface IQiToken is IERC20 {
-    function exchangeRateCurrent() external returns (uint256);
+interface IWETH is IERC20 {
+    event  Deposit(address indexed dst, uint wad);
+    event  Withdrawal(address indexed src, uint wad);
+
+    function deposit() external payable;
+
+    function withdraw(uint256 wad) external;
 }

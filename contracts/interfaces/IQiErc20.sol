@@ -22,8 +22,10 @@
  */
 
 pragma solidity ^0.8.0;
-import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "./IQiToken.sol";
 
-interface IQiToken is IERC20 {
-    function exchangeRateCurrent() external returns (uint256);
+interface IQiErc20 is IQiToken {
+    function mint(uint256 mintAmount) external returns (uint256);
+    function redeem(uint256 redeemTokens) external returns (uint256);
+    function balanceOf(address owner) external view returns (uint256);
 }

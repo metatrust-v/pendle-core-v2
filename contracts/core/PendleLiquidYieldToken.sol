@@ -26,8 +26,6 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "../libraries/math/FixedPoint.sol";
 
 abstract contract PendleLiquidYieldToken is ERC20 {
-    using FixedPoint for uint256;
-
     struct GlobalReward {
         uint256 index;
         uint256 lastBalance;
@@ -48,7 +46,7 @@ abstract contract PendleLiquidYieldToken is ERC20 {
 
     uint256 private constant _INITIAL_REWARD_INDEX = 1;
 
-    address public immutable yieldToken;
+    address public immutable underlyingYieldToken;
 
     constructor(
         string memory _name,
@@ -56,7 +54,7 @@ abstract contract PendleLiquidYieldToken is ERC20 {
         uint8 __decimals,
         uint8 _underlyingDecimals,
         address[] memory _rewardTokens,
-        address _yieldToken
+        address _underlyingYieldToken
     ) ERC20(_name, _symbol) {
         _decimals = __decimals;
         underlyingDecimals = _underlyingDecimals;
@@ -64,7 +62,7 @@ abstract contract PendleLiquidYieldToken is ERC20 {
         for (uint256 i = 0; i < _rewardTokens.length; i++) {
             globalReward.push(GlobalReward(_INITIAL_REWARD_INDEX, 0));
         }
-        yieldToken = _yieldToken;
+        underlyingYieldToken = _underlyingYieldToken;
     }
 
     function getRewardTokens() external view returns (address[] memory res) {
@@ -75,7 +73,6 @@ abstract contract PendleLiquidYieldToken is ERC20 {
     }
 
     // takes in yield bearing token, retuns some LYT
-    // qiUSDC -> LYT
     function mint(address to, uint256 amount) public virtual;
 
     function mintFromBaseToken(
@@ -99,11 +96,8 @@ abstract contract PendleLiquidYieldToken is ERC20 {
 
     // strictly not overridable to guarantee the definition of baseBalanceOf & exchangeRate
     function baseBalanceOf(address account) public returns (uint256) {
-        return balanceOf(account).mulDown(exchangeRateCurrent());
+        return FixedPoint.mulDown(balanceOf(account), exchangeRateCurrent());
     }
-
-    // withdraw just the principal, and ignore everthing else
-    function emergencyWithdraw(address to, uint256 amount) public virtual;
 
     function exchangeRateCurrent() public virtual returns (uint256);
 
