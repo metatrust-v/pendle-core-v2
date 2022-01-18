@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 
 import "./PendleRouter01.sol";
 import "./PendleRouterCore.sol";
-import "../interfaces/IPOwnershipToken.sol";
-import "../interfaces/IPYieldToken.sol";
+import "../../interfaces/IPOwnershipToken.sol";
+import "../../interfaces/IPYieldToken.sol";
 
 contract PendleRouter02 is PendleRouter01, PendleRouterCore {
     constructor(address _vault, address _marketFactory) PendleRouterCore(_vault, _marketFactory) {}

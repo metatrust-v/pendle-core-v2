@@ -23,10 +23,10 @@
 
 pragma solidity ^0.8.0;
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "../libraries/math/FixedPoint.sol";
-import "../interfaces/IPLiquidYieldToken.sol";
+import "../../libraries/math/FixedPoint.sol";
+import "../../interfaces/IPLiquidYieldToken.sol";
 
-abstract contract PendleLiquidYieldToken is IPLiquidYieldToken, ERC20 {
+abstract contract PendleLiquidYieldTokenBase is IPLiquidYieldToken, ERC20 {
     struct GlobalReward {
         uint256 index;
         uint256 lastBalance;

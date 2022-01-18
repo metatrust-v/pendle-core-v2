@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import "./PendleMarket.sol";
-import "../interfaces/IPMarketFactory.sol";
-import "./base/PendleRouterBase.sol";
+import "../PendleMarket.sol";
+import "../../interfaces/IPMarketFactory.sol";
+import "../Base/PendleRouterBase.sol";
 
 contract PendleRouterCore is PendleRouterBase {
     using FixedPoint for uint256;

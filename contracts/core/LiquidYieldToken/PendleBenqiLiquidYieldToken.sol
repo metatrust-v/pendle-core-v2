@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 pragma abicoder v2;
-import "./PendleLiquidYieldToken.sol";
-import "../interfaces/IBenQiComptroller.sol";
-import "../interfaces/IJoeRouter01.sol";
-import "../interfaces/IQiErc20.sol";
-import "../interfaces/IQiToken.sol";
-import "../interfaces/IWETH.sol";
+import "./PendleLiquidYieldTokenBase.sol";
+import "../../interfaces/IBenQiComptroller.sol";
+import "../../interfaces/IJoeRouter01.sol";
+import "../../interfaces/IQiErc20.sol";
+import "../../interfaces/IQiToken.sol";
+import "../../interfaces/IWETH.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/utils/SafeERC20.sol";
 import "openzeppelin-solidity/contracts/utils/math/Math.sol";
 
-contract PendleBenqiLiquidYieldToken is PendleLiquidYieldToken {
+contract PendleBenqiLiquidYieldToken is PendleLiquidYieldTokenBase {
     using SafeERC20 for IERC20;
     address public immutable comptroller;
     address public immutable weth;
@@ -27,7 +27,7 @@ contract PendleBenqiLiquidYieldToken is PendleLiquidYieldToken {
         address _weth,
         address _joeRouter
     )
-        PendleLiquidYieldToken(
+        PendleLiquidYieldTokenBase(
             _name,
             _symbol,
             __decimals,

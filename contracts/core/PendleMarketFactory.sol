@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "openzeppelin-solidity/contracts/utils/structs/EnumerableSet.sol";
 import "../interfaces/IPMarket.sol";
 import "../interfaces/IPYieldContractFactory.sol";
-import "./PermissionsV2.sol";
+import "../periphery/PermissionsV2.sol";
 import "./PendleMarket.sol";
 
 contract PendleMarketFactory is PermissionsV2 {
