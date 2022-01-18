@@ -12,8 +12,8 @@ interface IPMarket is IPBaseToken {
         bytes calldata data
     ) external returns (int256 amountLYTIn);
 
-    function getAmountOTOutFromLYT(uint256 amountLYTIn)
-        external
-        pure
-        returns (uint256 amountOTOut);
+    // function getAmountOTOutFromLYT(uint256 amountLYTIn)
+    //     external
+    //     pure
+    //     returns (uint256 amountOTOut);
 }

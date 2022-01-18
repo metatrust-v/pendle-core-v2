@@ -21,27 +21,27 @@ contract PendleRouterCore is PendleRouterBase {
         IERC20(tokenToPull).transferFrom(payer, msg.sender, amountToPull);
     }
 
-    function swapOTforLYT(
+    function swapExactOTForLYT(
         address receipient,
         address market,
-        uint256 amountOTtoSell,
+        uint256 amountOTIn,
         uint256 minAmountLYTOut
     ) public returns (uint256 amountLYTOut) {
         amountLYTOut = PendleMarket(market)
-            .swap(receipient, amountOTtoSell.toInt(), abi.encode(msg.sender))
+            .swap(receipient, amountOTIn.toInt(), abi.encode(msg.sender))
             .neg()
             .toUint();
         require(amountLYTOut >= minAmountLYTOut, "INSUFFICIENT_LYT_OUT");
     }
 
-    function swapLYTforOT(
+    function swapLYTForExactOT(
         address receipient,
         address market,
-        uint256 amountOTtoBuy,
+        uint256 amountOTOut,
         uint256 maxAmountLYTIn
     ) public returns (uint256 amountLYTIn) {
         amountLYTIn = (
-            IPMarket(market).swap(receipient, amountOTtoBuy.toInt().neg(), abi.encode(msg.sender))
+            IPMarket(market).swap(receipient, amountOTOut.toInt().neg(), abi.encode(msg.sender))
         ).toUint();
 
         require(amountLYTIn <= maxAmountLYTIn, "LYT_IN_LIMIT_EXCEEDED");

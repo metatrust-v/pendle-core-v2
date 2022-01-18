@@ -9,18 +9,18 @@ import "../../interfaces/IPYieldToken.sol";
 contract PendleRouter02 is PendleRouter01, PendleRouterCore {
     constructor(address _marketFactory) PendleRouterCore(_marketFactory) {}
 
-    function swapBaseTokenforOT(
+    function swapBaseTokenForExactOT(
         address baseToken,
         uint256 amountBaseToken,
         address OT,
         address OTMarket,
-        uint256 minAmountOTOut,
+        uint256 amountOTOut,
         address to,
         bytes calldata data
-    ) external returns (uint256 amountOTOut) {
+    ) external {
         address LYT = IPOwnershipToken(OT).LYT();
 
-        uint256 amountLYTReceived = swapBaseTokenforLYT(
+        uint256 amountLYTReceived = swapExactBaseTokenForLYT(
             baseToken,
             amountBaseToken,
             LYT,
@@ -29,14 +29,11 @@ contract PendleRouter02 is PendleRouter01, PendleRouterCore {
             data
         );
 
-        amountOTOut = IPMarket(OTMarket).getAmountOTOutFromLYT(amountLYTReceived);
-        require(amountOTOut >= minAmountOTOut, "INSUFFICIENT_OUT_AMOUNT");
-
-        uint256 amountLYTIn = swapLYTforOT(to, OTMarket, amountOTOut, amountLYTReceived);
+        uint256 amountLYTIn = swapLYTForExactOT(to, OTMarket, amountOTOut, amountLYTReceived);
         assert(amountLYTIn == amountLYTReceived);
     }
 
-    function swapOTforBaseToken(
+    function swapExactOTforBaseToken(
         address OT,
         address OTMarket,
         uint256 amountOTIn,
@@ -46,8 +43,8 @@ contract PendleRouter02 is PendleRouter01, PendleRouterCore {
         bytes calldata data
     ) external returns (uint256 amountBaseTokenOut) {
         address LYT = IPOwnershipToken(OT).LYT();
-        uint256 amountLYTReceived = swapOTforLYT(address(this), OTMarket, amountOTIn, 0);
-        amountBaseTokenOut = swapLYTforBaseToken(
+        uint256 amountLYTReceived = swapExactOTForLYT(address(this), OTMarket, amountOTIn, 0);
+        amountBaseTokenOut = swapExactLYTforBaseToken(
             LYT,
             amountLYTReceived,
             baseToken,

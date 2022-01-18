@@ -182,11 +182,12 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         timeToExpiry = expiry - block.timestamp;
     }
 
-    function getAmountOTOutFromLYT(uint256 amountLYTIn)
-        public
-        pure
-        returns (uint256 amountOTOut)
-    {}
+    // may add this, but gas may be expensive
+    // function getAmountOTOutFromLYT(uint256 amountLYTIn)
+    //     public
+    //     pure
+    //     returns (uint256 amountOTOut)
+    // {}
 
     function _updateReserve() internal {
         reserveLYT = _selfBalance(LYT);

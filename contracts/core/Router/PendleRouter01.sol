@@ -7,7 +7,7 @@ import "../../interfaces/IPLiquidYieldToken.sol";
 contract PendleRouter01 {
     using SafeERC20 for IERC20;
 
-    function swapBaseTokenforLYT(
+    function swapExactBaseTokenForLYT(
         address baseToken,
         uint256 amountBaseToken,
         address LYT,
@@ -25,10 +25,10 @@ contract PendleRouter01 {
         );
     }
 
-    function swapLYTforBaseToken(
+    function swapExactLYTforBaseToken(
         address LYT,
         uint256 amountLYTIn,
-        address toBaseToken,
+        address baseToken,
         uint256 minBaseTokenOut,
         address to,
         bytes calldata data
@@ -36,7 +36,7 @@ contract PendleRouter01 {
         IERC20(LYT).safeTransferFrom(msg.sender, address(this), amountLYTIn);
         amountBaseTokenOut = IPLiquidYieldToken(LYT).burnToBaseToken(
             to,
-            toBaseToken,
+            baseToken,
             amountLYTIn,
             minBaseTokenOut,
             data
