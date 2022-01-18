@@ -10,4 +10,6 @@ interface IPOwnershipToken is IPBaseToken {
     function mintByYT(address user, uint256 amount) external;
 
     function LYT() external view returns (address);
+
+    function YT() external view returns (address);
 }

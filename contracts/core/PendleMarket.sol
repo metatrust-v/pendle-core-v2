@@ -3,15 +3,16 @@ pragma solidity ^0.8.0;
 
 import "./PendleBaseToken.sol";
 import "../interfaces/IPVault.sol";
-import "../interfaces/IPCoreSwapRouter.sol";
+import "../interfaces/IPMarketCallback.sol";
 import "../interfaces/IPOwnershipToken.sol";
 import "../interfaces/IPLiquidYieldToken.sol";
+import "../interfaces/IPMarket.sol";
 
 import "../libraries/math/LogExpMath.sol";
 import "../libraries/math/FixedPoint.sol";
 
 // solhint-disable reason-string
-contract PendleMarket is PendleBaseToken {
+contract PendleMarket is PendleBaseToken, IPMarket {
     using FixedPoint for uint256;
     using FixedPoint for int256;
     using LogExpMath for uint256;
@@ -118,12 +119,12 @@ contract PendleMarket is PendleBaseToken {
 
         if (amountOTIn > 0) {
             // need to pull OT & push LYT
-            IPCoreSwapRouter(msg.sender).marketCallback(address(OT), amountOTIn.toUint(), data);
+            IPMarketCallback(msg.sender).callback(address(OT), amountOTIn.toUint(), data);
             require(IPVault(vault).callerBalance(address(OT)) - reserveOT >= amountOTIn.toUint());
             IPVault(vault).withdrawTo(recipient, address(LYT), amountLYTIn.neg().toUint());
         } else {
             // need to pull LYT
-            IPCoreSwapRouter(msg.sender).marketCallback(address(LYT), amountLYTIn.toUint(), data);
+            IPMarketCallback(msg.sender).callback(address(LYT), amountLYTIn.toUint(), data);
             require(
                 IPVault(vault).callerBalance(address(LYT)) - reserveLYT >= amountLYTIn.toUint()
             );
@@ -187,6 +188,12 @@ contract PendleMarket is PendleBaseToken {
     function getTimeToExpiry() public view returns (uint256 timeToExpiry) {
         timeToExpiry = expiry - block.timestamp;
     }
+
+    function getAmountOTOutFromLYT(uint256 amountLYTIn)
+        public
+        pure
+        returns (uint256 amountOTOut)
+    {}
 
     function _updateReserve() internal {
         reserveLYT = IPVault(vault).callerBalance(address(LYT));

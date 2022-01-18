@@ -24,8 +24,9 @@
 pragma solidity ^0.8.0;
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "../libraries/math/FixedPoint.sol";
+import "../interfaces/IPLiquidYieldToken.sol";
 
-abstract contract PendleLiquidYieldToken is ERC20 {
+abstract contract PendleLiquidYieldToken is IPLiquidYieldToken, ERC20 {
     struct GlobalReward {
         uint256 index;
         uint256 lastBalance;
@@ -81,7 +82,7 @@ abstract contract PendleLiquidYieldToken is ERC20 {
         uint256 amount,
         uint256 minAmountLYTOut,
         bytes memory data
-    ) public virtual;
+    ) public virtual returns (uint256 amountLYTOut);
 
     // take in some LYT, returns yield bearing token
     function burn(address to, uint256 amount) public virtual;
@@ -92,7 +93,7 @@ abstract contract PendleLiquidYieldToken is ERC20 {
         uint256 amount,
         uint256 minAmountTokenOut,
         bytes memory data
-    ) public virtual;
+    ) public virtual returns (uint256 amountTokenOut);
 
     // strictly not overridable to guarantee the definition of baseBalanceOf & exchangeRate
     function baseBalanceOf(address account) public returns (uint256) {
@@ -110,7 +111,7 @@ abstract contract PendleLiquidYieldToken is ERC20 {
         _updateUserRewardSkipGlobal(user);
     }
 
-    function decimals() public view virtual override returns (uint8) {
+    function decimals() public view virtual override(ERC20, IERC20Metadata) returns (uint8) {
         return _decimals;
     }
 

@@ -11,7 +11,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/utils/SafeERC20.sol";
 import "openzeppelin-solidity/contracts/utils/math/Math.sol";
 
 contract PendleBenqiLiquidYieldToken is PendleLiquidYieldToken {
-
+    using SafeERC20 for IERC20;
     address public immutable comptroller;
     address public immutable weth;
     address public immutable joeRouter;
@@ -42,7 +42,7 @@ contract PendleBenqiLiquidYieldToken is PendleLiquidYieldToken {
     }
 
     function mint(address to, uint256 amount) public override {
-        SafeERC20.safeTransferFrom(IERC20(underlyingYieldToken), msg.sender, address(this), amount);
+        IERC20(underlyingYieldToken).safeTransferFrom(msg.sender, address(this), amount);
         _mint(to, amount);
     }
 
@@ -52,23 +52,29 @@ contract PendleBenqiLiquidYieldToken is PendleLiquidYieldToken {
         uint256 amount,
         uint256 minAmountLYTOut,
         bytes memory data
-    ) public override {
+    ) public override returns (uint256 amountLYTOut) {
         (address[] memory path, uint256 expiry) = abi.decode(data, (address[], uint256));
         require(token == path[0], "INVALID_PATH");
-        uint256 amountUnderlying = IJoeRouter01(joeRouter).swapExactTokensForTokens(amount, 1, path, to, expiry)[path.length - 1];
-        
-        uint256 balanceBefore = IQiErc20(underlyingYieldToken).balanceOf(to); 
+        uint256 amountUnderlying = IJoeRouter01(joeRouter).swapExactTokensForTokens(
+            amount,
+            1,
+            path,
+            to,
+            expiry
+        )[path.length - 1];
+
+        uint256 balanceBefore = IQiErc20(underlyingYieldToken).balanceOf(to);
         IQiErc20(underlyingYieldToken).mint(amountUnderlying);
         uint256 balanceAfter = IQiErc20(underlyingYieldToken).balanceOf(to);
 
-        uint256 amountToMint = balanceAfter - balanceBefore;
-        require(amountToMint >= minAmountLYTOut, "INSUFFICIENT_OUT_AMOUNT");
-        mint(to, amountToMint);
+        amountLYTOut = balanceAfter - balanceBefore;
+        require(amountLYTOut >= minAmountLYTOut, "INSUFFICIENT_OUT_AMOUNT");
+        _mint(to, amountLYTOut);
     }
 
     function burn(address to, uint256 amount) public override {
         _burn(msg.sender, amount);
-        SafeERC20.safeTransfer(IERC20(underlyingYieldToken), to, amount);
+        IERC20(underlyingYieldToken).safeTransfer(to, amount);
     }
 
     function burnToBaseToken(
@@ -77,18 +83,24 @@ contract PendleBenqiLiquidYieldToken is PendleLiquidYieldToken {
         uint256 amount,
         uint256 minAmountTokenOut,
         bytes memory data
-    ) public override {
-        burn(to, amount);
+    ) public override returns (uint256 amountTokenOut) {
+        _burn(to, amount);
 
         (address[] memory path, uint256 expiry) = abi.decode(data, (address[], uint256));
         require(token == path[path.length - 1], "INVALID_PATH");
-        
-        uint256 balanceBefore = IERC20(path[0]).balanceOf(to); 
+
+        uint256 balanceBefore = IERC20(path[0]).balanceOf(to);
         IQiErc20(underlyingYieldToken).redeem(amount);
         uint256 balanceAfter = IERC20(path[0]).balanceOf(to);
 
-        uint amountUnderlyingOut = balanceAfter - balanceBefore;
-        uint amountTokenOut = IJoeRouter01(joeRouter).swapExactTokensForTokens(amountUnderlyingOut, 1, path, to, expiry)[path.length - 1];
+        uint256 amountUnderlyingOut = balanceAfter - balanceBefore;
+        amountTokenOut = IJoeRouter01(joeRouter).swapExactTokensForTokens(
+            amountUnderlyingOut,
+            1,
+            path,
+            to,
+            expiry
+        )[path.length - 1];
         require(amountTokenOut >= minAmountTokenOut, "INSUFFICIENT_OUT_AMOUNT");
     }
 
@@ -111,7 +123,7 @@ contract PendleBenqiLiquidYieldToken is PendleLiquidYieldToken {
             globalReward[i].lastBalance -= outAmounts[i];
 
             if (outAmounts[i] != 0) {
-                SafeERC20.safeTransfer(IERC20(rewardTokens[i]), msg.sender, outAmounts[i]);
+                IERC20(rewardTokens[i]).safeTransfer(msg.sender, outAmounts[i]);
             }
         }
     }
@@ -124,7 +136,7 @@ contract PendleBenqiLiquidYieldToken is PendleLiquidYieldToken {
         for (uint256 i = 0; i < rewardTokens.length; ++i) {
             IBenQiComptroller(comptroller).claimReward(uint8(i), holders, qiTokens, false, true);
         }
-        
+
         if (address(this).balance != 0) IWETH(weth).deposit{ value: address(this).balance };
     }
 
@@ -136,7 +148,10 @@ contract PendleBenqiLiquidYieldToken is PendleLiquidYieldToken {
             uint256 currentRewardBalance;
             currentRewardBalance = IERC20(rewardTokens[i]).balanceOf(address(this));
             if (totalLYT != 0) {
-                globalReward[i].index += FixedPoint.divUp((currentRewardBalance - globalReward[i].lastBalance), totalLYT);
+                globalReward[i].index += FixedPoint.divUp(
+                    (currentRewardBalance - globalReward[i].lastBalance),
+                    totalLYT
+                );
             }
             globalReward[i].lastBalance = currentRewardBalance;
         }

@@ -3,13 +3,14 @@ pragma solidity ^0.8.0;
 
 import "./PendleBaseToken.sol";
 import "../interfaces/IPLiquidYieldToken.sol";
+import "../interfaces/IPYieldToken.sol";
 import "../interfaces/IPOwnershipToken.sol";
 import "../libraries/math/FixedPoint.sol";
 import "../libraries/helpers/ArrayLib.sol";
 import "openzeppelin-solidity/contracts/utils/math/Math.sol";
 
 // probably should abstract more math to libraries
-contract PendleYieldToken is PendleBaseToken {
+contract PendleYieldToken is PendleBaseToken, IPYieldToken {
     using FixedPoint for uint256;
     using ArrayLib for uint256[];
 
