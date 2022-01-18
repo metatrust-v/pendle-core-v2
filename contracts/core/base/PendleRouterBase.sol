@@ -6,7 +6,6 @@ import "../../interfaces/IPMarketCallback.sol";
 import "../../libraries/math/FixedPoint.sol";
 
 abstract contract PendleRouterBase is IPMarketCallback {
-    address public immutable vault;
     address public immutable marketFactory;
 
     modifier onlycallback(address market) {
@@ -14,8 +13,7 @@ abstract contract PendleRouterBase is IPMarketCallback {
         _;
     }
 
-    constructor(address _vault, address _marketFactory) {
-        vault = _vault;
+    constructor(address _marketFactory) {
         marketFactory = _marketFactory;
     }
 

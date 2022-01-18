@@ -9,7 +9,7 @@ contract PendleRouterCore is PendleRouterBase {
     using FixedPoint for uint256;
     using FixedPoint for int256;
 
-    constructor(address _vault, address _marketFactory) PendleRouterBase(_vault, _marketFactory) {}
+    constructor(address _marketFactory) PendleRouterBase(_marketFactory) {}
 
     function callback(
         address tokenToPull,
@@ -18,8 +18,7 @@ contract PendleRouterCore is PendleRouterBase {
     ) external override onlycallback(msg.sender) {
         address payer = abi.decode(data, (address));
 
-        IERC20(tokenToPull).transferFrom(payer, address(vault), amountToPull);
-        IPVault(vault).depositNoTransfer(msg.sender, tokenToPull, amountToPull);
+        IERC20(tokenToPull).transferFrom(payer, msg.sender, amountToPull);
     }
 
     function swapOTforLYT(

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "./Base/PendleBaseToken.sol";
-import "../interfaces/IPVault.sol";
 import "../interfaces/IPMarketCallback.sol";
 import "../interfaces/IPOwnershipToken.sol";
 import "../interfaces/IPLiquidYieldToken.sol";
@@ -17,8 +16,6 @@ contract PendleMarket is PendleBaseToken, IPMarket {
     using FixedPoint for int256;
     using LogExpMath for uint256;
     // make it ultra simple
-    // the start variable is kinda off, it should be set to the time that the market is bootstrapped
-    // Code first, then integrate with vault later
 
     // careful, the reserve of the market shouldn't be interferred by external factors
     string private constant NAME = "Pendle Market";
@@ -29,7 +26,6 @@ contract PendleMarket is PendleBaseToken, IPMarket {
 
     address public immutable OT;
     address public immutable LYT;
-    address public immutable vault;
 
     uint256 public reserveOT;
     uint256 public reserveLYT;
@@ -44,14 +40,12 @@ contract PendleMarket is PendleBaseToken, IPMarket {
 
     constructor(
         address _OT,
-        address _vault,
         uint256 _feeRateRoot,
         uint256 _scalarRoot,
         int256 _anchorRoot
     ) PendleBaseToken(NAME, SYMBOL, 18, IPOwnershipToken(_OT).expiry()) {
         OT = _OT;
         LYT = IPOwnershipToken(_OT).LYT();
-        vault = _vault;
         feeRateRoot = _feeRateRoot;
         scalarRoot = _scalarRoot;
         savedAnchorRate = _anchorRoot;
@@ -60,8 +54,8 @@ contract PendleMarket is PendleBaseToken, IPMarket {
     function mint(address to) external returns (uint256 liquidity) {
         require(block.timestamp < expiry, "MARKET_EXPIRED");
 
-        uint256 amountOT = IPVault(vault).callerBalance(address(OT)) - reserveOT;
-        uint256 amountLYT = IPVault(vault).callerBalance(address(LYT)) - reserveLYT;
+        uint256 amountOT = _selfBalance(OT) - reserveOT;
+        uint256 amountLYT = _selfBalance(LYT) - reserveLYT;
 
         if (totalSupply() == 0) {
             start = block.timestamp;
@@ -86,10 +80,10 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         amountLYT = (liquidity * reserveLYT) / totalSupply();
         require(amountOT > 0 && amountLYT > 0, "INSUFFICIENT_LIQUIDITY_BURNED");
 
-        _burn(address(this), liquidity);
         IERC20(OT).transfer(to, amountOT);
         IERC20(LYT).transfer(to, amountLYT);
 
+        _burn(address(this), liquidity);
         _updateReserve();
     }
 
@@ -119,19 +113,18 @@ contract PendleMarket is PendleBaseToken, IPMarket {
 
         if (amountOTIn > 0) {
             // need to pull OT & push LYT
+            IERC20(LYT).transfer(recipient, amountLYTIn.neg().toUint());
             IPMarketCallback(msg.sender).callback(address(OT), amountOTIn.toUint(), data);
-            require(IPVault(vault).callerBalance(address(OT)) - reserveOT >= amountOTIn.toUint());
-            IPVault(vault).withdrawTo(recipient, address(LYT), amountLYTIn.neg().toUint());
+            require(_selfBalance(OT) - reserveOT >= amountOTIn.toUint());
         } else {
-            // need to pull LYT
+            // need to pull LYT & push OT
+            IERC20(OT).transfer(recipient, amountOTIn.neg().toUint());
             IPMarketCallback(msg.sender).callback(address(LYT), amountLYTIn.toUint(), data);
-            require(
-                IPVault(vault).callerBalance(address(LYT)) - reserveLYT >= amountLYTIn.toUint()
-            );
-            IPVault(vault).withdrawTo(recipient, address(OT), amountOTIn.neg().toUint());
+            require(_selfBalance(LYT) - reserveLYT >= amountLYTIn.toUint());
         }
 
         savedIntRate = getIntRate();
+        _updateReserve();
         // TODO: also need to transfer the money to treasury
     }
 
@@ -196,11 +189,15 @@ contract PendleMarket is PendleBaseToken, IPMarket {
     {}
 
     function _updateReserve() internal {
-        reserveLYT = IPVault(vault).callerBalance(address(LYT));
-        reserveOT = IPVault(vault).callerBalance(address(OT));
+        reserveLYT = _selfBalance(LYT);
+        reserveOT = _selfBalance(OT);
     }
 
     function _lytExchangeRate() internal returns (uint256 rate) {
         rate = IPLiquidYieldToken(LYT).exchangeRateCurrent();
+    }
+
+    function _selfBalance(address token) internal view returns (uint256) {
+        return IERC20(token).balanceOf(address(this));
     }
 }

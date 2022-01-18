@@ -7,7 +7,7 @@ import "../../interfaces/IPOwnershipToken.sol";
 import "../../interfaces/IPYieldToken.sol";
 
 contract PendleRouter02 is PendleRouter01, PendleRouterCore {
-    constructor(address _vault, address _marketFactory) PendleRouterCore(_vault, _marketFactory) {}
+    constructor(address _marketFactory) PendleRouterCore(_marketFactory) {}
 
     function swapBaseTokenforOT(
         address baseToken,

@@ -10,15 +10,11 @@ contract PendleMarketFactory is PermissionsV2 {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     mapping(address => EnumerableSet.AddressSet) internal OTmarkets;
-    address public immutable vault;
     address public immutable yieldContractFactory;
 
-    constructor(
-        address _governanceManager,
-        address _vault,
-        address _yieldContractFactory
-    ) PermissionsV2(_governanceManager) {
-        vault = _vault;
+    constructor(address _governanceManager, address _yieldContractFactory)
+        PermissionsV2(_governanceManager)
+    {
         yieldContractFactory = _yieldContractFactory;
     }
 
@@ -36,7 +32,7 @@ contract PendleMarketFactory is PermissionsV2 {
             "INVALID_OT"
         );
 
-        market = address(new PendleMarket(OT, vault, feeRateRoot, scalarRoot, anchorRoot));
+        market = address(new PendleMarket(OT, feeRateRoot, scalarRoot, anchorRoot));
         OTmarkets[address(OT)].add(market);
     }
 
