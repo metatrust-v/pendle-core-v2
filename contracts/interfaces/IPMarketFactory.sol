@@ -2,5 +2,5 @@
 pragma solidity ^0.8.0;
 
 interface IPMarketFactory {
-    function isValidOTMarket(address market) external view returns (bool);
+    function isValidMarket(address market) external view returns (bool);
 }

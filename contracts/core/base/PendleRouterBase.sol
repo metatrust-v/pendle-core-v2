@@ -10,7 +10,7 @@ abstract contract PendleRouterBase is IPMarketCallback {
     address public immutable marketFactory;
 
     modifier onlycallback(address market) {
-        require(IPMarketFactory(marketFactory).isValidOTMarket(market), "INVALID_MARKET");
+        require(IPMarketFactory(marketFactory).isValidMarket(market), "INVALID_MARKET");
         _;
     }
 

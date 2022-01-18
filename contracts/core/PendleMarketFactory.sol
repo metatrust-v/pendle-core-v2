@@ -40,7 +40,7 @@ contract PendleMarketFactory is PermissionsV2 {
         OTmarkets[address(OT)].add(market);
     }
 
-    function isValidOTMarket(address market) external view returns (bool) {
+    function isValidMarket(address market) external view returns (bool) {
         address OT = IPMarket(market).OT();
         return OTmarkets[OT].contains(market);
     }

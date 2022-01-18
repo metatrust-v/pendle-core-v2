@@ -21,10 +21,15 @@ abstract contract PendleBaseToken is ERC20, IPBaseToken {
         uint8 __decimals,
         uint256 _expiry
     ) ERC20(_name, _symbol) {
+        require(_expiry < block.timestamp, "INVALID_EXPIRY");
+
         _decimals = __decimals;
         timeCreated = block.timestamp;
         expiry = _expiry;
         factory = msg.sender;
-        require(expiry < block.timestamp, "INVALID_EXPIRY");
+    }
+
+    function decimals() public view virtual override(ERC20, IERC20Metadata) returns (uint8) {
+        return _decimals;
     }
 }
