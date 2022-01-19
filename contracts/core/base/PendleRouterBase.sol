@@ -18,8 +18,10 @@ abstract contract PendleRouterBase is IPMarketCallback {
     }
 
     function callback(
-        address tokenToPull,
-        uint256 amountToPull,
+        address tokenReceived,
+        uint256 amountReceived,
+        address tokenOwed,
+        uint256 amountOwed,
         bytes calldata data
     ) external virtual override;
 }

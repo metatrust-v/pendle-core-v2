@@ -113,13 +113,27 @@ contract PendleMarket is PendleBaseToken, IPMarket {
 
         if (amountOTIn > 0) {
             // need to pull OT & push LYT
-            IERC20(LYT).transfer(recipient, amountLYTIn.neg().toUint());
-            IPMarketCallback(msg.sender).callback(address(OT), amountOTIn.toUint(), data);
+            uint256 amountLYTOut = amountLYTIn.neg().toUint();
+            IERC20(LYT).transfer(recipient, amountLYTOut);
+            IPMarketCallback(msg.sender).callback(
+                address(LYT),
+                amountLYTOut,
+                address(OT),
+                amountOTIn.toUint(),
+                data
+            );
             require(_selfBalance(OT) - reserveOT >= amountOTIn.toUint());
         } else {
             // need to pull LYT & push OT
-            IERC20(OT).transfer(recipient, amountOTIn.neg().toUint());
-            IPMarketCallback(msg.sender).callback(address(LYT), amountLYTIn.toUint(), data);
+            uint256 amountOTOut = amountOTIn.neg().toUint();
+            IERC20(OT).transfer(recipient, amountOTOut);
+            IPMarketCallback(msg.sender).callback(
+                address(OT),
+                amountOTOut,
+                address(LYT),
+                amountLYTIn.toUint(),
+                data
+            );
             require(_selfBalance(LYT) - reserveLYT >= amountLYTIn.toUint());
         }
 

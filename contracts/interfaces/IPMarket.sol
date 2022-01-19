@@ -6,6 +6,8 @@ import "./IPBaseToken.sol";
 interface IPMarket is IPBaseToken {
     function OT() external view returns (address);
 
+    function LYT() external view returns (address);
+
     function swap(
         address recipient,
         int256 amountOTIn,

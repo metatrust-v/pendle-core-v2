@@ -3,8 +3,10 @@ pragma solidity ^0.8.0;
 
 interface IPMarketCallback {
     function callback(
-        address tokenToPull,
-        uint256 amountToPull,
+        address tokenReceived,
+        uint256 amountReceived,
+        address tokenOwed,
+        uint256 amountOwed,
         bytes calldata data
     ) external;
 }

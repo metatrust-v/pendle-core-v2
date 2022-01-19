@@ -9,17 +9,17 @@ contract PendleRouter01 {
 
     function swapExactBaseTokenForLYT(
         address baseToken,
-        uint256 amountBaseToken,
+        uint256 amountBaseTokenIn,
         address LYT,
         uint256 minAmountLYTOut,
-        address to,
+        address receipient,
         bytes calldata data
     ) public returns (uint256 amountLYTOut) {
-        IERC20(baseToken).safeTransferFrom(msg.sender, address(this), amountBaseToken);
+        IERC20(baseToken).safeTransferFrom(msg.sender, address(this), amountBaseTokenIn);
         amountLYTOut = IPLiquidYieldToken(LYT).mintFromBaseToken(
-            to,
+            receipient,
             baseToken,
-            amountBaseToken,
+            amountBaseTokenIn,
             minAmountLYTOut,
             data
         );
@@ -29,16 +29,16 @@ contract PendleRouter01 {
         address LYT,
         uint256 amountLYTIn,
         address baseToken,
-        uint256 minBaseTokenOut,
-        address to,
+        uint256 minAmountBaseTokenOut,
+        address receipient,
         bytes calldata data
     ) public returns (uint256 amountBaseTokenOut) {
         IERC20(LYT).safeTransferFrom(msg.sender, address(this), amountLYTIn);
         amountBaseTokenOut = IPLiquidYieldToken(LYT).burnToBaseToken(
-            to,
+            receipient,
             baseToken,
             amountLYTIn,
-            minBaseTokenOut,
+            minAmountBaseTokenOut,
             data
         );
     }

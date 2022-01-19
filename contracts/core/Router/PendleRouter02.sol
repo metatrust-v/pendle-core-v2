@@ -10,46 +10,50 @@ contract PendleRouter02 is PendleRouter01, PendleRouterCore {
     constructor(address _marketFactory) PendleRouterCore(_marketFactory) {}
 
     function swapBaseTokenForExactOT(
+        address market,
         address baseToken,
-        uint256 amountBaseToken,
-        address OT,
-        address OTMarket,
+        uint256 amountBaseTokenIn,
         uint256 amountOTOut,
-        address to,
+        address receipient,
         bytes calldata data
     ) external {
-        address LYT = IPOwnershipToken(OT).LYT();
+        address LYT = IPMarket(market).LYT();
 
         uint256 amountLYTReceived = swapExactBaseTokenForLYT(
             baseToken,
-            amountBaseToken,
+            amountBaseTokenIn,
             LYT,
             0, // can have a minLYTOut here to make it fail earlier
             address(this),
             data
         );
 
-        uint256 amountLYTIn = swapLYTForExactOT(to, OTMarket, amountOTOut, amountLYTReceived);
+        uint256 amountLYTIn = swapLYTForExactOT(
+            receipient,
+            market,
+            amountOTOut,
+            amountLYTReceived
+        );
         assert(amountLYTIn == amountLYTReceived);
     }
 
     function swapExactOTforBaseToken(
-        address OT,
-        address OTMarket,
+        address market,
         uint256 amountOTIn,
         address baseToken,
         uint256 minAmountBaseTokenOut,
-        address to,
+        address receipient,
         bytes calldata data
     ) external returns (uint256 amountBaseTokenOut) {
-        address LYT = IPOwnershipToken(OT).LYT();
-        uint256 amountLYTReceived = swapExactOTForLYT(address(this), OTMarket, amountOTIn, 0);
+        address LYT = IPMarket(market).LYT();
+
+        uint256 amountLYTReceived = swapExactOTForLYT(address(this), market, amountOTIn, 0);
         amountBaseTokenOut = swapExactLYTforBaseToken(
             LYT,
             amountLYTReceived,
             baseToken,
             minAmountBaseTokenOut,
-            to,
+            receipient,
             data
         );
     }

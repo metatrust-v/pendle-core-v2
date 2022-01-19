@@ -12,13 +12,16 @@ contract PendleRouterCore is PendleRouterBase {
     constructor(address _marketFactory) PendleRouterBase(_marketFactory) {}
 
     function callback(
-        address tokenToPull,
-        uint256 amountToPull,
+        address,
+        uint256,
+        address tokenOwed,
+        uint256 amountOwed,
         bytes calldata data
     ) external override onlycallback(msg.sender) {
+        // can use tokenReceived & amountReceived to fail sooner
         address payer = abi.decode(data, (address));
 
-        IERC20(tokenToPull).transferFrom(payer, msg.sender, amountToPull);
+        IERC20(tokenOwed).transferFrom(payer, msg.sender, amountOwed);
     }
 
     function swapExactOTForLYT(
