@@ -7,7 +7,7 @@ interface IPYieldToken is IPBaseToken {
 
     function OT() external view returns (address);
 
-    function tokenizeYield(address to) external;
+    function tokenizeYield(address to) external returns (uint256 amountMinted);
 
     function redeemUnderlying(address to) external returns (uint256 amountRedeemed);
 

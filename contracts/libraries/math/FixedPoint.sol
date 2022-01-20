@@ -26,18 +26,8 @@ library FixedPoint {
     // Minimum base for the power function when the exponent is 'free' (larger than ONE).
     uint256 internal constant MIN_POW_BASE_FREE_EXPONENT = 0.7e18;
 
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        // Fixed Point addition is the same as regular checked addition
-
-        uint256 c = a + b;
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        // Fixed Point addition is the same as regular checked addition
-
-        uint256 c = a - b;
-        return c;
+    function subMax0(uint256 a, uint256 b) internal pure returns (uint256) {
+        return (a >= b ? a - b : 0);
     }
 
     function mulDown(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -121,12 +111,12 @@ library FixedPoint {
      */
     function powDown(uint256 x, uint256 y) internal pure returns (uint256) {
         uint256 raw = LogExpMath.pow(x, y);
-        uint256 maxError = add(mulUp(raw, MAX_POW_RELATIVE_ERROR), 1);
+        uint256 maxError = mulUp(raw, MAX_POW_RELATIVE_ERROR) + 1;
 
         if (raw < maxError) {
             return 0;
         } else {
-            return sub(raw, maxError);
+            return raw - maxError;
         }
     }
 
@@ -136,9 +126,9 @@ library FixedPoint {
      */
     function powUp(uint256 x, uint256 y) internal pure returns (uint256) {
         uint256 raw = LogExpMath.pow(x, y);
-        uint256 maxError = add(mulUp(raw, MAX_POW_RELATIVE_ERROR), 1);
+        uint256 maxError = mulUp(raw, MAX_POW_RELATIVE_ERROR) + 1;
 
-        return add(raw, maxError);
+        return raw + maxError;
     }
 
     /**

@@ -87,59 +87,24 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         _updateReserve();
     }
 
-    // doing call back?
-    function swap(
-        address recipient,
-        int256 amountOTIn,
-        bytes calldata data
-    ) external returns (int256 amountLYTIn) {
-        require(block.timestamp < expiry, "MARKET_EXPIRED");
-        require(reserveOT.toInt() + amountOTIn > 0, "INSUFFICIENT_LIQUIDITY");
+    function swapExactOTForLYT(
+        address receipient,
+        uint256 amountOTIn,
+        bytes calldata cbData
+    ) external returns (uint256 amountLYTOut, bytes memory cbRes) {
+        int256 amountLYTIn_raw;
+        (amountLYTIn_raw, cbRes) = _swap(receipient, amountOTIn.toInt(), cbData);
+        amountLYTOut = amountLYTIn_raw.toUint();
+    }
 
-        savedAnchorRate = getAnchorRate();
-        uint256 pTrade = getPTrade(amountOTIn);
-
-        int256 feeRate = getFeeRate().toInt();
-        feeRate = (amountOTIn > 0 ? feeRate : -feeRate);
-
-        int256 excRateTrade = getExcRate(pTrade).toInt() + feeRate;
-
-        require(excRateTrade >= (FixedPoint.ONE).toInt(), "NEGATIVE_RATE");
-
-        int256 amountAccUnitsIn = amountOTIn.divDown(excRateTrade).neg();
-
-        // the exchangeRate is get twice, not nice
-        amountLYTIn = amountAccUnitsIn.divDown(_lytExchangeRate());
-
-        if (amountOTIn > 0) {
-            // need to pull OT & push LYT
-            uint256 amountLYTOut = amountLYTIn.neg().toUint();
-            IERC20(LYT).transfer(recipient, amountLYTOut);
-            IPMarketCallback(msg.sender).callback(
-                address(LYT),
-                amountLYTOut,
-                address(OT),
-                amountOTIn.toUint(),
-                data
-            );
-            require(_selfBalance(OT) - reserveOT >= amountOTIn.toUint());
-        } else {
-            // need to pull LYT & push OT
-            uint256 amountOTOut = amountOTIn.neg().toUint();
-            IERC20(OT).transfer(recipient, amountOTOut);
-            IPMarketCallback(msg.sender).callback(
-                address(OT),
-                amountOTOut,
-                address(LYT),
-                amountLYTIn.toUint(),
-                data
-            );
-            require(_selfBalance(LYT) - reserveLYT >= amountLYTIn.toUint());
-        }
-
-        savedIntRate = getIntRate();
-        _updateReserve();
-        // TODO: also need to transfer the money to treasury
+    function swapLYTForExactOT(
+        address receipient,
+        uint256 amountOTOut,
+        bytes calldata cbData
+    ) external returns (uint256 amountLYTIn, bytes memory cbRes) {
+        int256 amountLYTIn_raw;
+        (amountLYTIn_raw, cbRes) = _swap(receipient, amountOTOut.toInt().neg(), cbData);
+        amountLYTIn = amountLYTIn_raw.neg().toUint();
     }
 
     function getPTrade(int256 amountOTIn) public returns (uint256 pTrade) {
@@ -196,12 +161,48 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         timeToExpiry = expiry - block.timestamp;
     }
 
-    // may add this, but gas may be expensive
-    // function getAmountOTOutFromLYT(uint256 amountLYTIn)
-    //     public
-    //     pure
-    //     returns (uint256 amountOTOut)
-    // {}
+    function _swap(
+        address recipient,
+        int256 amountOTIn,
+        bytes calldata cbData
+    ) internal returns (int256 amountLYTIn, bytes memory cbRes) {
+        require(block.timestamp < expiry, "MARKET_EXPIRED");
+        require(reserveOT.toInt() + amountOTIn > 0, "INSUFFICIENT_LIQUIDITY");
+
+        savedAnchorRate = getAnchorRate();
+        uint256 pTrade = getPTrade(amountOTIn);
+
+        int256 feeRate = getFeeRate().toInt();
+        feeRate = (amountOTIn > 0 ? feeRate : -feeRate);
+
+        int256 excRateTrade = getExcRate(pTrade).toInt() + feeRate;
+
+        require(excRateTrade >= (FixedPoint.ONE).toInt(), "NEGATIVE_RATE");
+
+        int256 amountAccUnitsIn = amountOTIn.divDown(excRateTrade).neg();
+
+        // the exchangeRate is get twice, not nice
+        amountLYTIn = amountAccUnitsIn.divDown(_lytExchangeRate());
+
+        if (amountOTIn > 0) {
+            // need to pull OT & push LYT
+            uint256 amountLYTOut = amountLYTIn.neg().toUint();
+            IERC20(LYT).transfer(recipient, amountLYTOut);
+            cbRes = IPMarketCallback(msg.sender).callback(amountOTIn, amountLYTIn, cbData);
+            require(_selfBalance(OT) - reserveOT >= amountOTIn.toUint());
+        } else {
+            // need to pull LYT & push OT
+            uint256 amountOTOut = amountOTIn.neg().toUint();
+            IERC20(OT).transfer(recipient, amountOTOut);
+            cbRes = IPMarketCallback(msg.sender).callback(amountOTIn, amountLYTIn, cbData);
+            require(_selfBalance(LYT) - reserveLYT >= amountLYTIn.toUint());
+        }
+
+        //solhint-disable-next-line reentrancy
+        savedIntRate = getIntRate();
+        _updateReserve();
+        // TODO: also need to transfer the money to treasury
+    }
 
     function _updateReserve() internal {
         reserveLYT = _selfBalance(LYT);

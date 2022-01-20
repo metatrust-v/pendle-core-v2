@@ -48,13 +48,13 @@ contract PendleYieldToken is PendleBaseToken, IPYieldToken {
         paramL.setValue(1);
     }
 
-    function tokenizeYield(address to) external {
+    function tokenizeYield(address to) external returns (uint256 amountMinted) {
         uint256 amountToTokenize = _receiveLYT();
 
-        uint256 amountToMint = _calcAmountToMint(amountToTokenize);
+        amountMinted = _calcAmountToMint(amountToTokenize);
 
-        IPOwnershipToken(OT).mintByYT(to, amountToMint);
-        _mint(to, amountToMint);
+        IPOwnershipToken(OT).mintByYT(to, amountMinted);
+        _mint(to, amountMinted);
     }
 
     function redeemUnderlying(address to) external returns (uint256 amountRedeemed) {
