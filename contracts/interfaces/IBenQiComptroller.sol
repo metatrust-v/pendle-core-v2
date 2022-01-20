@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * MIT License
  * ===========
@@ -24,10 +24,10 @@ pragma solidity ^0.8.0;
 
 interface IBenQiComptroller {
     function claimReward(
-        uint8 rewardType, 
-        address[] memory holders, 
-        address[] memory qiTokens, 
-        bool borrowers, 
+        uint8 rewardType,
+        address[] memory holders,
+        address[] memory qiTokens,
+        bool borrowers,
         bool suppliers
     ) external;
 }

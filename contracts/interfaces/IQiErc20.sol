@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * MIT License
  * ===========
@@ -26,6 +26,8 @@ import "./IQiToken.sol";
 
 interface IQiErc20 is IQiToken {
     function mint(uint256 mintAmount) external returns (uint256);
+
     function redeem(uint256 redeemTokens) external returns (uint256);
+
     function balanceOf(address owner) external view returns (uint256);
 }
