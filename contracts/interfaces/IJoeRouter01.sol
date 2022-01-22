@@ -3,10 +3,6 @@
 pragma solidity ^0.8.0;
 
 interface IJoeRouter01 {
-    function factory() external pure returns (address);
-
-    function WAVAX() external pure returns (address);
-
     function addLiquidity(
         address tokenA,
         address tokenB,
@@ -132,6 +128,16 @@ interface IJoeRouter01 {
         uint256 deadline
     ) external payable returns (uint256[] memory amounts);
 
+    function getAmountsOut(uint256 amountIn, address[] calldata path)
+        external
+        view
+        returns (uint256[] memory amounts);
+
+    function getAmountsIn(uint256 amountOut, address[] calldata path)
+        external
+        view
+        returns (uint256[] memory amounts);
+
     function quote(
         uint256 amountA,
         uint256 reserveA,
@@ -150,13 +156,7 @@ interface IJoeRouter01 {
         uint256 reserveOut
     ) external pure returns (uint256 amountIn);
 
-    function getAmountsOut(uint256 amountIn, address[] calldata path)
-        external
-        view
-        returns (uint256[] memory amounts);
+    function factory() external pure returns (address);
 
-    function getAmountsIn(uint256 amountOut, address[] calldata path)
-        external
-        view
-        returns (uint256[] memory amounts);
+    function WAVAX() external pure returns (address);
 }

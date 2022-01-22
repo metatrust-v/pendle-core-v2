@@ -2,52 +2,77 @@
   "extends": "solhint:recommended",
   "plugins": [],
   "rules": {
-    "avoid-call-value": "error",
-    "avoid-low-level-calls": "off",
-    "avoid-sha3": "error",
-    "avoid-suicide": "error",
-    "avoid-throw": "error",
-    "avoid-tx-origin": "off",
-    "check-send-result": "error",
-    "compiler-version": [
-      "error",
-      "^0.8.0"
+    "code-complexity": [
+      "warn",
+      7
     ],
-    "const-name-snakecase": "error",
-    "func-name-mixedcase": "off",
-    "imports-on-top": "error",
-    "mark-callable-contracts": "off",
+    "function-max-lines": [
+      "warn",
+      50
+    ],
     "max-line-length": [
       "off",
       120
     ],
     "max-states-count": [
-      "off",
-      20
+      "warn",
+      15
     ],
-    "multiple-sends": "error",
-    "no-complex-fallback": "error",
-    "no-empty-blocks": "off",
-    "no-inline-assembly": "off",
-    "no-unused-vars": "error",
-    "not-rely-on-block-hash": "error",
+    "no-empty-blocks": "warn",
+    "no-unused-vars": "warn",
+    "payable-fallback": "warn",
+    "reason-string": [
+      "warn",
+      {
+        "maxLength": 32
+      }
+    ],
+    "constructor-syntax": "warn",
+    "comprehensive-interface": "off",
+    "avoid-call-value": "warn",
+    "avoid-low-level-calls": "warn",
+    "avoid-sha3": "warn",
+    "avoid-suicide": "warn",
+    "avoid-throw": "warn",
+    "avoid-tx-origin": "warn",
+    "check-send-result": "warn",
+    "compiler-version": [
+      "warn",
+      "^0.8.0"
+    ],
+    "imports-on-top": "warn",
+    "mark-callable-contracts": "off",
+    "multiple-sends": "warn",
+    "no-complex-fallback": "warn",
+    "no-inline-assembly": "warn",
+    "not-rely-on-block-hash": "warn",
     "not-rely-on-time": "off",
-    "ordering": "error",
-    "payable-fallback": "error",
+    "ordering": "warn",
     "quotes": [
-      "error",
+      "warn",
       "double"
     ],
-    "reason-string": "error",
-    "reentrancy": "error",
+    "reentrancy": "warn",
     "func-visibility": [
       "warn",
       {
         "ignoreConstructors": true
       }
     ],
-    "use-forbidden-name": "error",
+    "private-vars-leading-underscore": [
+      "off",
+      {
+        "strict": false
+      }
+    ],
+    "const-name-snakecase": "warn",
+    "func-name-mixedcase": "off",
+    "use-forbidden-name": "warn",
     "var-name-mixedcase": "off",
-    "visibility-modifier-order": "error"
+    "visibility-modifier-order": "warn",
+    "contract-name-camelcase": "warn",
+    "event-name-camelcase": "warn",
+    "func-param-name-mixedcase": "off",
+    "modifier-name-mixedcase": "warn"
   }
 }

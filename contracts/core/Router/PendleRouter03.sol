@@ -5,20 +5,19 @@ import "./PendleRouterCore.sol";
 import "../../interfaces/IPOwnershipToken.sol";
 import "../../interfaces/IPYieldToken.sol";
 import "../../interfaces/IPLiquidYieldToken.sol";
-import "../Base/PendleRouterBase.sol";
 import "../../libraries/helpers/MarketHelper.sol";
 
 contract PendleRouter03 is PendleRouterBase {
     using FixedPoint for uint256;
     using FixedPoint for int256;
 
-    struct DataLYTforExactYT {
+    struct DataLYTForExactYT {
         address recipient;
         address orgSender;
         uint256 maxAmountLYTIn;
     }
 
-    struct DataExactYTforLYT {
+    struct DataExactYTForLYT {
         address recipient;
         address orgSender;
         uint256 minAmountLYTOut;
@@ -56,7 +55,7 @@ contract PendleRouter03 is PendleRouterBase {
             amountOTToAccount,
             abi.encode(
                 Mode.LYTtoYT,
-                DataLYTforExactYT({
+                DataLYTForExactYT({
                     recipient: recipient,
                     orgSender: msg.sender,
                     maxAmountLYTIn: maxAmountLYTIn
@@ -79,7 +78,7 @@ contract PendleRouter03 is PendleRouterBase {
             amountOTToAccount,
             abi.encode(
                 Mode.YTtoLYT,
-                DataExactYTforLYT({
+                DataExactYTForLYT({
                     recipient: recipient,
                     orgSender: msg.sender,
                     minAmountLYTOut: minAmountLYTOut
@@ -99,7 +98,7 @@ contract PendleRouter03 is PendleRouterBase {
 
         uint256 amountOTIn = amountOTIn_raw.toUint();
         uint256 amountLYTOut = amountLYTIn_raw.neg().toUint();
-        DataLYTforExactYT memory data = abi.decode(data_raw, (DataLYTforExactYT));
+        DataLYTForExactYT memory data = abi.decode(data_raw, (DataLYTForExactYT));
 
         uint256 totalAmountLYTNeed = amountOTIn.divDown(market.LYT.exchangeRateCurrent());
         uint256 amountLYTToPull = totalAmountLYTNeed.subMax0(amountLYTOut);
@@ -127,7 +126,7 @@ contract PendleRouter03 is PendleRouterBase {
         MarketHelper.MarketStruct memory market = MarketHelper.readMarketInfo(marketAddr);
 
         uint256 amountLYTIn = amountLYTIn_raw.toUint();
-        DataExactYTforLYT memory data = abi.decode(data_raw, (DataExactYTforLYT));
+        DataExactYTForLYT memory data = abi.decode(data_raw, (DataExactYTForLYT));
 
         market.YT.transferFrom(
             data.orgSender,

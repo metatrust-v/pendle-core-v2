@@ -32,7 +32,7 @@ contract PendleRouter02 is PendleRouter01, PendleRouterCore {
         assert(amountLYTIn == amountLYTReceived);
     }
 
-    function swapExactOTforBaseToken(
+    function swapExactOTForBaseToken(
         address market,
         uint256 amountOTIn,
         address baseToken,
@@ -43,7 +43,7 @@ contract PendleRouter02 is PendleRouter01, PendleRouterCore {
         address LYT = IPMarket(market).LYT();
 
         uint256 amountLYTReceived = swapExactOTForLYT(address(this), market, amountOTIn, 0);
-        amountBaseTokenOut = swapExactLYTforBaseToken(
+        amountBaseTokenOut = swapExactLYTForBaseToken(
             LYT,
             amountLYTReceived,
             baseToken,

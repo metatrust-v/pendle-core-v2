@@ -25,7 +25,7 @@ contract PendleRouter01 {
         );
     }
 
-    function swapExactLYTforBaseToken(
+    function swapExactLYTForBaseToken(
         address LYT,
         uint256 amountLYTIn,
         address baseToken,
