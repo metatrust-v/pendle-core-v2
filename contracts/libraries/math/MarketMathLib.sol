@@ -177,7 +177,7 @@ library MarketMathLib {
             // It's technically possible that the implied rate is actually exactly zero (or
             // more accurately the natural log rounds down to zero) but we will still fail
             // in this case. If this does happen we may assume that markets are not initialized.
-            if (market.lastImpliedRate == 0) return (0, 0);
+            require(market.lastImpliedRate != 0);
         }
 
         (netLytToAccount, netLytToReserve) = _setNewMarketState(
