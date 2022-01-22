@@ -6,6 +6,7 @@ import "../interfaces/IPMarketCallback.sol";
 import "../interfaces/IPOwnershipToken.sol";
 import "../interfaces/IPLiquidYieldToken.sol";
 import "../interfaces/IPMarket.sol";
+import "../interfaces/IPMarketFactory.sol";
 
 import "../libraries/math/LogExpMath.sol";
 import "../libraries/math/FixedPoint.sol";
@@ -134,7 +135,7 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         }
         cbRes = IPMarketCallback(msg.sender).callback(otToAccount, netLytToAccount, cbData);
 
-        // IERC20(LYT).transfer(treasury, netLytToReserve);
+        IERC20(LYT).transfer(IPMarketFactory(factory).treasury(), netLytToReserve);
         _writeAndVerifyState(market);
     }
 

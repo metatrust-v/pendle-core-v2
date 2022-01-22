@@ -3,14 +3,16 @@ pragma solidity ^0.8.0;
 import "openzeppelin-solidity/contracts/utils/structs/EnumerableSet.sol";
 import "../interfaces/IPMarket.sol";
 import "../interfaces/IPYieldContractFactory.sol";
+import "../interfaces/IPMarketFactory.sol";
 import "../periphery/PermissionsV2.sol";
 import "./PendleMarket.sol";
 
-contract PendleMarketFactory is PermissionsV2 {
+contract PendleMarketFactory is PermissionsV2, IPMarketFactory {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     mapping(address => EnumerableSet.AddressSet) internal OTmarkets;
     address public immutable yieldContractFactory;
+    address public treasury;
 
     constructor(address _governanceManager, address _yieldContractFactory)
         PermissionsV2(_governanceManager)
@@ -37,6 +39,10 @@ contract PendleMarketFactory is PermissionsV2 {
             new PendleMarket(OT, feeRateRoot, scalarRoot, anchorRoot, reserveFeePercent)
         );
         OTmarkets[address(OT)].add(market);
+    }
+
+    function setTreasury(address newTreasury) external onlyGovernance {
+        treasury = newTreasury;
     }
 
     function isValidMarket(address market) external view returns (bool) {
