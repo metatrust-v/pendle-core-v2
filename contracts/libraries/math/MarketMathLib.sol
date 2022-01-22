@@ -15,9 +15,10 @@ struct MarketParameters {
     uint256 totalLp;
     uint256 lastImpliedRate;
     uint256 lytRate;
-    uint256 scalarRoot;
     uint256 reserveFeePercent; // base 100
+    uint256 scalarRoot;
     uint256 feeRateRoot;
+    int256 anchorRoot;
 }
 
 // make sure this struct use minimal number of slots
@@ -45,6 +46,20 @@ library MarketMathLib {
 
     // TODO: make sure 1e18 == FixedPoint.ONE
     uint256 internal constant MAX_MARKET_PROPORTION = (1e18 * 96) / 100;
+
+    function setInitialImpliedRate(MarketParameters memory market, uint256 timeToExpiry)
+        internal
+        pure
+    {
+        uint256 totalCashUnderlying = market.totalLyt.mulDown(market.lytRate);
+        market.lastImpliedRate = getImpliedRate(
+            market.totalOt,
+            totalCashUnderlying,
+            market.scalarRoot,
+            market.anchorRoot,
+            timeToExpiry
+        );
+    }
 
     function addLiquidity(
         MarketParameters memory market,
@@ -111,7 +126,6 @@ library MarketMathLib {
         uint256 timeToExpiry
     ) internal pure returns (int256 netLytToAccount, uint256 netLytToReserve) {
         require(timeToExpiry < market.expiry, "MARKET_EXPIRED");
-        uint256 timeToMaturity = market.expiry - timeToExpiry;
         // We return false if there is not enough Ot to support this trade.
         // if otToAccount > 0 and totalOt - otToAccount <= 0 then the trade will fail
         // if otToAccount < 0 and totalOt > 0 then this will always pass
@@ -122,7 +136,7 @@ library MarketMathLib {
             uint256 rateScalar,
             uint256 totalCashUnderlying,
             int256 rateAnchor
-        ) = getExchangeRateFactors(market, timeToMaturity);
+        ) = getExchangeRateFactors(market, timeToExpiry);
 
         // Calculates the exchange rate from cash to Ot before any liquidity fees
         // are applied
@@ -144,7 +158,7 @@ library MarketMathLib {
             market.feeRateRoot,
             preFeeExchangeRate,
             otToAccount,
-            timeToMaturity,
+            timeToExpiry,
             market.reserveFeePercent
         );
 
@@ -157,7 +171,7 @@ library MarketMathLib {
                 (totalCashUnderlying.toInt() + netCash.toMarket).toUint(),
                 rateScalar,
                 rateAnchor,
-                timeToMaturity
+                timeToExpiry
             );
 
             // It's technically possible that the implied rate is actually exactly zero (or
@@ -181,7 +195,7 @@ library MarketMathLib {
     /// @return rateAnchor an offset from the x axis to maintain interest rate continuity over time
     // TODO: should we call the underlyingUnit to be accounting unit or cash?
     // TODO: convert all market.totalLyt.mulDown to a function
-    function getExchangeRateFactors(MarketParameters memory market, uint256 timeToMaturity)
+    function getExchangeRateFactors(MarketParameters memory market, uint256 timeToExpiry)
         internal
         pure
         returns (
@@ -190,7 +204,7 @@ library MarketMathLib {
             int256 rateAnchor
         )
     {
-        rateScalar = getRateScalar(market, timeToMaturity);
+        rateScalar = getRateScalar(market, timeToExpiry);
         totalCashUnderlying = market.totalLyt.mulDown(market.lytRate);
 
         require(market.totalOt != 0 && totalCashUnderlying != 0);
@@ -204,7 +218,7 @@ library MarketMathLib {
                 market.lastImpliedRate,
                 totalCashUnderlying,
                 rateScalar,
-                timeToMaturity
+                timeToExpiry
             );
         }
     }
@@ -217,7 +231,7 @@ library MarketMathLib {
         uint256 feeRateRoot,
         uint256 preFeeExchangeRate,
         int256 otToAccount,
-        uint256 timeToMaturity,
+        uint256 timeToExpiry,
         uint256 reserveFeePercent
     )
         private
@@ -229,13 +243,13 @@ library MarketMathLib {
         )
     {
         // Fees are specified in basis points which is an rate precision denomination. We convert this to
-        // an exchange rate denomination for the given time to maturity. (i.e. get e^(fee * t) and multiply
+        // an exchange rate denomination for the given time to expiry. (i.e. get e^(fee * t) and multiply
         // or divide depending on the side of the trade).
-        // tradeExchangeRate = exp((tradeInterestRateNoFee +/- fee) * timeToMaturity)
-        // tradeExchangeRate = tradeExchangeRateNoFee (* or /) exp(fee * timeToMaturity)
+        // tradeExchangeRate = exp((tradeInterestRateNoFee +/- fee) * timeToExpiry)
+        // tradeExchangeRate = tradeExchangeRateNoFee (* or /) exp(fee * timeToExpiry)
         // cash = ot / exchangeRate, exchangeRate > 1
         int256 preFeeCashToAccount = otToAccount.divDown(preFeeExchangeRate).neg();
-        uint256 feeRate = getExchangeRateFromImpliedRate(feeRateRoot, timeToMaturity);
+        uint256 feeRate = getExchangeRateFromImpliedRate(feeRateRoot, timeToExpiry);
         uint256 fee;
 
         if (otToAccount > 0) {
@@ -301,18 +315,18 @@ library MarketMathLib {
         netLytToAccount = netCashToAccount.divDown(market.lytRate);
     }
 
-    /// @notice Rate anchors update as the market gets closer to maturity. Rate anchors are not comparable
+    /// @notice Rate anchors update as the market gets closer to expiry. Rate anchors are not comparable
     /// across time or markets but implied rates are. The goal here is to ensure that the implied rate
     /// before and after the rate anchor update is the same. Therefore, the market will trade at the same implied
     /// rate that it last traded at. If these anchors do not update then it opens up the opportunity for arbitrage
     /// which will hurt the liquidity providers.
     ///
-    /// The rate anchor will update as the market rolls down to maturity. The calculation is:
-    /// newExchangeRate = e^(lastImpliedRate * timeToMaturity / Constants.IMPLIED_RATE_TIME)
+    /// The rate anchor will update as the market rolls down to expiry. The calculation is:
+    /// newExchangeRate = e^(lastImpliedRate * timeToExpiry / Constants.IMPLIED_RATE_TIME)
     /// newAnchor = newExchangeRate - ln((proportion / (1 - proportion)) / rateScalar
     ///
     /// where:
-    /// lastImpliedRate = ln(exchangeRate') * (Constants.IMPLIED_RATE_TIME / timeToMaturity')
+    /// lastImpliedRate = ln(exchangeRate') * (Constants.IMPLIED_RATE_TIME / timeToExpiry')
     ///      (calculated when the last trade in the market was made)
     /// @return rateAnchor the new rate anchor and a boolean that signifies success
     function _getRateAnchor(
@@ -320,10 +334,10 @@ library MarketMathLib {
         uint256 lastImpliedRate,
         uint256 totalCashUnderlying,
         uint256 rateScalar,
-        uint256 timeToMaturity
+        uint256 timeToExpiry
     ) internal pure returns (int256 rateAnchor) {
-        // This is the exchange rate at the new time to maturity
-        uint256 newExchangeRate = getExchangeRateFromImpliedRate(lastImpliedRate, timeToMaturity);
+        // This is the exchange rate at the new time to expiry
+        uint256 newExchangeRate = getExchangeRateFromImpliedRate(lastImpliedRate, timeToExpiry);
 
         require(newExchangeRate >= FixedPoint.ONE);
 
@@ -345,7 +359,7 @@ library MarketMathLib {
         uint256 totalCashUnderlying,
         uint256 rateScalar,
         int256 rateAnchor,
-        uint256 timeToMaturity
+        uint256 timeToExpiry
     ) internal pure returns (uint256 impliedRate) {
         // This will check for exchange rates < Constants.RATE_PRECISION
         uint256 exchangeRate = _getExchangeRate(
@@ -359,20 +373,20 @@ library MarketMathLib {
         uint256 lnRate = exchangeRate.toInt().ln().toUint();
 
         // lnRate * IMPLIED_RATE_TIME / ttm
-        impliedRate = (lnRate * IMPLIED_RATE_TIME) / timeToMaturity;
+        impliedRate = (lnRate * IMPLIED_RATE_TIME) / timeToExpiry;
 
         // TODO: Probably this is not necessary
         require(impliedRate <= type(uint32).max);
     }
 
-    /// @notice Converts an implied rate to an exchange rate given a time to maturity. The
+    /// @notice Converts an implied rate to an exchange rate given a time to expiry. The
     /// formula is E = e^rt
-    function getExchangeRateFromImpliedRate(uint256 impliedRate, uint256 timeToMaturity)
+    function getExchangeRateFromImpliedRate(uint256 impliedRate, uint256 timeToExpiry)
         internal
         pure
         returns (uint256 extRate)
     {
-        uint256 rt = (impliedRate * timeToMaturity) / IMPLIED_RATE_TIME;
+        uint256 rt = (impliedRate * timeToExpiry) / IMPLIED_RATE_TIME;
 
         extRate = LogExpMath.exp(rt.toInt()).toUint();
     }
@@ -424,12 +438,12 @@ library MarketMathLib {
         res = logitP.toInt().ln();
     }
 
-    function getRateScalar(MarketParameters memory market, uint256 timeToMaturity)
+    function getRateScalar(MarketParameters memory market, uint256 timeToExpiry)
         internal
         pure
         returns (uint256 rateScalar)
     {
-        rateScalar = (market.scalarRoot * IMPLIED_RATE_TIME) / timeToMaturity;
+        rateScalar = (market.scalarRoot * IMPLIED_RATE_TIME) / timeToExpiry;
         require(rateScalar > 0); // dev: rate scalar underflow
     }
 }

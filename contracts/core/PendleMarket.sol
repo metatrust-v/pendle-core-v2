@@ -22,7 +22,6 @@ contract PendleMarket is PendleBaseToken, IPMarket {
     // careful, the reserve of the market shouldn't be interferred by external factors
     // maybe convert all time to uint32?
     // do the stateful & view stuff?
-    // consider not using ERC20 to pack variables into struct
     string private constant NAME = "Pendle Market";
     string private constant SYMBOL = "PENDLE-LPT";
     uint256 private constant MINIMUM_LIQUIDITY = 10**3;
@@ -32,16 +31,10 @@ contract PendleMarket is PendleBaseToken, IPMarket {
     address public immutable OT;
     address public immutable LYT;
 
-    uint256 public reserveOT;
-    uint256 public reserveLYT;
-
     uint256 public immutable scalarRoot;
-    uint256 public immutable feeRateRoot; // allow fee to be changable
+    uint256 public immutable feeRateRoot; // allow fee to be changable?
+    int256 public immutable anchorRoot;
     uint8 public immutable reserveFeePercent;
-
-    int256 public savedAnchorRate;
-    uint256 public start;
-    uint256 public savedIntRate;
 
     MarketStorage public _marketState;
 
@@ -56,35 +49,27 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         LYT = IPOwnershipToken(_OT).LYT();
         feeRateRoot = _feeRateRoot;
         scalarRoot = _scalarRoot;
-        savedAnchorRate = _anchorRoot;
         reserveFeePercent = _reserveFeePercent;
+        anchorRoot = _anchorRoot;
     }
 
-    function mint(
-        address recipient,
-        uint256 lytDesired,
-        uint256 otDesired
-    )
-        external
-        returns (
-            uint256 lpToUser,
-            uint256 lytNeed,
-            uint256 otNeed
-        )
-    {
+    function mint(address recipient) external returns (uint256 lpToUser) {
         MarketParameters memory market;
         _readState(market);
 
-        uint256 lpToReserve;
-        (lpToReserve, lpToUser, lytNeed, otNeed) = market.addLiquidity(lytDesired, otDesired);
+        uint256 lytDesired = _selfBalance(LYT) - market.totalLyt;
+        uint256 otDesired = _selfBalance(OT) - market.totalOt;
 
+        uint256 lpToReserve;
+        (lpToReserve, lpToUser, , ) = market.addLiquidity(lytDesired, otDesired);
+
+        // initializing the market
         if (lpToReserve != 0) {
+            market.setInitialImpliedRate(market.expiry - block.timestamp);
             _mint(address(1), lpToReserve);
         }
 
         _mint(recipient, lpToUser);
-        // TODO: add callback to router
-
         _writeAndVerifyState(market);
     }
 
@@ -100,7 +85,6 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         IERC20(LYT).transfer(recipient, lytOut);
         IERC20(OT).transfer(recipient, otOut);
 
-        // TODO: no callback here, but there are callbacks at other functions
         _writeAndVerifyState(market);
     }
 
@@ -164,6 +148,7 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         market.lytRate = IPLiquidYieldToken(LYT).exchangeRateCurrent();
         market.feeRateRoot = feeRateRoot;
         market.reserveFeePercent = reserveFeePercent;
+        market.anchorRoot = anchorRoot;
     }
 
     function _writeAndVerifyState(MarketParameters memory market) internal {
@@ -176,5 +161,9 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         store.totalOt = market.totalOt.toUint128();
         store.totalLyt = market.totalLyt.toUint128();
         store.lastImpliedRate = market.lastImpliedRate.toUint32();
+    }
+
+    function _selfBalance(address token) internal view returns (uint256) {
+        return IERC20(token).balanceOf(address(this));
     }
 }
