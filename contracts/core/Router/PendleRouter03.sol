@@ -50,9 +50,10 @@ contract PendleRouter03 is PendleRouterBase {
         uint256 amountYTOut,
         address recipient
     ) external returns (uint256 amountLYTIn) {
-        (, bytes memory res) = IPMarket(market).swapLYTForExactOT(
+        int256 amountOTToAccount = amountYTOut.toInt();
+        (, bytes memory res) = IPMarket(market).swap(
             address(this),
-            amountYTOut,
+            amountOTToAccount,
             abi.encode(
                 Mode.LYTtoYT,
                 DataLYTforExactYT({
@@ -72,9 +73,10 @@ contract PendleRouter03 is PendleRouterBase {
         address recipient
     ) external returns (uint256 amountLYTOut) {
         // amountOTOut = amountYTIn
-        (, bytes memory res) = IPMarket(market).swapLYTForExactOT(
+        int256 amountOTToAccount = amountYTIn.toInt().neg();
+        (, bytes memory res) = IPMarket(market).swap(
             address(this),
-            amountYTIn,
+            amountOTToAccount,
             abi.encode(
                 Mode.YTtoLYT,
                 DataExactYTforLYT({

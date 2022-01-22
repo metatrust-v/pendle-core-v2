@@ -87,44 +87,11 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         _writeAndVerifyState(market);
     }
 
-    function swapExactOTForLYT(
-        address recipient,
-        uint256 otIn,
-        bytes calldata cbData
-    ) external returns (uint256 lytOut, bytes memory cbRes) {
-        int256 lytToAccount;
-        (lytToAccount, cbRes) = _swap(recipient, otIn.toInt().neg(), cbData);
-        lytOut = lytToAccount.toUint();
-    }
-
-    function swapLYTForExactOT(
-        address recipient,
-        uint256 otOut,
-        bytes calldata cbData
-    ) external returns (uint256 lytOut, bytes memory cbRes) {
-        int256 lytToAccount;
-        (lytToAccount, cbRes) = _swap(recipient, otOut.toInt(), cbData);
-        lytOut = lytToAccount.neg().toUint();
-    }
-
-    function readState() public returns (MarketParameters memory market) {
-        MarketStorage storage store = _marketState;
-        market.expiry = expiry;
-        market.totalOt = store.totalOt;
-        market.totalLyt = store.totalLyt;
-        market.totalLp = totalSupply();
-        market.lastImpliedRate = store.lastImpliedRate;
-        market.lytRate = IPLiquidYieldToken(LYT).exchangeRateCurrent();
-        market.feeRateRoot = feeRateRoot;
-        market.reserveFeePercent = reserveFeePercent;
-        market.anchorRoot = anchorRoot;
-    }
-
-    function _swap(
+    function swap(
         address recipient,
         int256 otToAccount,
         bytes calldata cbData
-    ) internal returns (int256 netLytToAccount, bytes memory cbRes) {
+    ) external returns (int256 netLytToAccount, bytes memory cbRes) {
         require(block.timestamp < expiry, "MARKET_EXPIRED");
 
         MarketParameters memory market = readState();
@@ -147,6 +114,19 @@ contract PendleMarket is PendleBaseToken, IPMarket {
 
         IERC20(LYT).transfer(IPMarketFactory(factory).treasury(), netLytToReserve);
         _writeAndVerifyState(market);
+    }
+
+    function readState() public returns (MarketParameters memory market) {
+        MarketStorage storage store = _marketState;
+        market.expiry = expiry;
+        market.totalOt = store.totalOt;
+        market.totalLyt = store.totalLyt;
+        market.totalLp = totalSupply();
+        market.lastImpliedRate = store.lastImpliedRate;
+        market.lytRate = IPLiquidYieldToken(LYT).exchangeRateCurrent();
+        market.feeRateRoot = feeRateRoot;
+        market.reserveFeePercent = reserveFeePercent;
+        market.anchorRoot = anchorRoot;
     }
 
     function _writeAndVerifyState(MarketParameters memory market) internal {

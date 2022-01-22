@@ -9,17 +9,11 @@ interface IPMarket is IPBaseToken {
 
     function removeLiquidity(address recipient) external returns (uint256 lytOut, uint256 otOut);
 
-    function swapExactOTForLYT(
+    function swap(
         address recipient,
-        uint256 amountOTIn,
+        int256 otToAccount,
         bytes calldata cbData
-    ) external returns (uint256 amountLYTOut, bytes memory cbRes);
-
-    function swapLYTForExactOT(
-        address recipient,
-        uint256 amountOTOut,
-        bytes calldata cbData
-    ) external returns (uint256 amountLYTIn, bytes memory cbRes);
+    ) external returns (int256 netLytToAccount, bytes memory cbRes);
 
     function readState() external returns (MarketParameters memory market);
 

@@ -68,11 +68,13 @@ contract PendleRouterCore is PendleRouterBase {
         uint256 amountOTIn,
         uint256 minAmountLYTOut
     ) public returns (uint256 amountLYTOut) {
-        (amountLYTOut, ) = IPMarket(market).swapExactOTForLYT(
+        int256 amountOTToAccount = amountOTIn.toInt().neg();
+        (int256 amountLYTToAccount, ) = IPMarket(market).swap(
             recipient,
-            amountOTIn,
+            amountOTToAccount,
             abi.encode(msg.sender)
         );
+        amountLYTOut = amountLYTToAccount.toUint();
         require(amountLYTOut >= minAmountLYTOut, "INSUFFICIENT_LYT_OUT");
     }
 
@@ -82,12 +84,13 @@ contract PendleRouterCore is PendleRouterBase {
         uint256 amountOTOut,
         uint256 maxAmountLYTIn
     ) public returns (uint256 amountLYTIn) {
-        (amountLYTIn, ) = IPMarket(market).swapLYTForExactOT(
+        int256 amountOTToAccount = amountOTOut.toInt();
+        (int256 amountLYTToAccount, ) = IPMarket(market).swap(
             recipient,
-            amountOTOut,
+            amountOTToAccount,
             abi.encode(msg.sender)
         );
-
+        amountLYTIn = amountLYTToAccount.neg().toUint();
         require(amountLYTIn <= maxAmountLYTIn, "LYT_IN_LIMIT_EXCEEDED");
     }
 }
