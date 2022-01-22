@@ -12,12 +12,12 @@ contract PendleRouter01 {
         uint256 amountBaseTokenIn,
         address LYT,
         uint256 minAmountLYTOut,
-        address receipient,
+        address recipient,
         bytes calldata data
     ) public returns (uint256 amountLYTOut) {
         IERC20(baseToken).safeTransferFrom(msg.sender, address(this), amountBaseTokenIn);
         amountLYTOut = IPLiquidYieldToken(LYT).mintFromBaseToken(
-            receipient,
+            recipient,
             baseToken,
             amountBaseTokenIn,
             minAmountLYTOut,
@@ -30,12 +30,12 @@ contract PendleRouter01 {
         uint256 amountLYTIn,
         address baseToken,
         uint256 minAmountBaseTokenOut,
-        address receipient,
+        address recipient,
         bytes calldata data
     ) public returns (uint256 amountBaseTokenOut) {
         IERC20(LYT).safeTransferFrom(msg.sender, address(this), amountLYTIn);
         amountBaseTokenOut = IPLiquidYieldToken(LYT).burnToBaseToken(
-            receipient,
+            recipient,
             baseToken,
             amountLYTIn,
             minAmountBaseTokenOut,

@@ -22,7 +22,8 @@ contract PendleMarketFactory is PermissionsV2 {
         address OT,
         uint256 feeRateRoot,
         uint256 scalarRoot,
-        int256 anchorRoot
+        int256 anchorRoot,
+        uint8 reserveFeePercent
     ) external returns (address market) {
         address LYT = IPOwnershipToken(OT).LYT();
         uint256 expiry = IPOwnershipToken(OT).expiry();
@@ -32,7 +33,9 @@ contract PendleMarketFactory is PermissionsV2 {
             "INVALID_OT"
         );
 
-        market = address(new PendleMarket(OT, feeRateRoot, scalarRoot, anchorRoot));
+        market = address(
+            new PendleMarket(OT, feeRateRoot, scalarRoot, anchorRoot, reserveFeePercent)
+        );
         OTmarkets[address(OT)].add(market);
     }
 

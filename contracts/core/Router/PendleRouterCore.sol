@@ -28,13 +28,13 @@ contract PendleRouterCore is PendleRouterBase {
     }
 
     function swapExactOTForLYT(
-        address receipient,
+        address recipient,
         address market,
         uint256 amountOTIn,
         uint256 minAmountLYTOut
     ) public returns (uint256 amountLYTOut) {
         (amountLYTOut, ) = IPMarket(market).swapExactOTForLYT(
-            receipient,
+            recipient,
             amountOTIn,
             abi.encode(msg.sender)
         );
@@ -42,13 +42,13 @@ contract PendleRouterCore is PendleRouterBase {
     }
 
     function swapLYTForExactOT(
-        address receipient,
+        address recipient,
         address market,
         uint256 amountOTOut,
         uint256 maxAmountLYTIn
     ) public returns (uint256 amountLYTIn) {
         (amountLYTIn, ) = IPMarket(market).swapLYTForExactOT(
-            receipient,
+            recipient,
             amountOTOut,
             abi.encode(msg.sender)
         );

@@ -13,13 +13,13 @@ contract PendleRouter03 is PendleRouterBase {
     using FixedPoint for int256;
 
     struct DataLYTforExactYT {
-        address receipient;
+        address recipient;
         address orgSender;
         uint256 maxAmountLYTIn;
     }
 
     struct DataExactYTforLYT {
-        address receipient;
+        address recipient;
         address orgSender;
         uint256 minAmountLYTOut;
     }
@@ -48,7 +48,7 @@ contract PendleRouter03 is PendleRouterBase {
         address market,
         uint256 maxAmountLYTIn,
         uint256 amountYTOut,
-        address receipient
+        address recipient
     ) external returns (uint256 amountLYTIn) {
         (, bytes memory res) = IPMarket(market).swapLYTForExactOT(
             address(this),
@@ -56,7 +56,7 @@ contract PendleRouter03 is PendleRouterBase {
             abi.encode(
                 Mode.LYTtoYT,
                 DataLYTforExactYT({
-                    receipient: receipient,
+                    recipient: recipient,
                     orgSender: msg.sender,
                     maxAmountLYTIn: maxAmountLYTIn
                 })
@@ -69,7 +69,7 @@ contract PendleRouter03 is PendleRouterBase {
         address market,
         uint256 amountYTIn,
         uint256 minAmountLYTOut,
-        address receipient
+        address recipient
     ) external returns (uint256 amountLYTOut) {
         // amountOTOut = amountYTIn
         (, bytes memory res) = IPMarket(market).swapLYTForExactOT(
@@ -78,7 +78,7 @@ contract PendleRouter03 is PendleRouterBase {
             abi.encode(
                 Mode.YTtoLYT,
                 DataExactYTforLYT({
-                    receipient: receipient,
+                    recipient: recipient,
                     orgSender: msg.sender,
                     minAmountLYTOut: minAmountLYTOut
                 })
@@ -111,7 +111,7 @@ contract PendleRouter03 is PendleRouterBase {
         // payback OT to the market
         market.OT.transfer(marketAddr, amountOTRecieved);
         // transfer YT out to user
-        market.YT.transfer(data.receipient, amountOTRecieved);
+        market.YT.transfer(data.recipient, amountOTRecieved);
 
         res = abi.encode(amountLYTToPull);
     }
@@ -139,7 +139,7 @@ contract PendleRouter03 is PendleRouterBase {
         require(amountLYTOutToUser >= data.minAmountLYTOut, "INSUFFICIENT_LYT_OUT");
 
         market.LYT.transfer(marketAddr, amountLYTIn);
-        market.LYT.transfer(data.receipient, amountLYTOutToUser);
+        market.LYT.transfer(data.recipient, amountLYTOutToUser);
 
         res = abi.encode(amountLYTOutToUser);
     }

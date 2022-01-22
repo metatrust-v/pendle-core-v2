@@ -5,13 +5,13 @@ import "./IPBaseToken.sol";
 
 interface IPMarket is IPBaseToken {
     function swapExactOTForLYT(
-        address receipient,
+        address recipient,
         uint256 amountOTIn,
         bytes calldata cbData
     ) external returns (uint256 amountLYTOut, bytes memory cbRes);
 
     function swapLYTForExactOT(
-        address receipient,
+        address recipient,
         uint256 amountOTOut,
         bytes calldata cbData
     ) external returns (uint256 amountLYTIn, bytes memory cbRes);

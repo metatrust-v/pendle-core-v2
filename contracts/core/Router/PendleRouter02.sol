@@ -14,7 +14,7 @@ contract PendleRouter02 is PendleRouter01, PendleRouterCore {
         address baseToken,
         uint256 amountBaseTokenIn,
         uint256 amountOTOut,
-        address receipient,
+        address recipient,
         bytes calldata data
     ) external {
         address LYT = IPMarket(market).LYT();
@@ -28,12 +28,7 @@ contract PendleRouter02 is PendleRouter01, PendleRouterCore {
             data
         );
 
-        uint256 amountLYTIn = swapLYTForExactOT(
-            receipient,
-            market,
-            amountOTOut,
-            amountLYTReceived
-        );
+        uint256 amountLYTIn = swapLYTForExactOT(recipient, market, amountOTOut, amountLYTReceived);
         assert(amountLYTIn == amountLYTReceived);
     }
 
@@ -42,7 +37,7 @@ contract PendleRouter02 is PendleRouter01, PendleRouterCore {
         uint256 amountOTIn,
         address baseToken,
         uint256 minAmountBaseTokenOut,
-        address receipient,
+        address recipient,
         bytes calldata data
     ) external returns (uint256 amountBaseTokenOut) {
         address LYT = IPMarket(market).LYT();
@@ -53,7 +48,7 @@ contract PendleRouter02 is PendleRouter01, PendleRouterCore {
             amountLYTReceived,
             baseToken,
             minAmountBaseTokenOut,
-            receipient,
+            recipient,
             data
         );
     }
