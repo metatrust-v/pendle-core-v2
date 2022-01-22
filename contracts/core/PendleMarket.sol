@@ -54,9 +54,8 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         anchorRoot = _anchorRoot;
     }
 
-    function mint(address recipient) external returns (uint256 lpToUser) {
-        MarketParameters memory market;
-        _readState(market);
+    function addLiquidity(address recipient) external returns (uint256 lpToUser) {
+        MarketParameters memory market = readState();
 
         uint256 lytDesired = _selfBalance(LYT) - market.totalLyt;
         uint256 otDesired = _selfBalance(OT) - market.totalOt;
@@ -74,9 +73,8 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         _writeAndVerifyState(market);
     }
 
-    function burn(address recipient) external returns (uint256 lytOut, uint256 otOut) {
-        MarketParameters memory market;
-        _readState(market);
+    function removeLiquidity(address recipient) external returns (uint256 lytOut, uint256 otOut) {
+        MarketParameters memory market = readState();
 
         uint256 lpToRemove = balanceOf(address(this));
 
@@ -109,6 +107,19 @@ contract PendleMarket is PendleBaseToken, IPMarket {
         lytOut = lytToAccount.neg().toUint();
     }
 
+    function readState() public returns (MarketParameters memory market) {
+        MarketStorage storage store = _marketState;
+        market.expiry = expiry;
+        market.totalOt = store.totalOt;
+        market.totalLyt = store.totalLyt;
+        market.totalLp = totalSupply();
+        market.lastImpliedRate = store.lastImpliedRate;
+        market.lytRate = IPLiquidYieldToken(LYT).exchangeRateCurrent();
+        market.feeRateRoot = feeRateRoot;
+        market.reserveFeePercent = reserveFeePercent;
+        market.anchorRoot = anchorRoot;
+    }
+
     function _swap(
         address recipient,
         int256 otToAccount,
@@ -116,8 +127,7 @@ contract PendleMarket is PendleBaseToken, IPMarket {
     ) internal returns (int256 netLytToAccount, bytes memory cbRes) {
         require(block.timestamp < expiry, "MARKET_EXPIRED");
 
-        MarketParameters memory market;
-        _readState(market);
+        MarketParameters memory market = readState();
 
         uint256 netLytToReserve;
 
@@ -137,19 +147,6 @@ contract PendleMarket is PendleBaseToken, IPMarket {
 
         IERC20(LYT).transfer(IPMarketFactory(factory).treasury(), netLytToReserve);
         _writeAndVerifyState(market);
-    }
-
-    function _readState(MarketParameters memory market) internal {
-        MarketStorage storage store = _marketState;
-        market.expiry = expiry;
-        market.totalOt = store.totalOt;
-        market.totalLyt = store.totalLyt;
-        market.totalLp = totalSupply();
-        market.lastImpliedRate = store.lastImpliedRate;
-        market.lytRate = IPLiquidYieldToken(LYT).exchangeRateCurrent();
-        market.feeRateRoot = feeRateRoot;
-        market.reserveFeePercent = reserveFeePercent;
-        market.anchorRoot = anchorRoot;
     }
 
     function _writeAndVerifyState(MarketParameters memory market) internal {

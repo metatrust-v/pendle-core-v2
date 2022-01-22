@@ -8,6 +8,7 @@ import "../Base/PendleRouterBase.sol";
 contract PendleRouterCore is PendleRouterBase {
     using FixedPoint for uint256;
     using FixedPoint for int256;
+    using MarketMathLib for MarketParameters;
 
     constructor(address _marketFactory) PendleRouterBase(_marketFactory) {}
 
@@ -25,6 +26,40 @@ contract PendleRouterCore is PendleRouterBase {
         }
         // encode nothing
         cbRes = abi.encode();
+    }
+
+    function addLiquidity(
+        address recipient,
+        address market,
+        uint256 amountOTDesired,
+        uint256 amountLYTDesired
+    )
+        external
+        returns (
+            uint256 lpOut,
+            uint256 amountOTUsed,
+            uint256 amountLYTUsed
+        )
+    {
+        MarketParameters memory marketState = IPMarket(market).readState();
+        (, lpOut, amountLYTUsed, amountOTUsed) = marketState.addLiquidity(
+            amountLYTDesired,
+            amountOTDesired
+        );
+        IPMarket _market = IPMarket(msg.sender);
+        IERC20(_market.OT()).transferFrom(msg.sender, market, amountOTUsed);
+        IERC20(_market.LYT()).transferFrom(msg.sender, market, amountLYTUsed);
+        _market.addLiquidity(recipient);
+    }
+
+    function removeLiquidity(
+        address recipient,
+        address market,
+        uint256 amountLpToRemove
+    ) external returns (uint256 amountOTOut, uint256 amountLYTOut) {
+        IPMarket _market = IPMarket(msg.sender);
+        _market.transferFrom(msg.sender, market, amountLpToRemove);
+        (amountLYTOut, amountOTOut) = _market.removeLiquidity(recipient);
     }
 
     function swapExactOTForLYT(
