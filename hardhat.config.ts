@@ -61,7 +61,7 @@ const config: HardhatUserConfig = {
                     balance: '1000000000000000000000000000000000000',
                 },
             ],
-            allowUnlimitedContractSize: true,
+            allowUnlimitedContractSize: false,
             blockGasLimit: 800000000000000,
             gas: 80000000,
             loggingEnabled: false,
