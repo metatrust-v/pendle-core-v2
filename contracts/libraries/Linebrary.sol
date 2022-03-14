@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 pragma abicoder v2;
 
@@ -37,12 +38,7 @@ library LineHelper {
         res = LineHelper.getValueAt(a, block.timestamp);
     }
 
-    function getExpiry(Line memory a) internal view returns (uint256 res) {
+    function getExpiry(Line memory a) internal pure returns (uint256 res) {
         return a.bias / a.slope;
-    }
-
-    function normalize(Line memory a) internal view returns (Line memory res) {
-        res.slope = a.slope;
-        res.bias = a.bias - (a.bias % a.slope);
     }
 }
