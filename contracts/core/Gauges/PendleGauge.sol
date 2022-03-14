@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (token/ERC20/ERC20.sol)
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 import "./EpochController.sol";
 import "../../libraries/math/FixedPoint.sol";
