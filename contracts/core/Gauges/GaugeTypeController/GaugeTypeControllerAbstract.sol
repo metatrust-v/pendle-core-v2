@@ -51,6 +51,9 @@ contract GaugeTypeControllerAbstract is Ownable, EpochController {
         }
     }
 
+    /**
+     * @TODO: This function's logic is undone and will need more decisions. 
+     */ 
     function getRewardIncentivized(
         address gauge,
         uint256 from,

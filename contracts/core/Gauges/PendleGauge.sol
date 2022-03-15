@@ -37,7 +37,7 @@ contract PendleGauge is EpochController {
     }
 
     GlobalInfo public rewardInfo;
-    mapping(address => UserInfo) public users;
+    mapping(address => UserInfo) public userInfos;
 
     constructor(
         IERC20 _lpToken,
@@ -71,12 +71,12 @@ contract PendleGauge is EpochController {
         UserInfo memory userRwd = _updateUserRewardIndex(user);
         if (userRwd.rewardAccrued > 0) {
             pendle.safeTransferFrom(address(controller), user, userRwd.rewardAccrued);
-            users[user].rewardAccrued = 0;
+            userInfos[user].rewardAccrued = 0;
         }
     }
 
     function _updateUserBalance(address user, uint256 newBalance) internal {
-        UserInfo memory userRwd = users[user];
+        UserInfo memory userRwd = userInfos[user];
         uint256 supplyLp = lpToken.balanceOf(user);
         userRwd.lpBalance = newBalance;
 
@@ -88,7 +88,7 @@ contract PendleGauge is EpochController {
             userRwd.workingBalance = userRwd.lpBalance;
         }
 
-        users[user] = userRwd;
+        userInfos[user] = userRwd;
     }
 
     function _consumeLpToken() internal returns (uint256) {
@@ -112,11 +112,11 @@ contract PendleGauge is EpochController {
 
     function _updateUserRewardIndex(address user) internal returns (UserInfo memory userRwd) {
         GlobalInfo memory rwdInfo = _updateGlobalRewardInfo();
-        userRwd = users[user];
+        userRwd = userInfos[user];
         userRwd.rewardAccrued += (rwdInfo.rewardIndex - userRwd.lastRewardIndex).mulDown(
             userRwd.workingBalance
         );
         userRwd.lastRewardIndex = rwdInfo.rewardIndex;
-        users[user] = userRwd;
+        userInfos[user] = userRwd;
     }
 }
