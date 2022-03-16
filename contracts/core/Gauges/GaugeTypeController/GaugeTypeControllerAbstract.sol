@@ -23,15 +23,21 @@ contract GaugeTypeControllerAbstract is Ownable, EpochController {
     IERC20 public immutable pendle;
     uint256 public pendlePerSec;
 
+    uint256 public globalRewardIndex;
+    uint256 public lastTimestamp;
+    uint256 public totalVePendleVoted;
+
+    // mapping[gauge]
+    mapping(address => uint256) public accumulatedReward;
+    mapping(address => uint256) public votesForGauge;
+    mapping(address => uint256) public gaugeRewardIndex;
+
     constructor(IERC20 _pendle, uint256 _startTime) EpochController(_startTime) {
         pendle = _pendle;
+        lastTimestamp = startTime;
     }
 
-    mapping(address => bool) public isGaugeValid;
-    mapping(address => mapping(uint256 => uint256)) public gaugeEpochIncentives;
-
     function setGaugeValidity(address gauge, bool validity) external onlyOwner {
-        isGaugeValid[gauge] = validity;
         pendle.approve(gauge, validity ? type(uint256).max : 0);
     }
 
@@ -41,34 +47,27 @@ contract GaugeTypeControllerAbstract is Ownable, EpochController {
 
     function _setVotingResults(address[] memory gauges, uint256[] memory votes) internal {
         require(gauges.length == votes.length, "INVALID_VOTING_RESULTS");
-        uint256 currentEpoch = getEpochId(block.timestamp);
-        uint256 totalVotes = 0;
-        for (uint256 i = 0; i < votes.length; ++i) {
-            totalVotes += votes[i];
-        }
+        _updateGlobalReward();
         for (uint256 i = 0; i < gauges.length; ++i) {
-            gaugeEpochIncentives[gauges[i]][currentEpoch] = (pendlePerSec * votes[i]) / totalVotes;
+            _setSingleVotingResult(gauges[i], votes[i]);
         }
     }
 
-    /**
-     * @TODO: This function's logic is undone and will need more decisions. 
-     */ 
-    function getRewardIncentivized(
-        address gauge,
-        uint256 from,
-        uint256 to
-    ) public view returns (uint256) {
-        if (to < startTime) return 0;
-        from = Math.max(from, startTime);
-        uint256 totalReward = 0;
-        uint256 startEpoch = getEpochId(from);
-        uint256 endEpoch = getEpochId(to);
-        for (uint256 epoch = startEpoch; epoch <= endEpoch; ++epoch) {
-            uint256 l = Math.max(getEpochStartingTimestamp(epoch), from);
-            uint256 r = Math.min(getEpochEndingTimestamp(epoch), to);
-            totalReward += gaugeEpochIncentives[gauge][epoch] * (r - l);
-        }
-        return totalReward;
+    function _setSingleVotingResult(address gauge, uint256 vote) internal {
+        accumulatedReward[gauge] += votesForGauge[gauge].mulDown(
+            globalRewardIndex - gaugeRewardIndex[gauge]
+        );
+        gaugeRewardIndex[gauge] = globalRewardIndex;
+        totalVePendleVoted = totalVePendleVoted + vote - votesForGauge[gauge];
+        votesForGauge[gauge] = vote;
+    }
+
+    function _updateGlobalReward() internal {
+        if (totalVePendleVoted == 0 || block.timestamp < startTime) return;
+        assert(block.timestamp <= lastTimestamp);
+        globalRewardIndex += ((lastTimestamp - block.timestamp) * pendlePerSec).divUp(
+            totalVePendleVoted
+        );
+        lastTimestamp = block.timestamp;
     }
 }

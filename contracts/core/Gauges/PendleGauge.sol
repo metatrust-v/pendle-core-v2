@@ -33,7 +33,7 @@ contract PendleGauge is EpochController {
         uint256 supplyLp;
         uint256 supplyWorking;
         uint256 rewardIndex;
-        uint256 lastTimestamp;
+        uint256 lastAccumulatedReward;
     }
 
     GlobalInfo public rewardInfo;
@@ -98,20 +98,18 @@ contract PendleGauge is EpochController {
         return amount;
     }
 
-    function _updateGlobalRewardInfo() internal returns (GlobalInfo memory rwdInfo) {
+    function _updateGlobalRewardIndex() internal returns (GlobalInfo memory rwdInfo) {
         rwdInfo = rewardInfo;
-        uint256 rewardIncentivized = controller.getRewardIncentivized(
-            address(this),
-            rwdInfo.lastTimestamp,
-            block.timestamp
+        uint256 accumulatedReward = controller.accumulatedReward(address(this));
+        rwdInfo.rewardIndex += (accumulatedReward - rwdInfo.lastAccumulatedReward).divUp(
+            rwdInfo.supplyWorking
         );
-        rwdInfo.lastTimestamp = block.timestamp;
-        rwdInfo.rewardIndex += rewardIncentivized.divUp(rwdInfo.supplyWorking);
+        rwdInfo.lastAccumulatedReward = accumulatedReward;
         rewardInfo = rwdInfo;
     }
 
     function _updateUserRewardIndex(address user) internal returns (UserInfo memory userRwd) {
-        GlobalInfo memory rwdInfo = _updateGlobalRewardInfo();
+        GlobalInfo memory rwdInfo = _updateGlobalRewardIndex();
         userRwd = userInfos[user];
         userRwd.rewardAccrued += (rwdInfo.rewardIndex - userRwd.lastRewardIndex).mulDown(
             userRwd.workingBalance
