@@ -14,8 +14,9 @@ abstract contract vePendleToken is IVEPendleToken, EpochController {
         uint256 timestamp;
     }
 
-    mapping(address => Line) public userLock;
+    address public constant ZERO_ADDRESS = address(0);
 
+    mapping(address => Line) public userLock;
     Line public supply;
     uint256 public lastEpoch;
     mapping(uint256 => uint256) public expiredVotes;
@@ -23,36 +24,22 @@ abstract contract vePendleToken is IVEPendleToken, EpochController {
     Checkpoint[] public supplyCheckpoints;
     mapping(address => Checkpoint[]) public userCheckpoints;
 
+    mapping(address => address) public delegatorOf;
+    mapping(address => address) public delegateeOf;
+
     function balanceOf(address user) public view returns (uint256) {
+        if (delegatorOf[user] != ZERO_ADDRESS) {
+            return userLock[delegatorOf[user]].getCurrentBalance();
+        }
+        if (delegateeOf[user] != ZERO_ADDRESS) {
+            return 0;
+        }
         return userLock[user].getCurrentBalance();
-    }
-
-    function _afterSetBalance(address user) internal virtual {}
-
-    function _setUserBalance(address user, Line memory newLine) internal {
-        _updateSupply();
-        Line memory oldLine = userLock[user];
-        expiredVotes[oldLine.getExpiry()] -= oldLine.slope;
-        expiredVotes[newLine.getExpiry()] += newLine.slope;
-        userLock[user] = newLine;
-        supply = supply.sub(oldLine).add(newLine);
-        userCheckpoints[user].push(Checkpoint(newLine, block.timestamp));
-        supplyCheckpoints.push(Checkpoint(supply, block.timestamp));
-        _afterSetBalance(user);
     }
 
     function totalSupply() public returns (uint256) {
         _updateSupply();
         return supply.getCurrentBalance();
-    }
-
-    function _updateSupply() internal {
-        uint256 nextEpochEnd = getEpochEndingTimestamp(lastEpoch + 1);
-        for (uint256 t = nextEpochEnd; t < block.timestamp; t += EPOCH_DURATION) {
-            uint256 expiredSlope = expiredVotes[t];
-            supply = supply.sub(Line(expiredSlope, expiredSlope * t));
-            lastEpoch += 1;
-        }
     }
 
     function getCheckpointAt(Checkpoint[] memory checkpoints, uint256 timestamp)
@@ -91,5 +78,42 @@ abstract contract vePendleToken is IVEPendleToken, EpochController {
             checkpoint.value = checkpoint.value.sub(Line(slope, slope * i));
         }
         return checkpoint.value.getValueAt(timestamp);
+    }
+
+    function delegateTo(address user) external {
+        address delegator = msg.sender;
+        address lastDelegatee = delegateeOf[user];
+        if (lastDelegatee != ZERO_ADDRESS && delegatorOf[lastDelegatee] == delegator) {
+            delegatorOf[lastDelegatee] = ZERO_ADDRESS;
+        }
+        delegateeOf[delegator] = user;
+    }
+
+    function acceptDelegation(address user) external {
+        require(delegateeOf[user] == msg.sender);
+        delegatorOf[msg.sender] = user;
+    }
+
+    function _afterSetBalance(address user) internal virtual {}
+
+    function _setUserBalance(address user, Line memory newLine) internal {
+        _updateSupply();
+        Line memory oldLine = userLock[user];
+        expiredVotes[oldLine.getExpiry()] -= oldLine.slope;
+        expiredVotes[newLine.getExpiry()] += newLine.slope;
+        userLock[user] = newLine;
+        supply = supply.sub(oldLine).add(newLine);
+        userCheckpoints[user].push(Checkpoint(newLine, block.timestamp));
+        supplyCheckpoints.push(Checkpoint(supply, block.timestamp));
+        _afterSetBalance(user);
+    }
+
+    function _updateSupply() internal {
+        uint256 nextEpochEnd = getEpochEndingTimestamp(lastEpoch + 1);
+        for (uint256 t = nextEpochEnd; t < block.timestamp; t += EPOCH_DURATION) {
+            uint256 expiredSlope = expiredVotes[t];
+            supply = supply.sub(Line(expiredSlope, expiredSlope * t));
+            lastEpoch += 1;
+        }
     }
 }
