@@ -13,7 +13,10 @@ contract vePendleCrosschain is vePendleToken, CrosschainReceiver {
     }
 
     function _afterReceiveData(bytes memory data) internal override {
-        (address user, uint256 slope, uint256 bias) = abi.decode(data, (address, uint256, uint256));
+        (address user, uint256 slope, uint256 bias) = abi.decode(
+            data,
+            (address, uint256, uint256)
+        );
         _setUserBalance(user, Line(slope, bias));
     }
 }
