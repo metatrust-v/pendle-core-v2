@@ -27,6 +27,7 @@ const config: HardhatUserConfig = {
     },
     networks: {
         hardhat: {
+            chainId: 43114,
             forking: {
                 url: `https://api.avax.network/ext/bc/C/rpc`,
                 blockNumber: 8311876
@@ -102,6 +103,15 @@ const config: HardhatUserConfig = {
             },
             {
                 version: '0.6.12',
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 200,
+                    },
+                },
+            },
+            {
+                version: '0.5.17',
                 settings: {
                     optimizer: {
                         enabled: true,
