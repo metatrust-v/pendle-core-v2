@@ -1,0 +1,3 @@
+[submodule "contracts/protocols/benqi"]
+	path = contracts/protocols/benqi
+	url = https://github.com/Benqi-fi/BENQI-Smart-Contracts
