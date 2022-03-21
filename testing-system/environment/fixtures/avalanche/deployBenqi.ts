@@ -110,8 +110,11 @@ export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
     env.aconsts.tokens.WNATIVE.address
   ]);
 
+  const qiLyt: BenqiLyt = new BenqiLyt(lyt);
+  await qiLyt.initialize();
+
   return {
     qiUSDC: qiUSD as any as QiErc20,
-    qiLyt: new BenqiLyt(lyt)
+    qiLyt: qiLyt
   };
 }
