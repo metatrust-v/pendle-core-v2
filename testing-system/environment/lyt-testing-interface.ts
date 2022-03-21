@@ -1,12 +1,15 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { IERC20, LYTWrap, LYTWrapWithRewards } from '../typechain-types';
+import { ERC20, IERC20, LYTWrap, LYTWrapWithRewards } from '../../typechain-types';
 import { BigNumber as BN, BigNumberish, CallOverrides, ContractTransaction, Overrides, Signer } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
-import { getContractAt } from './helpers';
+import { getContractAt } from '../helpers';
 import assert from 'assert';
+import { TestEnv } from '.';
 
 interface LYTSimpleInterface {
   connect(signerOrProvider: Signer | Provider | string): this;
+
+  yieldToken(overrides?: CallOverrides): Promise<string>;
 
   depositYieldToken(
     recipient: string,
@@ -36,28 +39,21 @@ interface LYTSimpleInterface {
 }
 
 interface LYTRewardSimpleInterface extends LYTSimpleInterface {
-  redeemReward(
-    user: string,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
+  redeemReward(user: string, overrides?: Overrides & { from?: string | Promise<string> }): Promise<ContractTransaction>;
   getRewardTokens(overrides?: CallOverrides): Promise<string[]>;
 }
 
-abstract class LytTesting<LYT extends LYTSimpleInterface> {
-  lytAddr: string;
+export abstract class LytTesting<LYT extends LYTSimpleInterface> {
   lyt: LYT;
 
-  constructor(lytAddr: string) {
-    this.lytAddr = lytAddr;
+  constructor(lyt: LYT) {
+    this.lyt = lyt;
   }
 
-  public async initialize(): Promise<void> {
-    this.lyt = await getContractAt<LYTWrap>('LYTWrap', this.lytAddr) as any as LYT;
-  }
-
-  abstract mintYieldToken(person: SignerWithAddress, amount: BN);
-  abstract burnYieldToken(person: SignerWithAddress, amount: BN);
-  abstract addFakeIncome();
+  abstract mintYieldToken(person: SignerWithAddress, amount: BN): Promise<void>;
+  abstract burnYieldToken(person: SignerWithAddress, amount: BN): Promise<void>;
+  abstract addFakeIncome(env: TestEnv): Promise<void>;
+  abstract yieldTokenBalance(addr: string): Promise<BN>;
 
   public async balanceOf(addr: string): Promise<BN> {
     return await this.lyt.balanceOf(addr);
@@ -84,19 +80,18 @@ abstract class LytTesting<LYT extends LYTSimpleInterface> {
   }
 }
 
-abstract class LytRewardTesting<LYT extends LYTRewardSimpleInterface> extends LytTesting<LYT> {
-  rewardTokens: IERC20[];
+export abstract class LytRewardTesting<LYT extends LYTRewardSimpleInterface> extends LytTesting<LYT> {
+  rewardTokens: IERC20[] = [];
   public async initialize(): Promise<void> {
-    this.lyt = await getContractAt<LYTWrapWithRewards>('LYTWrapWithRewards', this.lytAddr) as any as LYT;
+    const rewardTokenAddr: string[] = await this.lyt.getRewardTokens();
+    assert(rewardTokenAddr.length > 0, 'LYT does not have reward');
+    for (let tokenAddr of rewardTokenAddr) {
+      this.rewardTokens.push(await getContractAt<IERC20>('IERC20', tokenAddr));
+    }
   }
 
   public async redeemReward(addr: string): Promise<void> {
     await this.lyt.redeemReward(addr);
-    const rewardTokenAddr: string[] = await this.lyt.getRewardTokens();
-    assert(rewardTokenAddr.length > 0, "LYT does not have reward");
-    for(let tokenAddr of rewardTokenAddr) {
-      this.rewardTokens.push(await getContractAt<IERC20>('IERC20', tokenAddr));
-    }
   }
 
   public async rewardBalance(addr: string, rwdToken: number = 0): Promise<BN> {
