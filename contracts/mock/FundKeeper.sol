@@ -1,8 +1,12 @@
 pragma solidity ^0.8.0;
 import "../interfaces/IQiErc20.sol";
 
-contract ProtocolFakeUser {
+contract FundKeeper {
     constructor() {}
+
+    function transferTo(IERC20 token, address to, uint256 amount) public {
+        token.transfer(to, amount);
+    }
 
     function depositBenqi(IQiErc20 qiToken, uint256 amount) public {
         IERC20 underlying = IERC20(qiToken.underlying());
