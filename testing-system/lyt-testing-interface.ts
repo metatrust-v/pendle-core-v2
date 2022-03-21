@@ -3,6 +3,7 @@ import { IERC20, LYTWrap, LYTWrapWithRewards } from '../typechain-types';
 import { BigNumber as BN, BigNumberish, CallOverrides, ContractTransaction, Overrides, Signer } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
 import { getContractAt } from './helpers';
+import assert from 'assert';
 
 interface LYTSimpleInterface {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -39,6 +40,7 @@ interface LYTRewardSimpleInterface extends LYTSimpleInterface {
     user: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
+  getRewardTokens(overrides?: CallOverrides): Promise<string[]>;
 }
 
 abstract class LytTesting<LYT extends LYTSimpleInterface> {
@@ -90,6 +92,11 @@ abstract class LytRewardTesting<LYT extends LYTRewardSimpleInterface> extends Ly
 
   public async redeemReward(addr: string): Promise<void> {
     await this.lyt.redeemReward(addr);
+    const rewardTokenAddr: string[] = await this.lyt.getRewardTokens();
+    assert(rewardTokenAddr.length > 0, "LYT does not have reward");
+    for(let tokenAddr of rewardTokenAddr) {
+      this.rewardTokens.push(await getContractAt<IERC20>('IERC20', tokenAddr));
+    }
   }
 
   public async rewardBalance(addr: string, rwdToken: number = 0): Promise<BN> {
