@@ -1,8 +1,8 @@
-import { buildEnv, Env, Mode } from './environment';
+import { buildEnv, TestEnv, Mode } from './environment';
 
 async function main() {
-  const env: Env = await buildEnv();
-  const env2: Env = await buildEnv();
+  const env: TestEnv = await buildEnv();
+  const env2: TestEnv = await buildEnv();
 }
 
 main();
