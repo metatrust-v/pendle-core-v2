@@ -6,7 +6,6 @@ import {
   ERC20PresetFixedSupply,
   ERC20PresetFixedSupply__factory,
   FundKeeper,
-  ProtocolFakeUser,
 } from '../../../typechain-types';
 import { clearFund, deploy } from '../../helpers';
 export interface CommonTokens {
