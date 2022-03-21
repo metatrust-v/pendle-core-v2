@@ -3,8 +3,11 @@ import hre from 'hardhat';
 import { ethers, waffle } from 'hardhat';
 import { commonFixture, CommonFixture } from './fixtures/commonFixture';
 import { loadFixture } from 'ethereum-waffle';
-import { MiscConsts, MiscConstsType } from '@pendle/constants';
+import { AvaxConsts, EthConsts, MiscConsts, MiscConstsType, PendleConstsType } from '@pendle/constants';
 import { avalancheFixture, AvalancheFixture } from './fixtures';
+import { FundKeeper } from '../../typechain-types';
+import { deploy } from '../helpers';
+export * from './lyt-testing-interface';
 
 export enum Mode {
   BENQI,
@@ -15,18 +18,23 @@ export enum Mode {
 export interface BasicEnv {
   wallets: SignerWithAddress[];
   deployer: SignerWithAddress;
+  fundKeeper: FundKeeper;
   mconsts: MiscConstsType;
+  aconsts: PendleConstsType;
+  econsts: PendleConstsType;
 }
 
-export type Env = BasicEnv & CommonFixture & AvalancheFixture;
+export type TestEnv = BasicEnv & CommonFixture & AvalancheFixture;
 
-export async function loadBasicEnv(env: Env) {
+export async function loadBasicEnv(env: TestEnv) {
   env.wallets = await hre.ethers.getSigners();
   env.deployer = env.wallets[0];
   env.mconsts = MiscConsts;
+  env.aconsts = AvaxConsts;
+  env.econsts = EthConsts;
 }
 
-export async function buildEnv(): Promise<Env> {
+export async function buildEnv(): Promise<TestEnv> {
   switch (hre.network.config.chainId!) {
     case 43114:
       return await loadFixture(avalancheFixture);

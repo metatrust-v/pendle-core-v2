@@ -1,20 +1,21 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { Env, loadBasicEnv } from '..';
+import { TestEnv, loadBasicEnv } from '..';
 import {
   ERC20,
   ERC20Premined,
   ERC20PresetFixedSupply,
   ERC20PresetFixedSupply__factory,
+  FundKeeper,
   ProtocolFakeUser,
 } from '../../../typechain-types';
-import { deploy } from '../../helpers';
+import { clearFund, deploy } from '../../helpers';
 export interface CommonTokens {
   USD: ERC20;
 }
 
 export type CommonFixture = {
   tokens: CommonTokens;
-  protocolFakeUser: ProtocolFakeUser;
+  fundKeeper: FundKeeper;
 };
 
 async function deployTokens(deployer: SignerWithAddress): Promise<CommonTokens> {
@@ -24,12 +25,11 @@ async function deployTokens(deployer: SignerWithAddress): Promise<CommonTokens> 
   };
 }
 
-export async function commonFixture(): Promise<Env> {
-  const env = {} as Env;
+export async function commonFixture(): Promise<TestEnv> {
+  const env = {} as TestEnv;
   await loadBasicEnv(env);
-  return {
-    ...env,
-    tokens: await deployTokens(env.deployer),
-    protocolFakeUser: await deploy<ProtocolFakeUser>(env.deployer, 'ProtocolFakeUser', []),
-  };
+  env.fundKeeper = await deploy<FundKeeper>(env.deployer, 'FundKeeper', []);
+  env.tokens = await deployTokens(env.deployer);
+  await clearFund(env, [env.deployer], [env.tokens.USD.address]);
+  return env;
 }
