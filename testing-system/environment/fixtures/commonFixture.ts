@@ -5,28 +5,22 @@ import {
   ERC20Premined,
   ERC20PresetFixedSupply,
   ERC20PresetFixedSupply__factory,
+  ProtocolFakeUser,
 } from '../../../typechain-types';
 import { deploy } from '../../helpers';
 export interface CommonTokens {
-  USDC: ERC20;
-  USDT: ERC20;
-  DAI: ERC20;
-  NEAR: ERC20;
-  WBTC: ERC20;
+  USD: ERC20;
 }
 
 export type CommonFixture = {
   tokens: CommonTokens;
+  protocolFakeUser: ProtocolFakeUser;
 };
 
 async function deployTokens(deployer: SignerWithAddress): Promise<CommonTokens> {
-  console.log('Deploying 5 test tokens...');
+  console.log('Deploying test token...');
   return {
-    USDC: (await deploy<ERC20Premined>(deployer, 'ERC20Premined', ['USDC', 6])) as any as ERC20,
-    USDT: (await deploy<ERC20Premined>(deployer, 'ERC20Premined', ['USDT', 8])) as any as ERC20,
-    DAI: (await deploy<ERC20Premined>(deployer, 'ERC20Premined', ['DAI', 18])) as any as ERC20,
-    WBTC: (await deploy<ERC20Premined>(deployer, 'ERC20Premined', ['WBTC', 8])) as any as ERC20,
-    NEAR: (await deploy<ERC20Premined>(deployer, 'ERC20Premined', ['NEAR', 24])) as any as ERC20,
+    USD: (await deploy<ERC20Premined>(deployer, 'ERC20Premined', ['USD', 6])) as any as ERC20,
   };
 }
 
@@ -36,5 +30,6 @@ export async function commonFixture(): Promise<Env> {
   return {
     ...env,
     tokens: await deployTokens(env.deployer),
+    protocolFakeUser: await deploy<ProtocolFakeUser>(env.deployer, 'ProtocolFakeUser', []),
   };
 }
