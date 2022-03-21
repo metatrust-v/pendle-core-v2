@@ -996,21 +996,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nomiclabs/hardhat-vyper@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "@nomiclabs/hardhat-vyper@npm:3.0.0"
-  dependencies:
-    debug: ^4.1.1
-    fs-extra: ^7.0.1
-    io-ts: 1.10.4
-    lodash: ^4.17.11
-    semver: ^6.3.0
-  peerDependencies:
-    hardhat: ^2.8.3
-  checksum: 846bc7f6ec64973df47eaca78bdfed9e978d38579676a744cf10dd911604e9cb1004f7f54e4212207ee502407492f96c8e8c98fa30bb65a143643f9c1478aca0
-  languageName: node
-  linkType: hard
-
 "@nomiclabs/hardhat-waffle@npm:^2.0.1":
   version: 2.0.3
   resolution: "@nomiclabs/hardhat-waffle@npm:2.0.3"
@@ -1133,7 +1118,6 @@ __metadata:
     "@nomiclabs/hardhat-ethers": ^2.0.5
     "@nomiclabs/hardhat-etherscan": ^2.1.8
     "@nomiclabs/hardhat-truffle5": ^2.0.0
-    "@nomiclabs/hardhat-vyper": ^3.0.0
     "@nomiclabs/hardhat-waffle": ^2.0.1
     "@nomiclabs/hardhat-web3": ^2.0.0
     "@openzeppelin/contracts": ^4.5.0
