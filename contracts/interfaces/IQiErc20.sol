@@ -31,5 +31,7 @@ interface IQiErc20 is IQiToken {
 
     function balanceOf(address owner) external view returns (uint256);
 
+    function borrow(uint256 amount) external returns (uint256);
+
     function underlying() external view returns (address);
 }
