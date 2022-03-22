@@ -92,7 +92,7 @@ export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
   const oracle = await deploy<BenqiChainlinkOracle>(env.deployer, 'BenqiChainlinkOracle', []);
   await oracle.setUnderlyingPrice(qiUSD.address, env.mconsts.ONE_E_18);
   await comptroller._setPriceOracle(oracle.address);
-  await comptroller._setCollateralFactor(qiUSD.address, env.mconsts.ONE_E_18);
+  await comptroller._setCollateralFactor(qiUSD.address, env.mconsts.ONE_E_18.mul(8).div(10));
   await comptroller._setRewardSpeed(0, qiUSD.address, env.mconsts.ONE_E_18);
   await comptroller._setRewardSpeed(1, qiUSD.address, env.mconsts.ONE_E_12);
 
