@@ -8,6 +8,12 @@ contract FundKeeper {
         token.transfer(to, amount);
     }
 
+    function transferToMany(IERC20 token, address[] calldata to, uint256 amount) public {
+        for(uint8 i = 0; i < to.length; ++i) {
+            token.transfer(to[i], amount);
+        }
+    }
+
     function depositBenqi(IQiErc20 qiToken, uint256 amount) public {
         IERC20 underlying = IERC20(qiToken.underlying());
         underlying.approve(address(qiToken), amount);
