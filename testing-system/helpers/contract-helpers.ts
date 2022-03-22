@@ -1,8 +1,10 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { BigNumberish } from 'ethers';
 import { ethers } from 'hardhat';
 import { ERC20, IERC20 } from '../../typechain-types';
 import { TestEnv } from '../environment';
 import { getContractAt } from './hardhat-helpers';
+import { BigNumber as BN } from 'ethers';
 
 export async function approveAll(env: TestEnv, tokenAddr: string, toAddr: string): Promise<void> {
   const tokenContract = await getContractAt<IERC20>('IERC20', tokenAddr);
@@ -18,4 +20,15 @@ export async function clearFund(env: TestEnv, from: SignerWithAddress[], tokens:
       await token.connect(wallet).transfer(env.fundKeeper.address, await token.balanceOf(wallet.address));
     }
   }
+}
+
+export async function fundToken(env: TestEnv, to: string[], token: string, amount: BN) {
+  await env.fundKeeper.transferToMany(token, to, amount);
+}
+
+export async function transferNative(from: SignerWithAddress, to: string, amount: BigNumberish): Promise<void> {
+  await from.sendTransaction({
+    to: to,
+    value: amount,
+  });
 }
