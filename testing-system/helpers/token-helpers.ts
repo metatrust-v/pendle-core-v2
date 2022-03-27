@@ -2,8 +2,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { AvaxConsts } from '@pendle/constants';
 import { BigNumber as BN } from 'ethers';
 import { ethers } from 'hardhat';
-import { TestEnv } from '../../testing-system/environment';
-import { getContractAt } from '../../testing-system/helpers';
+import { TestEnv } from '../environment';
+import { getContractAt } from '.';
 import { ERC20 } from '../../typechain-types';
 
 export async function getBalance(token: any, users: string[]): Promise<BN[]> {
