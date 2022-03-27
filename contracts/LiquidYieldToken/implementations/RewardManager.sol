@@ -32,11 +32,19 @@ abstract contract RewardManager {
         }
     }
 
+    function _initiateUser(address user) internal virtual {
+        if (userReward[user].length == rewardLength) return;
+        for (uint256 i = 0; i < rewardLength; i++) {
+            userReward[user].push(UserReward(0, 0));
+        }
+    }
+
     function _doTransferOutRewards(address user)
         internal
         virtual
         returns (uint256[] memory outAmounts)
     {
+        _initiateUser(user);
         outAmounts = new uint256[](rewardLength);
 
         address[] memory rewardTokens = getRewardTokens();
@@ -47,7 +55,7 @@ abstract contract RewardManager {
             userReward[user][i].accuredReward = 0;
 
             globalReward[i].lastBalance -= outAmounts[i];
-
+            
             if (outAmounts[i] != 0) {
                 token.safeTransfer(user, outAmounts[i]);
             }
@@ -82,6 +90,7 @@ abstract contract RewardManager {
     }
 
     function _updateUserRewardSkipGlobal(address user, uint256 balanceOfUser) internal virtual {
+        _initiateUser(user);
         for (uint256 i = 0; i < rewardLength; ++i) {
             uint256 userLastIndex = userReward[user][i].lastIndex;
             if (userLastIndex == globalReward[i].index) continue;
