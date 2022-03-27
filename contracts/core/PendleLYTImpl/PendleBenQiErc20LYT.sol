@@ -89,12 +89,6 @@ contract PendleBenQiErc20LYT is LYTBaseWithRewards {
         res = lastLytIndex;
     }
 
-    function getRewardTokens() public view override returns (address[] memory res) {
-        res = new address[](2);
-        res[0] = QI;
-        res[1] = WAVAX;
-    }
-
     /*///////////////////////////////////////////////////////////////
                 MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
@@ -113,6 +107,12 @@ contract PendleBenQiErc20LYT is LYTBaseWithRewards {
                                REWARDS-RELATED
     //////////////////////////////////////////////////////////////*/
 
+    function getRewardTokens() public view override returns (address[] memory res) {
+        res = new address[](rewardLength);
+        res[0] = qi;
+        res[1] = wavax;
+    }
+
     function _redeemExternalReward() internal override {
         address[] memory holders = new address[](1);
         address[] memory qiTokens = new address[](1);
@@ -122,6 +122,6 @@ contract PendleBenQiErc20LYT is LYTBaseWithRewards {
         IBenQiComptroller(comptroller).claimReward(0, holders, qiTokens, false, true);
         IBenQiComptroller(comptroller).claimReward(1, holders, qiTokens, false, true);
 
-        if (address(this).balance != 0) IWETH(WAVAX).deposit{ value: address(this).balance };
+        if (address(this).balance != 0) IWETH(wavax).deposit{ value: address(this).balance }();
     }
 }
