@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BigNumber as BN } from 'ethers';
-import { LytRewardTesting } from '../../lyt-testing-interface';
+import { LytSingleReward } from '../../lyt-testing-interfaces';
 import {
   BenqiChainlinkOracle,
   Comptroller,
@@ -16,9 +16,10 @@ import {
 import { approveAll, deploy, getContractAt, transferNative } from '../../../helpers';
 import { TestEnv } from '../..';
 
-export class BenqiLyt extends LytRewardTesting<PendleBenQiErc20LYT> {
+export class BenqiLyt extends LytSingleReward<PendleBenQiErc20LYT> {
   underlying: ERC20 = {} as ERC20;
   qiToken: QiErc20 = {} as QiErc20;
+  comptroller: Comptroller = {} as Comptroller;
 
   constructor(lyt: PendleBenQiErc20LYT) {
     super(lyt);
@@ -28,6 +29,7 @@ export class BenqiLyt extends LytRewardTesting<PendleBenQiErc20LYT> {
     await super.initialize();
     this.qiToken = await getContractAt<QiErc20>('QiErc20', await this.lyt.yieldToken());
     this.underlying = await getContractAt<ERC20>('ERC20', await this.qiToken.underlying());
+    this.comptroller = await getContractAt<Comptroller>('Comptroller', await this.qiToken.comptroller());
   }
 
   async mintYieldToken(person: SignerWithAddress, amount: BN): Promise<void> {
@@ -44,22 +46,16 @@ export class BenqiLyt extends LytRewardTesting<PendleBenQiErc20LYT> {
     return await this.qiToken.balanceOf(addr);
   }
 
-  async claimDirectReward(env: TestEnv, payer: SignerWithAddress, person: SignerWithAddress): Promise<void> {
-    await env.comptroller
-      .connect(payer)
-      ['claimReward(uint8,address[],address[],bool,bool)'](0, [person.address], [this.qiToken.address], false, true);
-    await env.comptroller
-      .connect(payer)
-      ['claimReward(uint8,address[],address[],bool,bool)'](1, [person.address], [this.qiToken.address], false, true);
+  async claimDirectReward(payer: SignerWithAddress, person: SignerWithAddress): Promise<void> {
+    for (let i = 0; i < 2; ++i) {
+      await this.comptroller.connect(payer)['claimReward(uint8,address)'](i, person.address);
+    }
   }
 }
 
 export interface BenqiEnv {
   qiUSDC: QiErc20;
   qiLyt: BenqiLyt;
-
-  comptroller: Comptroller;
-
   qiToken: ERC20Premined;
 }
 
@@ -75,7 +71,7 @@ export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
   const qiToken = await deploy<ERC20Premined>(env.deployer, 'ERC20Premined', ['Qi', 18]);
   await comptroller.setQiAddress(qiToken.address);
   await qiToken.transfer(comptroller.address, await qiToken.balanceOf(env.deployer.address));
-  await transferNative(env.deployer, comptroller.address, env.mconsts.ONE_E_18);
+  await transferNative(env.deployer, comptroller.address, env.mconsts.ONE_E_18.mul(10 ** 6));
 
   // DEPLOY TOKEN
   const interestRateModel = await deploy<JumpRateModel>(env.deployer, 'JumpRateModel', [
@@ -131,7 +127,6 @@ export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
   return {
     qiUSDC: qiUSD as any as QiErc20,
     qiLyt: qiLyt,
-    comptroller: comptroller,
     qiToken: qiToken,
   };
 }
