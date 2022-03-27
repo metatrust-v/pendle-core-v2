@@ -1,1 +1,1 @@
-export * from "./abstract-single";
+export * from './abstract-single';
