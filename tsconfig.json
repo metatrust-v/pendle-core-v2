@@ -15,8 +15,8 @@
     ]
   },
   "include": [
-    "./test"
-  ],
+    "testing-system/tests"
+, "testing-system/helpers/ErrorMessages.ts", "testing-system/helpers/token-helpers.ts", "testing-system/helpers/misc-helpers.ts"  ],
   "files": [
     "./hardhat.config.ts"
   ]

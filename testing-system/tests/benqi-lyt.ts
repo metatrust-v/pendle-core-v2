@@ -5,19 +5,24 @@ import {
   getEth,
   impersonateAccount,
   impersonateAccountStop,
-} from '../../helpers/hardhat-helpers';
-import { buildEnv, TestEnv } from '../../../testing-system/environment';
-import { BenqiLyt } from '../../../testing-system/environment/fixtures/avalanche/deployBenqi';
+  getBalance,
+  approxBigNumber,
+  random,
+  errMsg,
+  approveAll,
+  clearFund,
+  fundToken,
+  getContractAt,
+  transferNative,
+} from '../helpers';
+import { buildEnv, TestEnv } from '../environment';
+import { BenqiLyt } from '../environment/fixtures/avalanche/deployBenqi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BigNumber as BN } from 'ethers';
 import hre, { ethers } from 'hardhat';
-import { ERC20, IWETH, QiErc20 } from '../../../typechain-types';
+import { ERC20, IWETH, QiErc20 } from '../../typechain-types';
 import { expect } from 'chai';
-import { approveAll, clearFund, fundToken, getContractAt, transferNative } from '../../../testing-system/helpers';
 import { assert } from 'console';
-import { getBalance } from '../../helpers/token-helpers';
-import { approxBigNumber, random } from '../../helpers/misc-helpers';
-import { errMsg } from '../../helpers/ErrorMessages';
 import { Erc20Token } from '@pendle/constants';
 
 describe('Benqi-lyt test', async () => {
@@ -358,7 +363,7 @@ describe('Benqi-lyt test', async () => {
     const directRewards = await getRewardAmount(
       alice,
       rewardTokens,
-      async () => await lyt.claimDirectReward(env, bob, alice)
+      async () => await lyt.claimDirectReward(bob, alice)
     );
 
     const lytRewards = await getRewardAmount(
@@ -401,7 +406,7 @@ describe('Benqi-lyt test', async () => {
     const directRewards = await getRewardAmount(
       alice,
       rewardTokens,
-      async () => await lyt.claimDirectReward(env, bob, alice)
+      async () => await lyt.claimDirectReward(bob, alice)
     );
 
     const lytRewards_Bob = await getRewardAmount(
@@ -432,7 +437,7 @@ describe('Benqi-lyt test', async () => {
     const directRewards = await getRewardAmount(
       alice,
       rewardTokens,
-      async () => await lyt.claimDirectReward(env, bob, alice)
+      async () => await lyt.claimDirectReward(bob, alice)
     );
 
     const lytRewards = await getRewardAmount(
@@ -482,7 +487,7 @@ describe('Benqi-lyt test', async () => {
     const directRewards = await getRewardAmount(
       charlie,
       rewardTokens,
-      async () => await lyt.claimDirectReward(env, bob, charlie)
+      async () => await lyt.claimDirectReward(bob, charlie)
     );
 
     const lytRewards = await getRewardAmount(
