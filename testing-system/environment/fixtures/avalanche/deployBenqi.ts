@@ -16,7 +16,7 @@ import {
 import { approveAll, deploy, getContractAt, transferNative } from '../../../helpers';
 import { TestEnv } from '../..';
 
-class BenqiLyt extends LytRewardTesting<PendleBenQiErc20LYT> {
+export class BenqiLyt extends LytRewardTesting<PendleBenQiErc20LYT> {
   underlying: ERC20 = {} as ERC20;
   qiToken: QiErc20 = {} as QiErc20;
 
@@ -43,11 +43,24 @@ class BenqiLyt extends LytRewardTesting<PendleBenQiErc20LYT> {
   async yieldTokenBalance(addr: string): Promise<BN> {
     return await this.qiToken.balanceOf(addr);
   }
+
+  async claimDirectReward(env: TestEnv, payer: SignerWithAddress, person: SignerWithAddress): Promise<void> {
+    await env.comptroller
+      .connect(payer)
+      ['claimReward(uint8,address[],address[],bool,bool)'](0, [person.address], [this.qiToken.address], false, true);
+    await env.comptroller
+      .connect(payer)
+      ['claimReward(uint8,address[],address[],bool,bool)'](1, [person.address], [this.qiToken.address], false, true);
+  }
 }
 
 export interface BenqiEnv {
   qiUSDC: QiErc20;
   qiLyt: BenqiLyt;
+
+  comptroller: Comptroller;
+
+  qiToken: ERC20Premined;
 }
 
 export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
@@ -94,7 +107,7 @@ export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
   await comptroller._setPriceOracle(oracle.address);
   await comptroller._setCollateralFactor(qiUSD.address, env.mconsts.ONE_E_18.mul(8).div(10));
   await comptroller._setRewardSpeed(0, qiUSD.address, env.mconsts.ONE_E_18);
-  await comptroller._setRewardSpeed(1, qiUSD.address, env.mconsts.ONE_E_12);
+  await comptroller._setRewardSpeed(1, qiUSD.address, env.mconsts.ONE_E_18);
 
   // FAKE AMOUNT
   await env.fundKeeper.depositBenqi(qiUSD.address, env.mconsts.ONE_E_18);
@@ -118,5 +131,7 @@ export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
   return {
     qiUSDC: qiUSD as any as QiErc20,
     qiLyt: qiLyt,
+    comptroller: comptroller,
+    qiToken: qiToken,
   };
 }
