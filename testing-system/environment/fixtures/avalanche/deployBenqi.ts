@@ -46,10 +46,14 @@ export class BenqiLyt extends LytSingleReward<PendleBenQiErc20LYT> {
     return await this.qiToken.balanceOf(addr);
   }
 
-  async claimDirectReward(payer: SignerWithAddress, person: SignerWithAddress): Promise<void> {
+  async claimDirectReward(payer: SignerWithAddress, addr: string): Promise<void> {
     for (let i = 0; i < 2; ++i) {
-      await this.comptroller.connect(payer)['claimReward(uint8,address)'](i, person.address);
+      await this.comptroller.connect(payer)['claimReward(uint8,address)'](i, addr);
     }
+  }
+
+  async getDirectExchangeRate(): Promise<BN> {
+    return await this.qiToken.callStatic.exchangeRateCurrent();
   }
 }
 
@@ -106,7 +110,7 @@ export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
   await comptroller._setRewardSpeed(1, qiUSD.address, env.mconsts.ONE_E_18);
 
   // FAKE AMOUNT
-  await env.fundKeeper.depositBenqi(qiUSD.address, env.mconsts.ONE_E_18);
+  await env.fundKeeper.depositBenqi(qiUSD.address, BN.from(10).pow(8));
 
   // Deploy LYT
   const lyt = await deploy<PendleBenQiErc20LYT>(env.deployer, 'PendleBenQiErc20LYT', [

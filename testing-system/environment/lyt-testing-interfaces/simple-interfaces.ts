@@ -2,8 +2,12 @@ import { BigNumber as BN, BigNumberish, CallOverrides, ContractTransaction, Over
 import { Provider } from '@ethersproject/abstract-provider';
 
 export interface LYTSimpleInterface {
+  address: string;
+
   connect(signerOrProvider: Signer | Provider | string): this;
 
+  decimals(overrides?: CallOverrides): Promise<number>;
+  assetDecimals(overrides?: CallOverrides): Promise<number>;
   yieldToken(overrides?: CallOverrides): Promise<string>;
   getBaseTokens(overrides?: CallOverrides): Promise<string[]>;
 
@@ -43,6 +47,10 @@ export interface LYTSimpleInterface {
     amount: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
+
+  lytIndexCurrent(overrides?: Overrides & { from?: string | Promise<string> }): Promise<ContractTransaction>;
+  lytIndexStored(overrides?: CallOverrides): Promise<BN>;
+  isValidBaseToken(token: string, overrides?: CallOverrides): Promise<boolean>;
 
   callStatic: {
     depositBaseToken(
