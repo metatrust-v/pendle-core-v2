@@ -27,6 +27,7 @@ export abstract class LytSingle<LYT extends LYTSimpleInterface> {
   abstract burnYieldToken(person: SignerWithAddress, amount: BN): Promise<void>;
   abstract addFakeIncome(env: TestEnv): Promise<void>;
   abstract yieldTokenBalance(addr: string): Promise<BN>;
+  abstract getDirectExchangeRate(): Promise<BN>;
 
   public async balanceOf(addr: string): Promise<BN> {
     return await this.lyt.balanceOf(addr);
@@ -136,7 +137,7 @@ export abstract class LytSingle<LYT extends LYTSimpleInterface> {
 export abstract class LytSingleReward<LYT extends LYTRewardSimpleInterface> extends LytSingle<LYT> {
   rewardTokens: ERC20[] = [];
 
-  abstract claimDirectReward(payer: SignerWithAddress, person: SignerWithAddress): Promise<void>;
+  abstract claimDirectReward(payer: SignerWithAddress, person: string): Promise<void>;
 
   public async initialize(): Promise<void> {
     await super.initialize();
