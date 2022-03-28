@@ -10,6 +10,7 @@ contract FundKeeper {
 
     function transferToMany(IERC20 token, address[] calldata to, uint256 amount) public {
         for(uint8 i = 0; i < to.length; ++i) {
+            require(token.balanceOf(address(this)) >= amount, "fund keeper does not have enough fund");
             token.transfer(to[i], amount);
         }
     }
