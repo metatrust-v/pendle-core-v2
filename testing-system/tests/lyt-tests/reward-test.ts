@@ -104,7 +104,7 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
       return res;
     }
 
-    it.only('Redeem rewards success', async () => {
+    it('Redeem rewards success', async () => {
       await lyt.mintYieldToken(charlie, REF_AMOUNT_WEI.mul(2));
 
       let currentTime = BN.from(Math.round(new Date().getTime() / 1000));
