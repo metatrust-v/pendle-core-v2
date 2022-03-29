@@ -8,7 +8,7 @@ import { expect } from 'chai';
 import { LYTSimpleInterface } from '../../environment/lyt-testing-interfaces/simple-interfaces';
 
 export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: TestEnv, lyt: LYT) {
-  describe('Benqi-lyt test', async () => {
+  describe('Lyt single underlying test', async () => {
     const [ALICE, LYT] = [0, 1];
     const LYT_DECIMAL = 18;
     const MINUTES_PER_DAY = 1440;
@@ -84,8 +84,8 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
       for (let i = 0; i < wallets.length; ++i) {
         const pi = wallets[i];
         const pj = wallets[(i + 1) % wallets.length];
-        await lyt.depositBaseToken(pi, underlying.address, REF_AMOUNT_WEI);
-        await lyt.depositBaseTokenFor(pj, pj.address, underlying.address, REF_AMOUNT_WEI);
+        await lyt.mint(pi, pi.address, underlying.address, REF_AMOUNT_WEI);
+        await lyt.mint(pj, pj.address, underlying.address, REF_AMOUNT_WEI);
       }
       for (let person of wallets) {
         approxBigNumber(await lyt.balanceOf(person.address), expectedLytAmount, 10);
@@ -96,8 +96,8 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
         const pi = wallets[i];
         const pj = wallets[(i + 1) % wallets.length];
         const bal = await lyt.balanceOf(pi.address);
-        await lyt.redeemYieldToken(pi, bal.div(2));
-        await lyt.redeemYieldTokenFor(pi, pj.address, bal.div(2));
+        await lyt.redeem(pi, pi.address, yieldToken.address, bal.div(2));
+        await lyt.redeem(pi, pj.address, yieldToken.address, bal.div(2));
       }
       for (let person of wallets) {
         approxBigNumber(await yieldToken.balanceOf(person.address), expectedLytAmount, 10);
@@ -108,8 +108,8 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
         const pi = wallets[i];
         const pj = wallets[(i + 1) % wallets.length];
         const bal = await yieldToken.balanceOf(pi.address);
-        await lyt.depositYieldToken(pi, bal.div(2));
-        await lyt.depositYieldTokenFor(pi, pj.address, bal.div(2));
+        await lyt.mint(pi, pi.address, yieldToken.address, bal.div(2));
+        await lyt.mint(pi, pj.address, yieldToken.address, bal.div(2));
       }
       for (let person of wallets) {
         approxBigNumber(await lyt.balanceOf(person.address), expectedLytAmount, 10);
@@ -120,8 +120,8 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
         const pi = wallets[i];
         const pj = wallets[(i + 1) % wallets.length];
         const bal = await lyt.balanceOf(pi.address);
-        await lyt.redeemBaseToken(pi, underlying.address, bal.div(4));
-        await lyt.redeemBaseTokenFor(pi, pj.address, underlying.address, bal.div(4));
+        await lyt.redeem(pi, pi.address, underlying.address, bal.div(4));
+        await lyt.redeem(pi, pj.address, underlying.address, bal.div(4));
       }
 
       for (let person of wallets) {
@@ -135,7 +135,7 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
 
     it('Asset balance', async () => {
       await lyt.mintYieldToken(alice, REF_AMOUNT_WEI);
-      await lyt.depositBaseToken(alice, underlying.address, REF_AMOUNT_WEI);
+      await lyt.mint(alice, alice.address, underlying.address, REF_AMOUNT_WEI);
       expect(await underlying.balanceOf(alice.address)).to.be.equal(0);
       await lyt.burnYieldToken(alice, await yieldToken.balanceOf(alice.address));
       approxBigNumber(await lyt.assetBalanceOf(alice.address), await underlying.balanceOf(alice.address), 10);
@@ -166,10 +166,6 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
 
     it('Asset decimal', async () => {
       expect(await lyt.lyt.assetDecimals()).to.be.eq(await underlying.decimals());
-    });
-
-    it('Base tokens', async () => {
-      expect(await lyt.lyt.getBaseTokens()).to.be.eql([underlying.address]);
     });
 
     it('Check valid base token', async () => {
