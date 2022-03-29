@@ -86,7 +86,7 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
 
     async function getRewardBalances(peopleIds: number[], rwdId: number = 0): Promise<BN> {
       let res = BN.from(0);
-      for(let id of peopleIds) {
+      for (let id of peopleIds) {
         res = res.add(await lyt.rewardBalance(wallets[id].address, rwdId));
       }
       return res;
@@ -109,7 +109,7 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
 
       let currentTime = BN.from(Math.round(new Date().getTime() / 1000));
       await setTimeNextBlock(currentTime.add(env.mconsts.ONE_DAY));
-      await lyt.depositBaseToken(alice, underlying.address, REF_AMOUNT_WEI);
+      await lyt.mint(alice, alice.address, underlying.address, REF_AMOUNT_WEI);
       currentTime = currentTime.add(env.mconsts.ONE_DAY);
 
       await setTimeNextBlock(currentTime.add(env.mconsts.ONE_DAY));
@@ -125,8 +125,8 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
       currentTime = currentTime.add(env.mconsts.ONE_DAY);
 
       // possible delay in one minute reward between txn
-      for (let i = 0; i < directRewards.length-1; ++i) {
-        approxBigNumber(directRewards[i], lytRewards[i], 10);
+      for (let i = 0; i < directRewards.length - 1; ++i) {
+        approxByPercent(directRewards[i], lytRewards[i], 10);
       }
     });
 
@@ -134,29 +134,36 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
     //                           STRESS TEST
     //   //////////////////////////////////////////////////////////////*/
 
-    it('Lyt holders should receive the same amount of rewards compared to yieldToken holders', async() => {
-      await fundToken(env, wallets.map(v => v.address), underlying.address, REF_AMOUNT_WEI.mul(100));
+    it('Lyt holders should receive the same amount of rewards compared to yieldToken holders', async () => {
+      await fundToken(
+        env,
+        wallets.map((v) => v.address),
+        underlying.address,
+        REF_AMOUNT_WEI.mul(100)
+      );
       /**
        * P1s holding yield bearing, P2s holding LYT
        */
       const NUM_ITERS = 50;
-      for(let iter = 0; iter < NUM_ITERS; ++iter) {
+      for (let iter = 0; iter < NUM_ITERS; ++iter) {
         let action = random(0, 2);
 
-        let p1 = wallets[random(0, 3)]; 
+        let p1 = wallets[random(0, 3)];
         let p2 = wallets[3 + random(0, 2)];
 
-        if (action == 0) { // MINT
-          await lyt.depositBaseToken(p1, underlying.address, REF_AMOUNT_WEI);
+        if (action == 0) {
+          // MINT
+          await lyt.mint(p1, p1.address, underlying.address, REF_AMOUNT_WEI);
           await lyt.mintYieldToken(p2, REF_AMOUNT_WEI);
-        } else { // BURN
+        } else {
+          // BURN
           let delta = minBN(await lyt.balanceOf(p1.address), await yieldToken.balanceOf(p2.address));
           if (delta.gt(0)) {
-            await lyt.redeemBaseToken(p1, underlying.address, delta);
+            await lyt.redeem(p1, p1.address, underlying.address, delta);
             await lyt.burnYieldToken(p2, delta);
           }
         }
-        
+
         let transferer = random(0, 2);
         let receiver = transferer ^ 1;
         let lytBal = await lyt.balanceOf(wallets[transferer].address);
@@ -166,57 +173,58 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
         await advanceTime(env.mconsts.ONE_WEEK);
       }
 
-      for(let person of wallets) {
+      for (let person of wallets) {
         await lyt.claimDirectReward(person, person.address);
         await lyt.redeemReward(person, person.address);
       }
 
-      approxByPercent(
-        await getRewardBalances([0, 1, 2]),
-        await getRewardBalances([3, 4])
-      );
+      approxByPercent(await getRewardBalances([0, 1, 2]), await getRewardBalances([3, 4]));
     });
 
-    it('Lyt holders receive reward proportionally to their balances', async() => {
-      await fundToken(env, wallets.map(v => v.address), underlying.address, REF_AMOUNT_WEI.mul(100));
+    it('Lyt holders receive reward proportionally to their balances', async () => {
+      await fundToken(
+        env,
+        wallets.map((v) => v.address),
+        underlying.address,
+        REF_AMOUNT_WEI.mul(100)
+      );
       /**
        * Scenario: alice + bob = charlie + dave = eve
        */
       const NUM_ITERS = 50;
-      for(let iter = 0; iter < NUM_ITERS; ++iter) {
+      for (let iter = 0; iter < NUM_ITERS; ++iter) {
         let action = random(0, 2);
-        let p1 = wallets[random(0, 2)]; 
+        let p1 = wallets[random(0, 2)];
         let p2 = wallets[random(2, 4)];
         let p3 = eve;
-  
-        if (action == 0) { // MINT
-          for(let person of [p1, p2, p3]) {
-            await lyt.depositBaseToken(person, underlying.address, REF_AMOUNT_WEI);
+
+        if (action == 0) {
+          // MINT
+          for (let person of [p1, p2, p3]) {
+            await lyt.mint(person, person.address, underlying.address, REF_AMOUNT_WEI);
           }
-        } else { // BURN
-          let delta = minBN(await lyt.balanceOf(p1.address), minBN(await lyt.balanceOf(p2.address), await lyt.balanceOf(p3.address)));
+        } else {
+          // BURN
+          let delta = minBN(
+            await lyt.balanceOf(p1.address),
+            minBN(await lyt.balanceOf(p2.address), await lyt.balanceOf(p3.address))
+          );
           if (delta.gt(0)) {
-            for(let person of [p1, p2, p3]) {
-              await lyt.redeemBaseToken(person, underlying.address, delta.div(2));
+            for (let person of [p1, p2, p3]) {
+              await lyt.redeem(person, person.address, underlying.address, delta.div(2));
             }
           }
         }
         await advanceTime(env.mconsts.ONE_WEEK);
       }
-  
-      for(let person of wallets) {
+
+      for (let person of wallets) {
         await lyt.claimDirectReward(person, person.address);
         await lyt.redeemReward(person, person.address);
       }
-  
-      approxByPercent(
-        await getRewardBalances([0, 1]),
-        await getRewardBalances([2, 3])
-      );
-      approxByPercent(
-        await getRewardBalances([0, 1]),
-        await getRewardBalances([4])
-      );
+
+      approxByPercent(await getRewardBalances([0, 1]), await getRewardBalances([2, 3]));
+      approxByPercent(await getRewardBalances([0, 1]), await getRewardBalances([4]));
     });
   });
 }

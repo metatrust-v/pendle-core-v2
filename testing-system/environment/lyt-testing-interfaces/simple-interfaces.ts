@@ -8,38 +8,22 @@ export interface LYTSimpleInterface {
 
   decimals(overrides?: CallOverrides): Promise<number>;
   assetDecimals(overrides?: CallOverrides): Promise<number>;
-  yieldToken(overrides?: CallOverrides): Promise<string>;
   getBaseTokens(overrides?: CallOverrides): Promise<string[]>;
 
-  depositBaseToken(
+  mint(
     recipient: string,
     baseTokenIn: string,
-    amountBaseIn: BigNumberish,
     minAmountLytOut: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  redeemToBaseToken(
+  redeem(
     recipient: string,
-    amountLytRedeem: BigNumberish,
     baseTokenOut: string,
     minAmountBaseOut: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  depositYieldToken(
-    recipient: string,
-    amountYieldIn: BigNumberish,
-    minAmountLytOut: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  redeemToYieldToken(
-    recipient: string,
-    amountLytRedeem: BigNumberish,
-    minAmountYieldOut: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
   balanceOf(account: string, overrides?: CallOverrides): Promise<BN>;
   transfer(to: string, amount: BigNumberish, overrides?: CallOverrides): Promise<ContractTransaction>;
   approve(
@@ -53,32 +37,6 @@ export interface LYTSimpleInterface {
   isValidBaseToken(token: string, overrides?: CallOverrides): Promise<boolean>;
 
   callStatic: {
-    depositBaseToken(
-      recipient: string,
-      baseTokenIn: string,
-      amountBaseIn: BigNumberish,
-      minAmountLytOut: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BN>;
-    redeemToBaseToken(
-      recipient: string,
-      amountLytRedeem: BigNumberish,
-      baseTokenOut: string,
-      minAmountBaseOut: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BN>;
-    depositYieldToken(
-      recipient: string,
-      amountYieldIn: BigNumberish,
-      minAmountLytOut: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BN>;
-    redeemToYieldToken(
-      recipient: string,
-      amountLytRedeem: BigNumberish,
-      minAmountYieldOut: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BN>;
     lytIndexCurrent(overrides?: Overrides & { from?: string | Promise<string> }): Promise<BN>;
     assetBalanceOf(user: string, overrides?: CallOverrides): Promise<BN>;
   };

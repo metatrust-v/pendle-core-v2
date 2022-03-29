@@ -17,7 +17,6 @@ import { approveAll, deploy, getContractAt, transferNative } from '../../../help
 import { TestEnv } from '../..';
 
 export class BenqiLyt extends LytSingleReward<PendleBenQiErc20LYT> {
-  underlying: ERC20 = {} as ERC20;
   qiToken: QiErc20 = {} as QiErc20;
   comptroller: Comptroller = {} as Comptroller;
 
@@ -27,9 +26,10 @@ export class BenqiLyt extends LytSingleReward<PendleBenQiErc20LYT> {
 
   public async initialize(): Promise<void> {
     await super.initialize();
-    this.qiToken = await getContractAt<QiErc20>('QiErc20', await this.lyt.yieldToken());
-    this.underlying = await getContractAt<ERC20>('ERC20', await this.qiToken.underlying());
+    this.qiToken = await getContractAt<QiErc20>('QiErc20', await this.lyt.qiToken());
     this.comptroller = await getContractAt<Comptroller>('Comptroller', await this.qiToken.comptroller());
+    this.underlying = await getContractAt<ERC20>('ERC20', await this.qiToken.underlying());
+    this.yieldToken = await getContractAt<ERC20>('ERC20', this.qiToken.address);
   }
 
   async mintYieldToken(person: SignerWithAddress, amount: BN): Promise<void> {
@@ -39,7 +39,7 @@ export class BenqiLyt extends LytSingleReward<PendleBenQiErc20LYT> {
     await this.qiToken.connect(person).redeem(amount);
   }
   async addFakeIncome(env: TestEnv): Promise<void> {
-    const currentBal = await this.qiToken.totalReserves();
+    const currentBal = await this.underlying.balanceOf(this.qiToken.address);
     await env.fundKeeper.transferTo(this.underlying.address, this.qiToken.address, currentBal.div(10));
   }
   async yieldTokenBalance(addr: string): Promise<BN> {
@@ -110,7 +110,7 @@ export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
   await comptroller._setRewardSpeed(1, qiUSD.address, env.mconsts.ONE_E_18);
 
   // FAKE AMOUNT
-  await env.fundKeeper.depositBenqi(qiUSD.address, BN.from(10).pow(8));
+  await env.fundKeeper.depositBenqi(qiUSD.address, BN.from(10).pow(10));
 
   // Deploy LYT
   const lyt = await deploy<PendleBenQiErc20LYT>(env.deployer, 'PendleBenQiErc20LYT', [
