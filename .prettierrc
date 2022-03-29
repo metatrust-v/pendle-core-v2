@@ -12,16 +12,13 @@
       }
     },
     {
-      "files": "*.ts",
+      "files": [
+        "*.ts",
+        "*.js"
+      ],
       "options": {
         "bracketSpacing": true,
         "explicitTypes": "always",
-        "newline-before-return": true,
-        "no-duplicate-variable": [
-          true,
-          "check-parameters"
-        ],
-        "no-var-keyword": true,
         "printWidth": 120,
         "semi": true,
         "singleQuote": true,

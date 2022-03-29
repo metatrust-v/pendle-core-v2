@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { ERC20, IERC20, LYTWrap, LYTWrapWithRewards } from '../../../typechain-types';
+import { ERC20, IERC20, LYTBase, LYTBaseWithRewards } from '../../../typechain-types';
 import { BigNumber as BN, BigNumberish, CallOverrides, ContractTransaction, Overrides, Signer } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
 import { getContractAt } from '../../helpers';
@@ -16,12 +16,7 @@ export abstract class LytSingle<LYT extends LYTSimpleInterface> {
     this.lyt = lyt;
   }
 
-  public async initialize() {
-    this.yieldToken = await getContractAt<ERC20>('ERC20', await this.lyt.yieldToken());
-    const baseTokens = await this.lyt.getBaseTokens();
-    assert(baseTokens.length == 1, 'Number of basetokens not 1');
-    this.underlying = await getContractAt<ERC20>('ERC20', baseTokens[0]);
-  }
+  public async initialize() {}
 
   abstract mintYieldToken(person: SignerWithAddress, amount: BN): Promise<void>;
   abstract burnYieldToken(person: SignerWithAddress, amount: BN): Promise<void>;
@@ -40,92 +35,37 @@ export abstract class LytSingle<LYT extends LYTSimpleInterface> {
   public async indexCurrent(): Promise<BN> {
     return await this.lyt.callStatic.lytIndexCurrent();
   }
-  public async depositBaseToken(
-    person: SignerWithAddress,
-    baseToken: string,
-    amount: BigNumberish,
-    minAmountLytOut: BigNumberish = 0
-  ): Promise<BN> {  // callstatic doesn't work with setTimeNextBlock, consider using pre & post balance in this case
-    const result = await this.lyt
-      .connect(person)
-      .callStatic.depositBaseToken(person.address, baseToken, amount, minAmountLytOut);
-    await this.lyt.connect(person).depositBaseToken(person.address, baseToken, amount, minAmountLytOut);
-    return result;
-  }
-  public async depositBaseTokenFor(
-    person: SignerWithAddress,
-    to: string,
-    baseToken: string,
-    amount: BigNumberish,
+
+  // Will change these when routers are finallized
+  public async mint(
+    payer: SignerWithAddress,
+    recipient: string,
+    tokenIn: string,
+    tokenAmount: BigNumberish,
     minAmountLytOut: BigNumberish = 0
   ): Promise<BN> {
-    const result = await this.lyt.connect(person).callStatic.depositBaseToken(to, baseToken, amount, minAmountLytOut);
-    await this.lyt.connect(person).depositBaseToken(to, baseToken, amount, minAmountLytOut);
-    return result;
+    await (tokenIn == this.underlying.address ? this.underlying : this.yieldToken)
+      .connect(payer)
+      .transfer(this.lyt.address, tokenAmount);
+    let preBal = await this.balanceOf(recipient);
+    await this.lyt.connect(payer).mint(recipient, tokenIn, minAmountLytOut);
+    return (await this.balanceOf(recipient)).sub(preBal);
   }
-  public async redeemBaseToken(
-    person: SignerWithAddress,
-    baseToken: string,
-    amount: BigNumberish,
-    minAmountBaseOut: BigNumberish = 0
+
+  public async redeem(
+    payer: SignerWithAddress,
+    recipient: string,
+    tokenOut: string,
+    lytAmount: BigNumberish,
+    amountBaseOut: BigNumberish = 0
   ): Promise<BN> {
-    const result = await this.lyt
-      .connect(person)
-      .callStatic.redeemToBaseToken(person.address, amount, baseToken, minAmountBaseOut);
-    await this.lyt.connect(person).redeemToBaseToken(person.address, amount, baseToken, minAmountBaseOut);
-    return result;
+    await this.lyt.connect(payer).transfer(this.lyt.address, lytAmount);
+    let baseToken = await getContractAt<ERC20>('ERC20', tokenOut);
+    let preBal = await baseToken.balanceOf(recipient);
+    await this.lyt.connect(payer).redeem(recipient, tokenOut, amountBaseOut);
+    return (await baseToken.balanceOf(recipient)).sub(preBal);
   }
-  public async redeemBaseTokenFor(
-    person: SignerWithAddress,
-    to: string,
-    baseToken: string,
-    amount: BigNumberish,
-    minAmountBaseOut: BigNumberish = 0
-  ): Promise<BN> {
-    const result = await this.lyt.connect(person).callStatic.redeemToBaseToken(to, amount, baseToken, minAmountBaseOut);
-    await this.lyt.connect(person).redeemToBaseToken(to, amount, baseToken, minAmountBaseOut);
-    return result;
-  }
-  public async depositYieldToken(
-    person: SignerWithAddress,
-    amount: BigNumberish,
-    minAmountLytOut: BigNumberish = 0
-  ): Promise<BN> {
-    const result = await this.lyt.connect(person).callStatic.depositYieldToken(person.address, amount, 0);
-    await this.lyt.connect(person).depositYieldToken(person.address, amount, minAmountLytOut);
-    return result;
-  }
-  public async depositYieldTokenFor(
-    person: SignerWithAddress,
-    to: string,
-    amount: BigNumberish,
-    minAmountLytOut: BigNumberish = 0
-  ): Promise<BN> {
-    const result = await this.lyt.connect(person).callStatic.depositYieldToken(to, amount, 0);
-    await this.lyt.connect(person).depositYieldToken(to, amount, minAmountLytOut);
-    return result;
-  }
-  public async redeemYieldToken(
-    person: SignerWithAddress,
-    amountLyt: BigNumberish,
-    minAmountYieldOut: BigNumberish = 0
-  ): Promise<BN> {
-    const result = await this.lyt
-      .connect(person)
-      .callStatic.redeemToYieldToken(person.address, amountLyt, minAmountYieldOut);
-    await this.lyt.connect(person).redeemToYieldToken(person.address, amountLyt, minAmountYieldOut);
-    return result;
-  }
-  public async redeemYieldTokenFor(
-    person: SignerWithAddress,
-    to: string,
-    amountLyt: BigNumberish,
-    minAmountYieldOut: BigNumberish = 0
-  ): Promise<BN> {
-    const result = await this.lyt.connect(person).callStatic.redeemToYieldToken(to, amountLyt, minAmountYieldOut);
-    await this.lyt.connect(person).redeemToYieldToken(to, amountLyt, minAmountYieldOut);
-    return result;
-  }
+
   public async transfer(from: SignerWithAddress, to: string, amount: BigNumberish): Promise<void> {
     await this.lyt.connect(from).transfer(to, amount);
   }
