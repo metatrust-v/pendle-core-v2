@@ -45,7 +45,7 @@ export abstract class LytSingle<LYT extends LYTSimpleInterface> {
     baseToken: string,
     amount: BigNumberish,
     minAmountLytOut: BigNumberish = 0
-  ): Promise<BN> {
+  ): Promise<BN> {  // callstatic doesn't work with setTimeNextBlock, consider using pre & post balance in this case
     const result = await this.lyt
       .connect(person)
       .callStatic.depositBaseToken(person.address, baseToken, amount, minAmountLytOut);
