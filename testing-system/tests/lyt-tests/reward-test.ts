@@ -135,7 +135,6 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
     //   //////////////////////////////////////////////////////////////*/
 
     it('Lyt holders should receive the same amount of rewards compared to yieldToken holders', async() => {
-      return;
       await fundToken(env, wallets.map(v => v.address), underlying.address, REF_AMOUNT_WEI.mul(100));
       /**
        * P1s holding yield bearing, P2s holding LYT
@@ -179,7 +178,6 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
     });
 
     it('Lyt holders receive reward proportionally to their balances', async() => {
-      return;
       await fundToken(env, wallets.map(v => v.address), underlying.address, REF_AMOUNT_WEI.mul(100));
       /**
        * Scenario: alice + bob = charlie + dave = eve
