@@ -1,8 +1,7 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { TestEnv, loadBasicEnv } from '..';
-import { getEth } from '../../../test/helpers/hardhat-helpers';
 import { ERC20, ERC20Premined, FundKeeper } from '../../../typechain-types';
-import { clearFund, deploy } from '../../helpers';
+import { clearFund, deploy, getEth } from '../../helpers';
 export interface CommonTokens {
   USD: ERC20;
 }

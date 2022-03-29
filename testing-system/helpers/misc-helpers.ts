@@ -29,6 +29,29 @@ export function approxBigNumber(
   }
 }
 
+export function approxByPercent(
+  _actual: BigNumberish,
+  _expected: BigNumberish,
+  _proportion: BigNumberish = 10**5
+) {
+  let actual: BN = BN.from(_actual);
+  let expected: BN = BN.from(_expected);
+  let minVal = actual.lt(expected) ? actual : expected;
+  approxBigNumber(actual, expected, minVal.div(_proportion));
+}
+
+export function minBN(
+  _a: BigNumberish,
+  _b: BigNumberish
+) {
+  let a = BN.from(_a);
+  let b = BN.from(_b);
+  return a.lt(b) ? a : b;
+}
+
+/**
+ * @returns one random integers in [l, r)
+ */
 export function random(l: number, r: number) {
   return Math.floor(Math.random() * (r - l) + l);
 }

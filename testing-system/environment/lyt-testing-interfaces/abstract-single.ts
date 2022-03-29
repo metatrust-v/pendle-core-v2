@@ -1,101 +1,33 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { ERC20, IERC20, LYTWrap, LYTWrapWithRewards } from '../../typechain-types';
+import { ERC20, IERC20, LYTWrap, LYTWrapWithRewards } from '../../../typechain-types';
 import { BigNumber as BN, BigNumberish, CallOverrides, ContractTransaction, Overrides, Signer } from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
-import { getContractAt } from '../helpers';
+import { getContractAt } from '../../helpers';
 import assert from 'assert';
-import { TestEnv } from '.';
+import { TestEnv } from '..';
+import { LYTSimpleInterface, LYTRewardSimpleInterface } from './simple-interfaces';
 
-interface LYTSimpleInterface {
-  connect(signerOrProvider: Signer | Provider | string): this;
-
-  yieldToken(overrides?: CallOverrides): Promise<string>;
-
-  depositBaseToken(
-    recipient: string,
-    baseTokenIn: string,
-    amountBaseIn: BigNumberish,
-    minAmountLytOut: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  redeemToBaseToken(
-    recipient: string,
-    amountLytRedeem: BigNumberish,
-    baseTokenOut: string,
-    minAmountBaseOut: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  depositYieldToken(
-    recipient: string,
-    amountYieldIn: BigNumberish,
-    minAmountLytOut: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  redeemToYieldToken(
-    recipient: string,
-    amountLytRedeem: BigNumberish,
-    minAmountYieldOut: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-  balanceOf(account: string, overrides?: CallOverrides): Promise<BN>;
-  transfer(to: string, amount: BigNumberish, overrides?: CallOverrides): Promise<ContractTransaction>;
-  approve(
-    spender: string,
-    amount: BigNumberish,
-    overrides?: Overrides & { from?: string | Promise<string> }
-  ): Promise<ContractTransaction>;
-
-  callStatic: {
-    depositBaseToken(
-      recipient: string,
-      baseTokenIn: string,
-      amountBaseIn: BigNumberish,
-      minAmountLytOut: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BN>;
-    redeemToBaseToken(
-      recipient: string,
-      amountLytRedeem: BigNumberish,
-      baseTokenOut: string,
-      minAmountBaseOut: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BN>;
-    depositYieldToken(
-      recipient: string,
-      amountYieldIn: BigNumberish,
-      minAmountLytOut: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BN>;
-    redeemToYieldToken(
-      recipient: string,
-      amountLytRedeem: BigNumberish,
-      minAmountYieldOut: BigNumberish,
-      overrides?: Overrides & { from?: string | Promise<string> }
-    ): Promise<BN>;
-    lytIndexCurrent(overrides?: Overrides & { from?: string | Promise<string> }): Promise<BN>;
-    assetBalanceOf(user: string, overrides?: CallOverrides): Promise<BN>;
-  };
-}
-
-interface LYTRewardSimpleInterface extends LYTSimpleInterface {
-  redeemReward(user: string, overrides?: Overrides & { from?: string | Promise<string> }): Promise<ContractTransaction>;
-  getRewardTokens(overrides?: CallOverrides): Promise<string[]>;
-}
-
-export abstract class LytTesting<LYT extends LYTSimpleInterface> {
+export abstract class LytSingle<LYT extends LYTSimpleInterface> {
   lyt: LYT;
+  underlying: ERC20 = {} as ERC20;
+  yieldToken: ERC20 = {} as ERC20;
 
   constructor(lyt: LYT) {
     this.lyt = lyt;
+  }
+
+  public async initialize() {
+    this.yieldToken = await getContractAt<ERC20>('ERC20', await this.lyt.yieldToken());
+    const baseTokens = await this.lyt.getBaseTokens();
+    assert(baseTokens.length == 1, 'Number of basetokens not 1');
+    this.underlying = await getContractAt<ERC20>('ERC20', baseTokens[0]);
   }
 
   abstract mintYieldToken(person: SignerWithAddress, amount: BN): Promise<void>;
   abstract burnYieldToken(person: SignerWithAddress, amount: BN): Promise<void>;
   abstract addFakeIncome(env: TestEnv): Promise<void>;
   abstract yieldTokenBalance(addr: string): Promise<BN>;
+  abstract getDirectExchangeRate(): Promise<BN>;
 
   public async balanceOf(addr: string): Promise<BN> {
     return await this.lyt.balanceOf(addr);
@@ -113,7 +45,7 @@ export abstract class LytTesting<LYT extends LYTSimpleInterface> {
     baseToken: string,
     amount: BigNumberish,
     minAmountLytOut: BigNumberish = 0
-  ): Promise<BN> {
+  ): Promise<BN> {  // callstatic doesn't work with setTimeNextBlock, consider using pre & post balance in this case
     const result = await this.lyt
       .connect(person)
       .callStatic.depositBaseToken(person.address, baseToken, amount, minAmountLytOut);
@@ -202,13 +134,17 @@ export abstract class LytTesting<LYT extends LYTSimpleInterface> {
   }
 }
 
-export abstract class LytRewardTesting<LYT extends LYTRewardSimpleInterface> extends LytTesting<LYT> {
-  rewardTokens: IERC20[] = [];
+export abstract class LytSingleReward<LYT extends LYTRewardSimpleInterface> extends LytSingle<LYT> {
+  rewardTokens: ERC20[] = [];
+
+  abstract claimDirectReward(payer: SignerWithAddress, person: string): Promise<void>;
+
   public async initialize(): Promise<void> {
+    await super.initialize();
     const rewardTokenAddr: string[] = await this.lyt.getRewardTokens();
     assert(rewardTokenAddr.length > 0, 'LYT does not have reward');
     for (let tokenAddr of rewardTokenAddr) {
-      this.rewardTokens.push(await getContractAt<IERC20>('IERC20', tokenAddr));
+      this.rewardTokens.push(await getContractAt<ERC20>('ERC20', tokenAddr));
     }
   }
 
