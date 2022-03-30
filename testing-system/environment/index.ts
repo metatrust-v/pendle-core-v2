@@ -21,6 +21,7 @@ export interface BasicEnv {
   aconsts: PendleConstsType;
   econsts: PendleConstsType;
   network: Network;
+  startTime: number;
 }
 
 export type TestEnv = BasicEnv & CommonFixture & AvalancheFixture & EthereumFixture;
@@ -31,6 +32,7 @@ export async function loadBasicEnv(env: TestEnv) {
   env.mconsts = MiscConsts;
   env.aconsts = AvaxConsts;
   env.econsts = EthConsts;
+  env.startTime = Math.round(new Date().getTime() / 1000);
 }
 
 export enum Network {
