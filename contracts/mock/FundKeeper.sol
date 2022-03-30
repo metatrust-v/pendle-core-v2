@@ -1,5 +1,8 @@
 pragma solidity ^0.8.0;
 import "../interfaces/IQiErc20.sol";
+import "../LiquidYieldToken/ILiquidYieldToken.sol";
+import "../core/PendleYieldToken.sol";
+import "hardhat/console.sol";
 
 contract FundKeeper {
     constructor() {}
@@ -13,6 +16,18 @@ contract FundKeeper {
             require(token.balanceOf(address(this)) >= amount, "fund keeper does not have enough fund");
             token.transfer(to[i], amount);
         }
+    }
+
+    function mintLytSingleBase(address lyt, address base, uint256 amount) public {
+        IERC20(base).transfer(lyt, amount);
+        ILiquidYieldToken(lyt).mint(address(this), base, 0);
+    }
+
+    function mintYT(address lyt, address base, address yt, uint256 amountBase) public {
+        IERC20(base).transfer(lyt, amountBase);
+        uint256 lytAmount = ILiquidYieldToken(lyt).mint(address(this), base, 0);
+        IERC20(lyt).transfer(yt, lytAmount);
+        PendleYieldToken(yt).mintYO(address(this), address(this));
     }
 
     function depositBenqi(IQiErc20 qiToken, uint256 amount) public {
