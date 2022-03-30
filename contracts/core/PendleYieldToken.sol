@@ -91,6 +91,7 @@ contract PendleYieldToken is PendleBaseToken, IPYieldToken {
         amountLytOut = _calcAmountRedeemable(amountYOToRedeem);
 
         IERC20(LYT).safeTransfer(recipient, amountLytOut);
+        _afterTransferOutLYT();
     }
 
     function redeemDueInterest(address user) public returns (uint256 interestOut) {
@@ -105,6 +106,7 @@ contract PendleYieldToken is PendleBaseToken, IPYieldToken {
 
         interestOut = interestPreFee - feeAmount;
         IERC20(LYT).safeTransfer(user, interestOut);
+        _afterTransferOutLYT();
     }
 
     function redeemDueRewards(address user) public returns (uint256[] memory rewardsOut) {
@@ -140,6 +142,7 @@ contract PendleYieldToken is PendleBaseToken, IPYieldToken {
 
         if (totalProtocolFee > 0) {
             IERC20(LYT).safeTransfer(treasury, totalProtocolFee);
+            _afterTransferOutLYT();
             totalProtocolFee = 0;
         }
     }
@@ -169,6 +172,7 @@ contract PendleYieldToken is PendleBaseToken, IPYieldToken {
 
         if (data[user].lastParamL.length == 0) {
             data[user].lastParamL = paramL;
+            data[user].dueRewards = new uint256[](2);
             return;
         }
 
@@ -195,7 +199,7 @@ contract PendleYieldToken is PendleBaseToken, IPYieldToken {
         uint256 totalYT = totalSupply();
 
         if (totalYT != 0) {
-            uint256[] memory incomePerYT = incomeRewards.mul(FixedPoint.ONE).divDown(totalYT);
+            uint256[] memory incomePerYT = incomeRewards.divDown(totalYT);
             paramL = paramL.add(incomePerYT);
         }
     }
@@ -213,6 +217,10 @@ contract PendleYieldToken is PendleBaseToken, IPYieldToken {
         amount = balanceLYT - lastLytBalance;
         lastLytBalance = balanceLYT;
         require(amount > 0, "RECEIVE_ZERO");
+    }
+
+    function _afterTransferOutLYT() internal {
+        lastLytBalance = IERC20(LYT).balanceOf(address(this));
     }
 
     function _beforeTokenTransfer(
