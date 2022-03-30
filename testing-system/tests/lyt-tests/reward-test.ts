@@ -10,6 +10,7 @@ import {
   approveAll,
   approxBigNumber,
   approxByPercent,
+  clearFund,
   evm_revert,
   evm_snapshot,
   fundToken,
@@ -50,7 +51,6 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
 
       await prepTestEnv();
       await prepTestScenerio();
-
       snapshotId = await evm_snapshot();
     });
 
@@ -104,12 +104,12 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
       return res;
     }
 
-    it('Redeem rewards success', async () => {
+    it('Redeem rewards success, [Charlie and dave pays all for alice and bob]', async () => {
+      await clearFund(env, [alice, bob], [underlying.address, yieldToken.address]);
       await lyt.mintYieldToken(charlie, REF_AMOUNT_WEI.mul(2));
-
       let currentTime = BN.from(Math.round(new Date().getTime() / 1000));
       await setTimeNextBlock(currentTime.add(env.mconsts.ONE_DAY));
-      await lyt.mint(alice, alice.address, underlying.address, REF_AMOUNT_WEI);
+      await lyt.mint(dave, alice.address, underlying.address, REF_AMOUNT_WEI);
       currentTime = currentTime.add(env.mconsts.ONE_DAY);
 
       await setTimeNextBlock(currentTime.add(env.mconsts.ONE_DAY));
@@ -170,12 +170,13 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
         if (lytBal.gt(0)) {
           await lyt.transfer(wallets[transferer], wallets[receiver].address, lytBal.div(2));
         }
-        await advanceTime(env.mconsts.ONE_WEEK);
+        await advanceTime(env.mconsts.ONE_DAY);
       }
 
-      for (let person of wallets) {
-        await lyt.claimDirectReward(person, person.address);
-        await lyt.redeemReward(person, person.address);
+      for (let i = 0; i < wallets.length; ++i) {
+        let person = wallets[i];
+        if (i < 3) await lyt.redeemReward(person, person.address);
+        else await lyt.claimDirectReward(person, person.address);
       }
 
       approxByPercent(await getRewardBalances([0, 1, 2]), await getRewardBalances([3, 4]));
@@ -215,11 +216,10 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
             }
           }
         }
-        await advanceTime(env.mconsts.ONE_WEEK);
+        await advanceTime(env.mconsts.ONE_DAY);
       }
 
       for (let person of wallets) {
-        await lyt.claimDirectReward(person, person.address);
         await lyt.redeemReward(person, person.address);
       }
 
@@ -228,8 +228,3 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
     });
   });
 }
-
-it('Run reward tests', async () => {
-  const env = await buildEnv();
-  await runTest(env, env.qiLyt);
-});

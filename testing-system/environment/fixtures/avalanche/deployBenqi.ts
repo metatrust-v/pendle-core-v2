@@ -62,7 +62,6 @@ export interface BenqiEnv {
   qiLyt: BenqiLyt;
   qiToken: ERC20Premined;
 }
-
 export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
   const comptrollerImplementation = await deploy<Comptroller>(env.deployer, 'Comptroller', []);
   const unitroller = await deploy<Unitroller>(env.deployer, 'Unitroller', []);
@@ -116,7 +115,7 @@ export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
   const lyt = await deploy<PendleBenQiErc20LYT>(env.deployer, 'PendleBenQiErc20LYT', [
     'LYT-qiUSD',
     'LYT-qiUSD',
-    18,
+    6,
     6,
     env.tokens.USD.address,
     qiUSD.address,

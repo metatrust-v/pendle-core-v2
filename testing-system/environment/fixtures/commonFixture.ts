@@ -9,6 +9,7 @@ export interface CommonTokens {
 export type CommonFixture = {
   tokens: CommonTokens;
   fundKeeper: FundKeeper;
+  treasury: FundKeeper;
 };
 
 async function deployTokens(deployer: SignerWithAddress): Promise<CommonTokens> {
@@ -21,7 +22,10 @@ async function deployTokens(deployer: SignerWithAddress): Promise<CommonTokens> 
 export async function commonFixture(): Promise<TestEnv> {
   const env = {} as TestEnv;
   await loadBasicEnv(env);
+
   env.fundKeeper = await deploy<FundKeeper>(env.deployer, 'FundKeeper', []);
+  env.treasury = await deploy<FundKeeper>(env.deployer, 'FundKeeper', []);
+
   await getEth(env.fundKeeper.address);
   env.tokens = await deployTokens(env.deployer);
   await clearFund(env, [env.deployer], [env.tokens.USD.address]);
