@@ -1,4 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { BigNumber as BN } from 'ethers';
 import { TestEnv, loadBasicEnv } from '..';
 import { ERC20, ERC20Premined, FundKeeper } from '../../../typechain-types';
 import { clearFund, deploy, getEth } from '../../helpers';

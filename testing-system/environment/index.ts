@@ -3,8 +3,9 @@ import hre from 'hardhat';
 import { CommonFixture } from './fixtures/commonFixture';
 import { loadFixture } from 'ethereum-waffle';
 import { AvaxConsts, EthConsts, MiscConsts, MiscConstsType, PendleConstsType } from '@pendle/constants';
-import { avalancheFixture, AvalancheFixture, EthereumFixture, ethereumFixture } from './fixtures';
+import { avalancheFixture, AvalancheFixture, EthereumFixture, ethereumFixture, LYTEnv } from './fixtures';
 import { FundKeeper } from '../../typechain-types';
+import { getLastBlockTimestamp } from '../helpers';
 export * from './lyt-testing-interfaces/abstract-single';
 
 export enum Mode {
@@ -24,7 +25,7 @@ export interface BasicEnv {
   startTime: number;
 }
 
-export type TestEnv = BasicEnv & CommonFixture & AvalancheFixture & EthereumFixture;
+export type TestEnv = BasicEnv & CommonFixture & AvalancheFixture & EthereumFixture & LYTEnv;
 
 export async function loadBasicEnv(env: TestEnv) {
   env.wallets = await hre.ethers.getSigners();
@@ -32,7 +33,7 @@ export async function loadBasicEnv(env: TestEnv) {
   env.mconsts = MiscConsts;
   env.aconsts = AvaxConsts;
   env.econsts = EthConsts;
-  env.startTime = Math.round(new Date().getTime() / 1000);
+  env.startTime = await getLastBlockTimestamp();
 }
 
 export enum Network {

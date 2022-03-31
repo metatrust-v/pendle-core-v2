@@ -11,7 +11,6 @@ import {
 } from '../../../../typechain-types';
 import { deploy, getContractAt } from '../../../helpers';
 import { TestEnv } from '../..';
-import { exit } from 'process';
 
 export class BenqiYTLYT extends LytSingleReward<PendleYTLYTBenqi> {
   rawLyt: LYTBaseWithRewards = {} as LYTBaseWithRewards;
@@ -62,6 +61,7 @@ export interface YOEnv {
   yt: PendleYieldToken;
   ot: PendleOwnershipToken;
   ytLyt: BenqiYTLYT;
+  expiry: BN;
 }
 
 export async function deployYO(env: TestEnv): Promise<YOEnv> {
@@ -100,13 +100,13 @@ export async function deployYO(env: TestEnv): Promise<YOEnv> {
   const ytLyt = new BenqiYTLYT(ytLytContract);
   await ytLyt.initialize();
 
-  await env.fundKeeper.mintLytSingleBase(lyt.address, env.qiLyt.underlying.address, env.mconsts.ONE_E_12);
-  // await env.fundKeeper.mintYT(lyt.address, env.qiLyt.underlying.address, yt.address, env.mconsts.ONE_E_12);
+  await env.fundKeeper.mintYT(lyt.address, env.qiLyt.underlying.address, yt.address, env.mconsts.ONE_E_12);
 
   return {
     ot,
     yt,
     ytLyt,
     factory,
+    expiry,
   };
 }

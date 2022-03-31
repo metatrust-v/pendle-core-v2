@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { BigNumber as BN, BigNumberish } from 'ethers';
+import { BigNumber, BigNumber as BN, BigNumberish } from 'ethers';
 
 export function approxBigNumber(
   _actual: BigNumberish,
@@ -36,10 +36,18 @@ export function approxByPercent(_actual: BigNumberish, _expected: BigNumberish, 
   approxBigNumber(actual, expected, minVal.div(_proportion));
 }
 
-export function minBN(_a: BigNumberish, _b: BigNumberish) {
+export function minBN(_a: BigNumberish, _b: BigNumberish): BN {
   let a = BN.from(_a);
   let b = BN.from(_b);
   return a.lt(b) ? a : b;
+}
+
+export function minBNs(_a: BigNumberish[]): BN {
+  let result: BN = BN.from(_a[0]);
+  for (let i = 1; i < _a.length; ++i) {
+    result = minBN(result, _a[i]);
+  }
+  return result;
 }
 
 /**

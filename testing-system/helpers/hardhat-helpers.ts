@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { Contract } from 'ethers';
 import { assert } from 'chai';
 import { BigNumber as BN } from 'ethers';
-import hre from 'hardhat';
+import hre, { ethers } from 'hardhat';
 
 export async function deploy<CType extends Contract>(
   deployer: SignerWithAddress,
@@ -94,4 +94,10 @@ export async function minerStop() {
 
 export async function getEth(user: string) {
   await hre.network.provider.send('hardhat_setBalance', [user, '0x56bc75e2d63100000000000000']);
+}
+
+export async function getLastBlockTimestamp() {
+  const blockBefore = await hre.ethers.provider.getBlockNumber();
+  const block = await hre.ethers.provider.getBlock(blockBefore);
+  return block.timestamp;
 }
