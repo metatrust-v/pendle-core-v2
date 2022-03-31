@@ -32,6 +32,11 @@ const config: HardhatUserConfig = {
                 url: `https://api.avax.network/ext/bc/C/rpc`,
                 blockNumber: 8311876
             },
+            // chainId: 1,
+            // forking: {
+            //     url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
+            //     blockNumber: 14308143,
+            // },
             accounts: [
                 // 5 accounts with 10^14 ETH each
                 // Addresses:

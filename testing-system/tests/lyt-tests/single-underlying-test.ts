@@ -1,18 +1,17 @@
 import { evm_revert, evm_snapshot, approxBigNumber, approveAll, fundToken } from '../../helpers';
-import { buildEnv, LytSingle, TestEnv } from '../../environment';
+import { buildEnv, LytSingle, Network, TestEnv } from '../../environment';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BigNumber as BN } from 'ethers';
 import hre from 'hardhat';
 import { ERC20 } from '../../../typechain-types';
 import { expect } from 'chai';
 import { LYTSimpleInterface } from '../../environment/lyt-testing-interfaces/simple-interfaces';
+import { BtrflyLyt } from '../../environment/fixtures/ethereum/btrflySupport';
+import { runExtraTestBtrfly } from './btrfly-extra-test';
 
 export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: TestEnv, lyt: LYT) {
   describe('Lyt single underlying test', async () => {
-    const [ALICE, LYT] = [0, 1];
     const LYT_DECIMAL = 18;
-    const MINUTES_PER_DAY = 1440;
-    const MINUTES_PER_MONTH = MINUTES_PER_DAY * 30;
 
     let globalSnapshotId: string;
     let snapshotId: string;
@@ -29,7 +28,6 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
 
     let underlying: ERC20;
     let yieldToken: ERC20;
-    let allContracts: string[];
 
     /*///////////////////////////////////////////////////////////////
                               Setting up
@@ -58,7 +56,6 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
       REF_AMOUNT_WEI = REF_AMOUNT.mul(BN.from(10).pow(await lyt.underlying.decimals()));
       underlying = lyt.underlying;
       yieldToken = lyt.yieldToken;
-      allContracts = [alice.address, lyt.lyt.address];
     }
 
     async function prepTestScenerio() {
@@ -170,12 +167,25 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
 
     it('Check valid base token', async () => {
       expect(await lyt.lyt.isValidBaseToken(underlying.address)).to.be.true;
+      expect(await lyt.lyt.isValidBaseToken(yieldToken.address)).to.be.true;
       expect(await lyt.lyt.isValidBaseToken(alice.address)).to.be.false;
+    });
+
+    it('Extra tests', async () => {
+      if (lyt instanceof BtrflyLyt) {
+        await runExtraTestBtrfly(env, lyt);
+      }
     });
   });
 }
 
 it('Run test single', async () => {
   const env = await buildEnv();
-  await runTest(env, env.qiLyt);
+  if (env.network == Network.AVAX) {
+    await runTest(env, env.qiLyt);
+  } else if (env.network == Network.ETH) {
+    await runTest(env, env.btrflyLyt);
+  } else {
+    throw new Error('Unsupported Network');
+  }
 });
