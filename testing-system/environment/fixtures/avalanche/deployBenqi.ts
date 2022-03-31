@@ -127,6 +127,8 @@ export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
   const qiLyt: BenqiLyt = new BenqiLyt(lyt);
   await qiLyt.initialize();
 
+  await env.fundKeeper.mintLytSingleBase(lyt.address, qiLyt.underlying.address, env.mconsts.ONE_E_12);
+
   return {
     qiUSDC: qiUSD as any as QiErc20,
     qiLyt: qiLyt,

@@ -6,13 +6,12 @@ import hre from 'hardhat';
 import { ERC20 } from '../../../typechain-types';
 import { expect } from 'chai';
 import { LYTSimpleInterface } from '../../environment/lyt-testing-interfaces/simple-interfaces';
-import { BtrflyLyt } from '../../environment/fixtures/ethereum/btrflySupport';
 import { runExtraTestBtrfly } from './btrfly-extra-test';
+import { parseLYTSingleEnv } from '../../environment/fixtures';
 
 export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: TestEnv, lyt: LYT) {
   describe('Lyt single underlying test', async () => {
     const LYT_DECIMAL = 18;
-
     let globalSnapshotId: string;
     let snapshotId: string;
     let wallets: SignerWithAddress[];
@@ -23,7 +22,6 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
     let dave: SignerWithAddress;
     let eve: SignerWithAddress;
 
-    let REF_AMOUNT: BN;
     let REF_AMOUNT_WEI: BN;
 
     let underlying: ERC20;
@@ -34,41 +32,26 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
       //////////////////////////////////////////////////////////////*/
     before(async () => {
       globalSnapshotId = await evm_snapshot();
-
-      await prepTestEnv();
-      await prepTestScenerio();
-
       snapshotId = await evm_snapshot();
+      [alice, bob, charlie, dave, eve] = wallets = env.wallets;
     });
 
     beforeEach(async () => {
       await evm_revert(snapshotId);
       snapshotId = await evm_snapshot();
-    });
-
-    after(async () => {
-      await evm_revert(globalSnapshotId);
-    });
-
-    async function prepTestEnv() {
-      [alice, bob, charlie, dave, eve] = wallets = await hre.ethers.getSigners();
-      REF_AMOUNT = BN.from(10 ** 2);
-      REF_AMOUNT_WEI = REF_AMOUNT.mul(BN.from(10).pow(await lyt.underlying.decimals()));
-      underlying = lyt.underlying;
-      yieldToken = lyt.yieldToken;
-    }
-
-    async function prepTestScenerio() {
-      await approveAll(env, underlying.address, lyt.lyt.address);
-      await approveAll(env, underlying.address, yieldToken.address);
-      await approveAll(env, yieldToken.address, lyt.lyt.address);
+      env = await parseLYTSingleEnv(env, lyt);
+      ({ underlying, yieldToken, REF_AMOUNT_WEI } = env);
       await fundToken(
         env,
         wallets.map((v) => v.address),
         underlying.address,
         REF_AMOUNT_WEI.mul(2)
       );
-    }
+    });
+
+    after(async () => {
+      await evm_revert(globalSnapshotId);
+    });
 
     /*///////////////////////////////////////////////////////////////
                             DEPOSIT & REDEEM 
@@ -156,25 +139,10 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
     /*///////////////////////////////////////////////////////////////
                   MISC METADATA FUNCTIONS
       //////////////////////////////////////////////////////////////*/
-
-    it('Decimal', async () => {
-      expect(await lyt.lyt.decimals()).to.be.eq(LYT_DECIMAL);
-    });
-
-    it('Asset decimal', async () => {
-      expect(await lyt.lyt.assetDecimals()).to.be.eq(await underlying.decimals());
-    });
-
     it('Check valid base token', async () => {
       expect(await lyt.lyt.isValidBaseToken(underlying.address)).to.be.true;
       expect(await lyt.lyt.isValidBaseToken(yieldToken.address)).to.be.true;
       expect(await lyt.lyt.isValidBaseToken(alice.address)).to.be.false;
-    });
-
-    it('Extra tests', async () => {
-      if (lyt instanceof BtrflyLyt) {
-        await runExtraTestBtrfly(env, lyt);
-      }
     });
   });
 }
@@ -185,6 +153,7 @@ it('Run test single', async () => {
     await runTest(env, env.qiLyt);
   } else if (env.network == Network.ETH) {
     await runTest(env, env.btrflyLyt);
+    await runExtraTestBtrfly(env, env.btrflyLyt);
   } else {
     throw new Error('Unsupported Network');
   }
