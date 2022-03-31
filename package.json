@@ -27,7 +27,7 @@
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/test-helpers": "0.5.12",
-    "@pendle/constants": "https://github.com/pendle-finance/pendle-constants.git#66143b5f7a2d1b4ddd2acc6d3ea8e5a6884b398d",
+    "@pendle/constants": "https://github.com/pendle-finance/pendle-constants.git#d8380d64b5e8687cbbacd3f41dd57fe103bb58b7",
     "@tenderly/hardhat-tenderly": "^1.0.12",
     "@truffle/hdwallet-provider": "^1.3.0",
     "@typechain/ethers-v5": "^9.0.0",

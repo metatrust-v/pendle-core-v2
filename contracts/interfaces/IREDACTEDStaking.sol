@@ -32,4 +32,11 @@ interface IREDACTEDStaking {
     function rebase() external;
 
     function warmupPeriod() external returns (uint256);
+
+    function epoch() external view returns (
+      uint256 length,
+      uint256 number,
+      uint256 endBlock,
+      uint256 distribute
+    );
 }
