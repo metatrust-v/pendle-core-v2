@@ -1101,13 +1101,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@pendle/constants@https://github.com/pendle-finance/pendle-constants.git#66143b5f7a2d1b4ddd2acc6d3ea8e5a6884b398d":
-  version: 0.6.2
-  resolution: "@pendle/constants@https://github.com/pendle-finance/pendle-constants.git#commit=66143b5f7a2d1b4ddd2acc6d3ea8e5a6884b398d"
+"@pendle/constants@https://github.com/pendle-finance/pendle-constants.git#d8380d64b5e8687cbbacd3f41dd57fe103bb58b7":
+  version: 0.7.0
+  resolution: "@pendle/constants@https://github.com/pendle-finance/pendle-constants.git#commit=d8380d64b5e8687cbbacd3f41dd57fe103bb58b7"
   dependencies:
     ethers: ^5.0.1
-    web3: ^1.6.1
-  checksum: 7444b0e6babdcfb60bc6714baaaf4ede2b60a3433eb73206f087917194cf7f42cd3121a0a7bb22674aa480bc7c098120668b59e6646dcceaabc7d60f8a1424d5
+  checksum: ff9cc0d4a6fbdf0b45ebaa24c15559a19f9499457c7ad52d0ff053e41444dc2d7d7ad753695d3d93688dab3daa1dfca62befd0a73274804d0e193aa03b979a58
   languageName: node
   linkType: hard
 
@@ -1122,7 +1121,7 @@ __metadata:
     "@nomiclabs/hardhat-web3": ^2.0.0
     "@openzeppelin/contracts": ^4.5.0
     "@openzeppelin/test-helpers": 0.5.12
-    "@pendle/constants": "https://github.com/pendle-finance/pendle-constants.git#66143b5f7a2d1b4ddd2acc6d3ea8e5a6884b398d"
+    "@pendle/constants": "https://github.com/pendle-finance/pendle-constants.git#d8380d64b5e8687cbbacd3f41dd57fe103bb58b7"
     "@rari-capital/solmate": ^6.2.0
     "@tenderly/hardhat-tenderly": ^1.0.12
     "@truffle/hdwallet-provider": ^1.3.0
@@ -15576,7 +15575,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"web3@npm:^1.0.0-beta.34, web3@npm:^1.2.5, web3@npm:^1.6.1, web3@npm:^1.7.0":
+"web3@npm:^1.0.0-beta.34, web3@npm:^1.2.5, web3@npm:^1.7.0":
   version: 1.7.1
   resolution: "web3@npm:1.7.1"
   dependencies:

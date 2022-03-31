@@ -3,7 +3,7 @@ import hre from 'hardhat';
 import { CommonFixture } from './fixtures/commonFixture';
 import { loadFixture } from 'ethereum-waffle';
 import { AvaxConsts, EthConsts, MiscConsts, MiscConstsType, PendleConstsType } from '@pendle/constants';
-import { avalancheFixture, AvalancheFixture } from './fixtures';
+import { avalancheFixture, AvalancheFixture, EthereumFixture, ethereumFixture } from './fixtures';
 import { FundKeeper } from '../../typechain-types';
 export * from './lyt-testing-interfaces/abstract-single';
 
@@ -20,9 +20,10 @@ export interface BasicEnv {
   mconsts: MiscConstsType;
   aconsts: PendleConstsType;
   econsts: PendleConstsType;
+  network: Network;
 }
 
-export type TestEnv = BasicEnv & CommonFixture & AvalancheFixture;
+export type TestEnv = BasicEnv & CommonFixture & AvalancheFixture & EthereumFixture;
 
 export async function loadBasicEnv(env: TestEnv) {
   env.wallets = await hre.ethers.getSigners();
@@ -32,11 +33,24 @@ export async function loadBasicEnv(env: TestEnv) {
   env.econsts = EthConsts;
 }
 
+export enum Network {
+  ETH,
+  AVAX,
+}
+
 export async function buildEnv(): Promise<TestEnv> {
+  let env: TestEnv;
   switch (hre.network.config.chainId!) {
+    case 1:
+      env = await loadFixture(ethereumFixture);
+      env.network = Network.ETH;
+      break;
     case 43114:
-      return await loadFixture(avalancheFixture);
+      env = await loadFixture(avalancheFixture);
+      env.network = Network.AVAX;
+      break;
     default:
       throw new Error('Unsupported Network');
   }
+  return env;
 }
