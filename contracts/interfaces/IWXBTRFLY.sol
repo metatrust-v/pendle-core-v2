@@ -22,7 +22,9 @@
  */
 pragma solidity ^0.8.0;
 
-interface IWXBTRFLY {
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+
+interface IWXBTRFLY is IERC20 {
     function wrapFromBTRFLY(uint256 _amount) external returns (uint256);
 
     function unwrapToBTRFLY(uint256 _amount) external returns (uint256);
