@@ -36,4 +36,12 @@ contract FundKeeper {
         qiToken.mint(amount);
         qiToken.borrow(amount / 2);
     }
+
+    function redeemAllYO(PendleYieldToken yt) public {
+        IERC20 ot = IERC20(yt.OT());
+        uint256 amount = yt.balanceOf(address(this));
+        ot.transfer(address(yt), amount);
+        yt.transfer(address(yt), amount);
+        yt.redeemYO(address(this));
+    }
 }

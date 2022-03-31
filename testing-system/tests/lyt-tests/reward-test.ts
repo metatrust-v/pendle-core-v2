@@ -4,6 +4,7 @@ import { BigNumber as BN } from 'ethers';
 import hre from 'hardhat';
 import { ERC20 } from '../../../typechain-types';
 import { buildEnv, LytSingleReward, TestEnv } from '../../environment';
+import { parseLYTSingleEnv } from '../../environment/fixtures';
 import { LYTRewardSimpleInterface } from '../../environment/lyt-testing-interfaces/simple-interfaces';
 import {
   advanceTime,
@@ -21,11 +22,6 @@ import {
 
 export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterface>>(env: TestEnv, lyt: LYT) {
   describe('LYT reward testing', async () => {
-    const [ALICE, LYT] = [0, 1];
-    const LYT_DECIMAL = 18;
-    const MINUTES_PER_DAY = 1440;
-    const MINUTES_PER_MONTH = MINUTES_PER_DAY * 30;
-
     let globalSnapshotId: string;
     let snapshotId: string;
     let wallets: SignerWithAddress[];
@@ -36,53 +32,36 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
     let dave: SignerWithAddress;
     let eve: SignerWithAddress;
 
-    let REF_AMOUNT: BN;
     let REF_AMOUNT_WEI: BN;
 
     let underlying: ERC20;
     let yieldToken: ERC20;
-    let allContracts: string[];
 
     /*///////////////////////////////////////////////////////////////
 														Setting up
 		//////////////////////////////////////////////////////////////*/
     before(async () => {
       globalSnapshotId = await evm_snapshot();
-
-      await prepTestEnv();
-      await prepTestScenerio();
       snapshotId = await evm_snapshot();
+      [alice, bob, charlie, dave, eve] = wallets = env.wallets;
     });
 
     beforeEach(async () => {
       await evm_revert(snapshotId);
       snapshotId = await evm_snapshot();
-    });
-
-    after(async () => {
-      await evm_revert(globalSnapshotId);
-    });
-
-    async function prepTestEnv() {
-      [alice, bob, charlie, dave, eve] = wallets = await hre.ethers.getSigners();
-      REF_AMOUNT = BN.from(10 ** 2);
-      REF_AMOUNT_WEI = REF_AMOUNT.mul(BN.from(10).pow(await lyt.underlying.decimals()));
-      underlying = lyt.underlying;
-      yieldToken = lyt.yieldToken;
-      allContracts = [alice.address, lyt.lyt.address];
-    }
-
-    async function prepTestScenerio() {
-      await approveAll(env, underlying.address, lyt.lyt.address);
-      await approveAll(env, underlying.address, yieldToken.address);
-      await approveAll(env, yieldToken.address, lyt.lyt.address);
+      env = await parseLYTSingleEnv(env, lyt);
+      ({ underlying, yieldToken, REF_AMOUNT_WEI } = env);
       await fundToken(
         env,
         wallets.map((v) => v.address),
         underlying.address,
         REF_AMOUNT_WEI.mul(2)
       );
-    }
+    });
+
+    after(async () => {
+      await evm_revert(globalSnapshotId);
+    });
 
     async function getRewardBalances(peopleIds: number[], rwdId: number = 0): Promise<BN> {
       let res = BN.from(0);
