@@ -44,4 +44,14 @@ contract FundKeeper {
         yt.transfer(address(yt), amount);
         yt.redeemYO(address(this));
     }
+
+    function redeemYOAfterExpiryPull(PendleYieldToken yt, uint256 amount) public {
+        require(yt.balanceOf(address(yt)) == 0, "NONEMPTY_YT_BALANCE");
+        IERC20 ot = IERC20(yt.OT());
+        ot.transferFrom(msg.sender, address(yt), amount);
+        uint256 amountLytOut = yt.redeemYO(msg.sender);
+        require(amountLytOut > 0, "FUNDKEEPER_NOT_EXPIRED");
+        IERC20 lyt = IERC20(yt.LYT());
+        lyt.transfer(msg.sender, amount);
+    }
 }

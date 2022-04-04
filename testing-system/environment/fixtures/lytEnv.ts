@@ -12,13 +12,16 @@ export type LYTEnv = {
   REF_AMOUNT_WEI: BN;
 };
 
-export async function parseLYTSingleEnv(env: TestEnv, lyt: LytSingle<LYTSimpleInterface>): Promise<TestEnv> {
+export async function parseLYTSingleEnv(
+  env: TestEnv,
+  lyt: LytSingle<LYTSimpleInterface>
+): Promise<TestEnv> {
   env.underlying = lyt.underlying;
   env.yieldToken = lyt.yieldToken;
   env.REF_AMOUNT = BN.from(100);
   env.REF_AMOUNT_WEI = env.REF_AMOUNT.mul(BN.from(10).pow(await lyt.lyt.decimals()));
-  await approveAll(env, lyt.underlying.address, lyt.lyt.address);
+  await approveAll(env, lyt.underlying.address, lyt.address);
   await approveAll(env, lyt.underlying.address, lyt.yieldToken.address);
-  await approveAll(env, lyt.yieldToken.address, lyt.lyt.address);
+  await approveAll(env, lyt.yieldToken.address, lyt.address);
   return env;
 }
