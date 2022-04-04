@@ -1,6 +1,13 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { ERC20, IERC20, LYTBase, LYTBaseWithRewards } from '../../../typechain-types';
-import { BigNumber as BN, BigNumberish, CallOverrides, ContractTransaction, Overrides, Signer } from 'ethers';
+import {
+  BigNumber as BN,
+  BigNumberish,
+  CallOverrides,
+  ContractTransaction,
+  Overrides,
+  Signer,
+} from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
 import { getContractAt } from '../../helpers';
 import assert from 'assert';
@@ -9,11 +16,14 @@ import { LYTSimpleInterface, LYTRewardSimpleInterface } from './simple-interface
 
 export abstract class LytSingle<LYT extends LYTSimpleInterface> {
   lyt: LYT;
+  address: string;
+
   underlying: ERC20 = {} as ERC20;
   yieldToken: ERC20 = {} as ERC20;
 
   constructor(lyt: LYT) {
     this.lyt = lyt;
+    this.address = lyt.address;
   }
 
   public async initialize() {}
@@ -29,7 +39,7 @@ export abstract class LytSingle<LYT extends LYTSimpleInterface> {
   }
 
   public async assetBalanceOf(addr: string): Promise<BN> {
-    return await this.lyt.callStatic.assetBalanceOf(addr);
+    return (await this.balanceOf(addr)).mul(await this.indexCurrent()).div(BN.from(10).pow(18));
   }
 
   public async indexCurrent(): Promise<BN> {

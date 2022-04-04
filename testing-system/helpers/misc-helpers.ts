@@ -29,7 +29,11 @@ export function approxBigNumber(
   }
 }
 
-export function approxByPercent(_actual: BigNumberish, _expected: BigNumberish, _proportion: BigNumberish = 10 ** 5) {
+export function approxByPercent(
+  _actual: BigNumberish,
+  _expected: BigNumberish,
+  _proportion: BigNumberish = 10 ** 5
+) {
   let actual: BN = BN.from(_actual);
   let expected: BN = BN.from(_expected);
   let minVal = actual.lt(expected) ? actual : expected;
