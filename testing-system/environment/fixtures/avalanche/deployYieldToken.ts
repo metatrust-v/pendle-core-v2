@@ -5,12 +5,14 @@ import {
   ERC20,
   LYTBaseWithRewards,
   PendleOwnershipToken,
+  PendleRouterLytAndForge,
   PendleYieldContractFactory,
   PendleYieldToken,
   PendleYTLYTBenqi,
 } from '../../../../typechain-types';
-import { deploy, getContractAt } from '../../../helpers';
+import { approveAll, deploy, getContractAt } from '../../../helpers';
 import { TestEnv } from '../..';
+import { exit } from 'process';
 
 export class BenqiYTLYT extends LytSingleReward<PendleYTLYTBenqi> {
   rawLyt: LYTBaseWithRewards = {} as LYTBaseWithRewards;
@@ -68,6 +70,7 @@ export interface YOEnv {
   ot: PendleOwnershipToken;
   ytLyt: BenqiYTLYT;
   expiry: BN;
+  // router: PendleRouterLytAndForge;
 }
 
 export async function deployYO(env: TestEnv): Promise<YOEnv> {
@@ -116,11 +119,19 @@ export async function deployYO(env: TestEnv): Promise<YOEnv> {
     env.mconsts.ONE_E_12
   );
 
+  const router = await deploy<PendleRouterLytAndForge>(env.deployer, 'PendleRouterLytAndForge', [
+    env.aconsts.joe!.ROUTER,
+    env.aconsts.joe!.PAIR_FACTORY,
+  ]);
+  await approveAll(env, yt.address, env.fundKeeper.address);
+  await approveAll(env, ot.address, env.fundKeeper.address);
+
   return {
     ot,
     yt,
     ytLyt,
     factory,
     expiry,
+    // router,
   };
 }

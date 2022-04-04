@@ -127,7 +127,7 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(
         [wallets[0].address, wallets[1].address],
         underlying.address
       );
-      
+
       // interest should yield more underlying overtime
       expect(balAliceBob).to.be.gt(funded);
       console.log('Funded:', funded.toString());
