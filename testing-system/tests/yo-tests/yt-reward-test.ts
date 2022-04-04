@@ -14,6 +14,7 @@ import {
   evm_snapshot,
   fundToken,
   getLastBlockTimestamp,
+  getSumBalance,
   minBN,
   minBNs,
   random,
@@ -60,14 +61,6 @@ describe('YT Reward tests', async () => {
     await runLYTRewardTest(env, lyt);
   });
 
-  async function getRewardBalances(peopleIds: number[], rwdId: number = 0): Promise<BN> {
-    let res = BN.from(0);
-    for (let id of peopleIds) {
-      res = res.add(await lyt.rewardBalance(wallets[id].address, rwdId));
-    }
-    return res;
-  }
-
   it('YT holder should receive the same amount of rewards as LYT holders and yieldtoken holder', async () => {
     const NUM_ITERS = 50;
     for (let i = 0; i < NUM_ITERS; ++i) {
@@ -104,9 +97,17 @@ describe('YT Reward tests', async () => {
       else qiLyt.claimDirectReward(person, person.address);
     }
 
-    approxByPercent(await getRewardBalances([0, 1]), await getRewardBalances([2, 3]), 10000);
+    approxByPercent(
+      await getSumBalance([wallets[0].address, wallets[1].address], lyt.rewardTokens[0].address),
+      await getSumBalance([wallets[2].address, wallets[3].address], lyt.rewardTokens[0].address),
+      10000
+    );
 
-    approxByPercent(await getRewardBalances([0, 1]), await getRewardBalances([4]), 10000);
+    approxByPercent(
+      await getSumBalance([wallets[0].address, wallets[1].address], lyt.rewardTokens[0].address),
+      await getSumBalance([wallets[4].address], lyt.rewardTokens[0].address),
+      10000
+    );
   });
 
   it('YT should not receive reward after expiry', async () => {

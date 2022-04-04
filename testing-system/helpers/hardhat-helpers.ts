@@ -71,7 +71,10 @@ export async function advanceTimeAndBlock(time: BN, blockCount: number) {
 }
 
 export async function mineAllPendingTransactions() {
-  let pendingBlock: any = await hre.network.provider.send('eth_getBlockByNumber', ['pending', false]);
+  let pendingBlock: any = await hre.network.provider.send('eth_getBlockByNumber', [
+    'pending',
+    false,
+  ]);
   await mineBlock();
   pendingBlock = await hre.network.provider.send('eth_getBlockByNumber', ['pending', false]);
   assert(pendingBlock.transactions.length == 0);

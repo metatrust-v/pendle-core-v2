@@ -11,7 +11,6 @@ import { parseLYTSingleEnv } from '../../environment/fixtures';
 
 export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: TestEnv, lyt: LYT) {
   describe('Lyt single underlying test', async () => {
-    const LYT_DECIMAL = 18;
     let globalSnapshotId: string;
     let snapshotId: string;
     let wallets: SignerWithAddress[];
@@ -60,7 +59,9 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
     it('Deposit & redeem test', async () => {
       /*                      PHASE 1: Deposit using underlying                         */
       const exchangeRateStart = await lyt.indexCurrent();
-      const expectedLytAmount = REF_AMOUNT_WEI.mul(2).mul(env.mconsts.ONE_E_18).div(exchangeRateStart);
+      const expectedLytAmount = REF_AMOUNT_WEI.mul(2)
+        .mul(env.mconsts.ONE_E_18)
+        .div(exchangeRateStart);
       for (let i = 0; i < wallets.length; ++i) {
         const pi = wallets[i];
         const pj = wallets[(i + 1) % wallets.length];
@@ -118,7 +119,11 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(env: Te
       await lyt.mint(alice, alice.address, underlying.address, REF_AMOUNT_WEI);
       expect(await underlying.balanceOf(alice.address)).to.be.equal(0);
       await lyt.burnYieldToken(alice, await yieldToken.balanceOf(alice.address));
-      approxBigNumber(await lyt.assetBalanceOf(alice.address), await underlying.balanceOf(alice.address), 10);
+      approxBigNumber(
+        await lyt.assetBalanceOf(alice.address),
+        await underlying.balanceOf(alice.address),
+        10
+      );
     });
 
     it('Lyt index current', async () => {

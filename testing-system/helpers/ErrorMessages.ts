@@ -5,4 +5,5 @@ export const errMsg = {
   ERC20_BURN_EXCEEDS_BALANCE: prefix + ' ' + "'ERC20: burn amount exceeds balance'",
   ERC20_TRANSFER_EXCEEDS_BALANCE: prefix + ' ' + "'ERC20: transfer amount exceeds balance'",
   SAFE_ERC20_FAILED: prefix + ' ' + "'SafeERC20: ERC20 operation did not succeed'",
+  FUNDKEEPER_NOT_EXPIRED: 'NOT_EXPIRED',
 };

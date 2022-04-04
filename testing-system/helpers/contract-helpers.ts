@@ -13,11 +13,17 @@ export async function approveAll(env: TestEnv, tokenAddr: string, toAddr: string
   }
 }
 
-export async function clearFund(env: TestEnv, from: SignerWithAddress[], tokens: string[]): Promise<void> {
+export async function clearFund(
+  env: TestEnv,
+  from: SignerWithAddress[],
+  tokens: string[]
+): Promise<void> {
   for (let wallet of from) {
     for (let tokenAddr of tokens) {
       let token = await getContractAt<ERC20>('ERC20', tokenAddr);
-      await token.connect(wallet).transfer(env.fundKeeper.address, await token.balanceOf(wallet.address));
+      await token
+        .connect(wallet)
+        .transfer(env.fundKeeper.address, await token.balanceOf(wallet.address));
     }
   }
 }
@@ -26,9 +32,22 @@ export async function fundToken(env: TestEnv, to: string[], token: string, amoun
   await env.fundKeeper.transferToMany(token, to, amount);
 }
 
-export async function transferNative(from: SignerWithAddress, to: string, amount: BigNumberish): Promise<void> {
+export async function transferNative(
+  from: SignerWithAddress,
+  to: string,
+  amount: BigNumberish
+): Promise<void> {
   await from.sendTransaction({
     to: to,
     value: amount,
   });
+}
+
+export async function getSumBalance(addresses: string[], tokenAddr: string) {
+  const token = await getContractAt<ERC20>('ERC20', tokenAddr);
+  let sum = BN.from(0);
+  for (let addr of addresses) {
+    sum = sum.add(await token.balanceOf(addr));
+  }
+  return sum;
 }

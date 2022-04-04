@@ -5,12 +5,14 @@ import {
   ERC20,
   LYTBaseWithRewards,
   PendleOwnershipToken,
+  PendleRouterLytAndForge,
   PendleYieldContractFactory,
   PendleYieldToken,
   PendleYTLYTBenqi,
 } from '../../../../typechain-types';
-import { deploy, getContractAt } from '../../../helpers';
+import { approveAll, deploy, getContractAt } from '../../../helpers';
 import { TestEnv } from '../..';
+import { exit } from 'process';
 
 export class BenqiYTLYT extends LytSingleReward<PendleYTLYTBenqi> {
   rawLyt: LYTBaseWithRewards = {} as LYTBaseWithRewards;
@@ -23,9 +25,15 @@ export class BenqiYTLYT extends LytSingleReward<PendleYTLYTBenqi> {
 
   public async initialize(): Promise<void> {
     await super.initialize();
-    this.yt = await getContractAt<PendleYieldToken>('PendleYieldToken', await this.lyt.yieldToken());
+    this.yt = await getContractAt<PendleYieldToken>(
+      'PendleYieldToken',
+      await this.lyt.yieldToken()
+    );
     this.ot = await getContractAt<PendleOwnershipToken>('PendleOwnershipToken', await this.yt.OT());
-    this.rawLyt = await getContractAt<LYTBaseWithRewards>('LYTBaseWithRewards', await this.lyt.lyt());
+    this.rawLyt = await getContractAt<LYTBaseWithRewards>(
+      'LYTBaseWithRewards',
+      await this.lyt.lyt()
+    );
     this.underlying = await getContractAt<ERC20>('ERC20', await this.rawLyt.address);
     this.yieldToken = await getContractAt<ERC20>('ERC20', await this.lyt.yieldToken());
   }
@@ -62,6 +70,7 @@ export interface YOEnv {
   ot: PendleOwnershipToken;
   ytLyt: BenqiYTLYT;
   expiry: BN;
+  // router: PendleRouterLytAndForge;
 }
 
 export async function deployYO(env: TestEnv): Promise<YOEnv> {
@@ -70,16 +79,19 @@ export async function deployYO(env: TestEnv): Promise<YOEnv> {
   let expiry = BN.from(env.startTime).add(env.mconsts.SIX_MONTH);
   expiry = expiry.add(divisor.sub(expiry.mod(divisor)));
   const fee = BN.from(10).pow(15); // 0.1%
-  const factory = await deploy<PendleYieldContractFactory>(env.deployer, 'PendleYieldContractFactory', [
-    divisor,
-    fee,
-    env.treasury.address,
-  ]);
+  const factory = await deploy<PendleYieldContractFactory>(
+    env.deployer,
+    'PendleYieldContractFactory',
+    [divisor, fee, env.treasury.address]
+  );
 
   /**** DEPLOY YO ******/
   const lyt = env.qiLyt.lyt;
   await factory.createYieldContract(lyt.address, expiry);
-  const yt = await getContractAt<PendleYieldToken>('PendleYieldToken', await factory.getYT(lyt.address, expiry));
+  const yt = await getContractAt<PendleYieldToken>(
+    'PendleYieldToken',
+    await factory.getYT(lyt.address, expiry)
+  );
   const ot = await getContractAt<PendleOwnershipToken>(
     'PendleOwnershipToken',
     await factory.getOT(lyt.address, expiry)
@@ -100,7 +112,19 @@ export async function deployYO(env: TestEnv): Promise<YOEnv> {
   const ytLyt = new BenqiYTLYT(ytLytContract);
   await ytLyt.initialize();
 
-  await env.fundKeeper.mintYT(lyt.address, env.qiLyt.underlying.address, yt.address, env.mconsts.ONE_E_12);
+  await env.fundKeeper.mintYT(
+    lyt.address,
+    env.qiLyt.underlying.address,
+    yt.address,
+    env.mconsts.ONE_E_12
+  );
+
+  const router = await deploy<PendleRouterLytAndForge>(env.deployer, 'PendleRouterLytAndForge', [
+    env.aconsts.joe!.ROUTER,
+    env.aconsts.joe!.PAIR_FACTORY,
+  ]);
+  await approveAll(env, yt.address, env.fundKeeper.address);
+  await approveAll(env, ot.address, env.fundKeeper.address);
 
   return {
     ot,
@@ -108,5 +132,6 @@ export async function deployYO(env: TestEnv): Promise<YOEnv> {
     ytLyt,
     factory,
     expiry,
+    // router,
   };
 }

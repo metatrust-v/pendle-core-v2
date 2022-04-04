@@ -2,6 +2,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { expect } from 'chai';
 import { BigNumber as BN } from 'ethers';
 import hre from 'hardhat';
+import { exit } from 'process';
 import { ERC20 } from '../../../typechain-types';
 import { buildEnv, LytSingleReward, TestEnv } from '../../environment';
 import { parseLYTSingleEnv } from '../../environment/fixtures';
@@ -15,12 +16,16 @@ import {
   evm_revert,
   evm_snapshot,
   fundToken,
+  getSumBalance,
   minBN,
   random,
   setTimeNextBlock,
 } from '../../helpers';
 
-export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterface>>(env: TestEnv, lyt: LYT) {
+export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterface>>(
+  env: TestEnv,
+  lyt: LYT
+) {
   describe('LYT reward testing', async () => {
     let globalSnapshotId: string;
     let snapshotId: string;
@@ -63,14 +68,6 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
       await evm_revert(globalSnapshotId);
     });
 
-    async function getRewardBalances(peopleIds: number[], rwdId: number = 0): Promise<BN> {
-      let res = BN.from(0);
-      for (let id of peopleIds) {
-        res = res.add(await lyt.rewardBalance(wallets[id].address, rwdId));
-      }
-      return res;
-    }
-
     async function getRewardAmount(person: SignerWithAddress, getReward: any) {
       const res: BN[] = [];
       for (let i = 0; i < lyt.rewardTokens.length; ++i) {
@@ -96,11 +93,17 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
       currentTime = currentTime.add(env.mconsts.ONE_DAY);
 
       await setTimeNextBlock(currentTime.add(env.mconsts.ONE_WEEK));
-      const lytRewards = await getRewardAmount(alice, async () => await lyt.redeemReward(alice, alice.address));
+      const lytRewards = await getRewardAmount(
+        alice,
+        async () => await lyt.redeemReward(alice, alice.address)
+      );
       currentTime = currentTime.add(env.mconsts.ONE_WEEK);
 
       await setTimeNextBlock(currentTime.add(env.mconsts.ONE_DAY));
-      const directRewards = await getRewardAmount(bob, async () => await lyt.claimDirectReward(bob, bob.address));
+      const directRewards = await getRewardAmount(
+        bob,
+        async () => await lyt.claimDirectReward(bob, bob.address)
+      );
       currentTime = currentTime.add(env.mconsts.ONE_DAY);
 
       // possible delay in one minute reward between txn
@@ -123,7 +126,7 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
       /**
        * P1s holding yield bearing, P2s holding LYT
        */
-      const NUM_ITERS = 50;
+      const NUM_ITERS = 40;
       for (let iter = 0; iter < NUM_ITERS; ++iter) {
         let action = random(0, 2);
 
@@ -136,7 +139,10 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
           await lyt.mintYieldToken(p2, REF_AMOUNT_WEI);
         } else {
           // BURN
-          let delta = minBN(await lyt.balanceOf(p1.address), await yieldToken.balanceOf(p2.address));
+          let delta = minBN(
+            await lyt.balanceOf(p1.address),
+            await yieldToken.balanceOf(p2.address)
+          );
           if (delta.gt(0)) {
             await lyt.redeem(p1, p1.address, underlying.address, delta);
             await lyt.burnYieldToken(p2, delta);
@@ -158,7 +164,13 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
         else await lyt.claimDirectReward(person, person.address);
       }
 
-      approxByPercent(await getRewardBalances([0, 1, 2]), await getRewardBalances([3, 4]));
+      approxByPercent(
+        await getSumBalance(
+          [wallets[0].address, wallets[1].address, wallets[2].address],
+          lyt.rewardTokens[0].address
+        ),
+        await getSumBalance([wallets[3].address, wallets[4].address], lyt.rewardTokens[0].address)
+      );
     });
 
     it('Lyt holders receive reward proportionally to their balances', async () => {
@@ -202,8 +214,15 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
         await lyt.redeemReward(person, person.address);
       }
 
-      approxByPercent(await getRewardBalances([0, 1]), await getRewardBalances([2, 3]));
-      approxByPercent(await getRewardBalances([0, 1]), await getRewardBalances([4]));
+      approxByPercent(
+        await getSumBalance([wallets[0].address, wallets[1].address], lyt.rewardTokens[0].address),
+        await getSumBalance([wallets[2].address, wallets[3].address], lyt.rewardTokens[0].address)
+      );
+
+      approxByPercent(
+        await getSumBalance([wallets[0].address, wallets[1].address], lyt.rewardTokens[0].address),
+        await getSumBalance([wallets[4].address], lyt.rewardTokens[0].address)
+      );
     });
   });
 }

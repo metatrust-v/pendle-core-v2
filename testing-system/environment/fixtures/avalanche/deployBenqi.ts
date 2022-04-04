@@ -27,7 +27,10 @@ export class BenqiLyt extends LytSingleReward<PendleBenQiErc20LYT> {
   public async initialize(): Promise<void> {
     await super.initialize();
     this.qiToken = await getContractAt<QiErc20>('QiErc20', await this.lyt.qiToken());
-    this.comptroller = await getContractAt<Comptroller>('Comptroller', await this.qiToken.comptroller());
+    this.comptroller = await getContractAt<Comptroller>(
+      'Comptroller',
+      await this.qiToken.comptroller()
+    );
     this.underlying = await getContractAt<ERC20>('ERC20', await this.qiToken.underlying());
     this.yieldToken = await getContractAt<ERC20>('ERC20', this.qiToken.address);
   }
@@ -40,7 +43,11 @@ export class BenqiLyt extends LytSingleReward<PendleBenQiErc20LYT> {
   }
   async addFakeIncome(env: TestEnv): Promise<void> {
     const currentBal = await this.underlying.balanceOf(this.qiToken.address);
-    await env.fundKeeper.transferTo(this.underlying.address, this.qiToken.address, currentBal.div(10));
+    await env.fundKeeper.transferTo(
+      this.underlying.address,
+      this.qiToken.address,
+      currentBal.div(100)
+    );
   }
   async yieldTokenBalance(addr: string): Promise<BN> {
     return await this.qiToken.balanceOf(addr);
@@ -127,7 +134,11 @@ export async function deployBenqi(env: TestEnv): Promise<BenqiEnv> {
   const qiLyt: BenqiLyt = new BenqiLyt(lyt);
   await qiLyt.initialize();
 
-  await env.fundKeeper.mintLytSingleBase(lyt.address, qiLyt.underlying.address, env.mconsts.ONE_E_12);
+  await env.fundKeeper.mintLytSingleBase(
+    lyt.address,
+    qiLyt.underlying.address,
+    env.mconsts.ONE_E_12
+  );
 
   return {
     qiUSDC: qiUSD as any as QiErc20,

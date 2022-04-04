@@ -4,11 +4,21 @@ import { ERC20 } from '../../../typechain-types';
 import { LytSingle, TestEnv } from '../../environment';
 import { BtrflyLyt } from '../../environment/fixtures/ethereum/btrflySupport';
 import { LYTSimpleInterface } from '../../environment/lyt-testing-interfaces/simple-interfaces';
-import { approveAll, approxBigNumber, approxByPercent, evm_revert, evm_snapshot, fundToken } from '../../helpers';
+import {
+  approveAll,
+  approxBigNumber,
+  approxByPercent,
+  evm_revert,
+  evm_snapshot,
+  fundToken,
+} from '../../helpers';
 import hre from 'hardhat';
 import { expect } from 'chai';
 
-export async function runExtraTestBtrfly<LYT extends LytSingle<LYTSimpleInterface>>(env: TestEnv, lyt: BtrflyLyt) {
+export async function runExtraTestBtrfly<LYT extends LytSingle<LYTSimpleInterface>>(
+  env: TestEnv,
+  lyt: BtrflyLyt
+) {
   describe('Btrfly lyt extra test', async () => {
     const LYT_DECIMAL = 18;
 
@@ -60,9 +70,9 @@ export async function runExtraTestBtrfly<LYT extends LytSingle<LYTSimpleInterfac
     }
 
     async function prepTestScenerio() {
-      await approveAll(env, underlying.address, lyt.lyt.address);
+      await approveAll(env, underlying.address, lyt.address);
       await approveAll(env, underlying.address, yieldToken.address);
-      await approveAll(env, yieldToken.address, lyt.lyt.address);
+      await approveAll(env, yieldToken.address, lyt.address);
       await fundToken(
         env,
         wallets.map((v) => v.address),
@@ -72,14 +82,14 @@ export async function runExtraTestBtrfly<LYT extends LytSingle<LYTSimpleInterfac
     }
 
     async function mintFromXBtrfly(payer: SignerWithAddress, recipient: string, amount: BN) {
-      await xBTRFLY.connect(payer).transfer(lyt.lyt.address, amount);
+      await xBTRFLY.connect(payer).transfer(lyt.address, amount);
       let preBal = await lyt.balanceOf(recipient);
       await lyt.lyt.connect(payer).mint(recipient, xBTRFLY.address, 0);
       return (await lyt.balanceOf(recipient)).sub(preBal);
     }
 
     async function redeemToXBtrfly(payer: SignerWithAddress, recipient: string, amount: BN) {
-      await lyt.lyt.connect(payer).transfer(lyt.lyt.address, amount);
+      await lyt.lyt.connect(payer).transfer(lyt.address, amount);
       let preBal = await xBTRFLY.balanceOf(recipient);
       await lyt.lyt.connect(payer).redeem(recipient, xBTRFLY.address, 0);
       return (await xBTRFLY.balanceOf(recipient)).sub(preBal);
@@ -88,7 +98,9 @@ export async function runExtraTestBtrfly<LYT extends LytSingle<LYTSimpleInterfac
     it('Deposit & redeem using xBtrfly', async () => {
       /*                      PHASE 1: Deposit using underlying                         */
       const exchangeRateStart = await lyt.indexCurrent();
-      const expectedLytAmount = REF_AMOUNT_WEI.mul(2).mul(env.mconsts.ONE_E_18).div(exchangeRateStart);
+      const expectedLytAmount = REF_AMOUNT_WEI.mul(2)
+        .mul(env.mconsts.ONE_E_18)
+        .div(exchangeRateStart);
       for (let i = 0; i < wallets.length; ++i) {
         const pi = wallets[i];
         const pj = wallets[(i + 1) % wallets.length];

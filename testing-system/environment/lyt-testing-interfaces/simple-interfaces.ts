@@ -1,4 +1,11 @@
-import { BigNumber as BN, BigNumberish, CallOverrides, ContractTransaction, Overrides, Signer } from 'ethers';
+import {
+  BigNumber as BN,
+  BigNumberish,
+  CallOverrides,
+  ContractTransaction,
+  Overrides,
+  Signer,
+} from 'ethers';
 import { Provider } from '@ethersproject/abstract-provider';
 
 export interface LYTSimpleInterface {
@@ -25,24 +32,32 @@ export interface LYTSimpleInterface {
   ): Promise<ContractTransaction>;
 
   balanceOf(account: string, overrides?: CallOverrides): Promise<BN>;
-  transfer(to: string, amount: BigNumberish, overrides?: CallOverrides): Promise<ContractTransaction>;
+  transfer(
+    to: string,
+    amount: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<ContractTransaction>;
   approve(
     spender: string,
     amount: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
-  lytIndexCurrent(overrides?: Overrides & { from?: string | Promise<string> }): Promise<ContractTransaction>;
+  lytIndexCurrent(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
   lytIndexStored(overrides?: CallOverrides): Promise<BN>;
   isValidBaseToken(token: string, overrides?: CallOverrides): Promise<boolean>;
 
   callStatic: {
     lytIndexCurrent(overrides?: Overrides & { from?: string | Promise<string> }): Promise<BN>;
-    assetBalanceOf(user: string, overrides?: CallOverrides): Promise<BN>;
   };
 }
 
 export interface LYTRewardSimpleInterface extends LYTSimpleInterface {
-  redeemReward(user: string, overrides?: Overrides & { from?: string | Promise<string> }): Promise<ContractTransaction>;
+  redeemReward(
+    user: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
   getRewardTokens(overrides?: CallOverrides): Promise<string[]>;
 }
