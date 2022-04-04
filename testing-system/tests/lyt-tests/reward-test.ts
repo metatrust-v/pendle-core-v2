@@ -164,8 +164,6 @@ export async function runTest<LYT extends LytSingleReward<LYTRewardSimpleInterfa
         else await lyt.claimDirectReward(person, person.address);
       }
 
-
-
       approxByPercent(
         await getSumBalance(
           [wallets[0].address, wallets[1].address, wallets[2].address],

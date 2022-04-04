@@ -46,7 +46,7 @@ export class BenqiLyt extends LytSingleReward<PendleBenQiErc20LYT> {
     await env.fundKeeper.transferTo(
       this.underlying.address,
       this.qiToken.address,
-      currentBal.div(10)
+      currentBal.div(100)
     );
   }
   async yieldTokenBalance(addr: string): Promise<BN> {

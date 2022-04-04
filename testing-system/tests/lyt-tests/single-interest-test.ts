@@ -107,6 +107,7 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(
           await lyt.transfer(wallets[j2], wallets[i2].address, delta);
         }
         await advanceTime(env.mconsts.ONE_MONTH);
+        await lyt.addFakeIncome(env);
       }
 
       for (let i = 0; i < wallets.length; ++i) {
@@ -126,10 +127,12 @@ export async function runTest<LYT extends LytSingle<LYTSimpleInterface>>(
         [wallets[0].address, wallets[1].address],
         underlying.address
       );
-
+      
+      // interest should yield more underlying overtime
       expect(balAliceBob).to.be.gt(funded);
       console.log('Funded:', funded.toString());
       console.log('After-interest:', balAliceBob.toString());
+
       approxByPercent(
         balAliceBob,
         await getSumBalance(
