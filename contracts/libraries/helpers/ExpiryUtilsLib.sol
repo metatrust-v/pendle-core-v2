@@ -28,6 +28,7 @@ library ExpiryUtils {
         uint256 _expiry,
         string memory _delimiter
     ) internal pure returns (string memory result) {
+        return "pendle";
         result = string(
             abi.encodePacked(_bt, _delimiter, _yt, _delimiter, toRFC2822String(_expiry))
         );
