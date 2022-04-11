@@ -128,7 +128,7 @@ abstract contract PendleRouterOTBaseUpg {
 
         netOtIn = state.approxSwapOtForExactSCY(
             exactSCYOut,
-            state.getTimeToExpiry(),
+            block.timestamp,
             netOtInGuessMin,
             netOtInGuessMax
         );
@@ -160,7 +160,7 @@ abstract contract PendleRouterOTBaseUpg {
     ) internal returns (uint256 netSCYIn) {
         MarketParameters memory state = IPMarket(market).readState();
 
-        (netSCYIn, ) = state.calcSCYForExactOt(exactOtOut, state.getTimeToExpiry());
+        (netSCYIn, ) = state.calcSCYForExactOt(exactOtOut, block.timestamp);
         require(netSCYIn <= maxSCYIn, "exceed limit scy in");
 
         if (doPull) {
@@ -172,7 +172,7 @@ abstract contract PendleRouterOTBaseUpg {
             recipient,
             exactOtOut,
             maxSCYIn,
-            abi.encode(msg.sender)
+            abi.encode()
         );
     }
 
@@ -193,7 +193,7 @@ abstract contract PendleRouterOTBaseUpg {
 
         netOtOut = state.approxSwapExactSCYForOt(
             exactSCYIn,
-            state.getTimeToExpiry(),
+            block.timestamp,
             netOtOutGuessMin,
             netOtOutGuessMax
         );

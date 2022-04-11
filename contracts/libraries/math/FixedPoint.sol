@@ -181,7 +181,7 @@ library FixedPoint {
     }
 
     function Int(uint256 x) internal pure returns (int256) {
-        require(x <= uint256(type(int256).max));
+        require(x <= uint256(type(int256).max) / 2);
         return int256(x);
     }
 
