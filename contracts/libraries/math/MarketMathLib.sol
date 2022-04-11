@@ -122,6 +122,7 @@ library MarketMathLib {
         otToAccount = (lpToRemove * market.totalOt) / market.totalLp;
 
         market.totalLp = market.totalLp.subNoNeg(lpToRemove);
+        require(market.totalLp > MINIMUM_LIQUIDITY, "minimum liquidity reached");
         market.totalOt = market.totalOt.subNoNeg(otToAccount);
         market.totalScy = market.totalScy.subNoNeg(scyToAccount);
 
