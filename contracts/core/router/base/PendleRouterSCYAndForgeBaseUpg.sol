@@ -10,8 +10,8 @@ abstract contract PendleRouterSCYAndForgeBaseUpg is PendleJoeSwapHelperUpg {
     using SafeERC20 for IERC20;
 
     /// @dev since this contract will be proxied, it must not contains non-immutable variables
-    constructor(address _joeRouter, address _joeFactory)
-        PendleJoeSwapHelperUpg(_joeRouter, _joeFactory)
+    constructor(address _joeRouter, address _joeFactory, address _WNATIVE)
+        PendleJoeSwapHelperUpg(_joeRouter, _joeFactory, _WNATIVE)
     // solhint-disable-next-line no-empty-blocks
     {
 
@@ -34,6 +34,7 @@ abstract contract PendleRouterSCYAndForgeBaseUpg is PendleJoeSwapHelperUpg {
         address[] calldata path,
         bool doPull
     ) internal returns (uint256 netScyOut) {
+        _wrapNativeBeforeSwap(path);
         if (doPull) {
             if (path.length == 1) {
                 IERC20(path[0]).safeTransferFrom(msg.sender, SCY, netRawTokenIn);

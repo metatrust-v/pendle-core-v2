@@ -53,7 +53,7 @@ contract PendleRouterProxy is Proxy, Initializable, UUPSUpgradeable, BoringOwnab
         ) {
             return PENDLE_ROUTER_YT;
         } else if (
-            sig == IPRouterRedeem.withdrawAll.selector ||
+            sig == IPRouterRedeem.withdrawMarkets.selector ||
             sig == IPRouterRedeem.redeemAll.selector
         ) {
             return PENDLE_ROUTER_REDEEM;

@@ -17,13 +17,10 @@ contract PendleRouterRedeemUpg is
         _redeemAll(user, scys, yieldTokens, gauges);
     }
 
-    function withdrawAll(
+    function withdrawMarkets(
         address user,
-        address[] calldata scys,
-        address[] calldata baseTokensOut,
-        address[] calldata yieldTokens,
         address[] calldata markets
     ) external {
-        _withdrawAll(user, scys, baseTokensOut, yieldTokens, markets);
+        _withdrawMarkets(user, markets);
     }
 }

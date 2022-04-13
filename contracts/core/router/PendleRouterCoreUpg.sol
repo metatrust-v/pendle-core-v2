@@ -20,9 +20,10 @@ contract PendleRouterCoreUpg is
     constructor(
         address _joeRouter,
         address _joeFactory,
+        address _WNATIVE,
         address _marketFactory
     )
-        PendleRouterSCYAndForgeBaseUpg(_joeRouter, _joeFactory)
+        PendleRouterSCYAndForgeBaseUpg(_joeRouter, _joeFactory, _WNATIVE)
         PendleRouterOTBaseUpg()
     //solhint-disable-next-line no-empty-blocks
     {

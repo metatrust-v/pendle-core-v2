@@ -9,11 +9,8 @@ interface IPRouterRedeem {
         address[] calldata gauges
     ) external;
 
-    function withdrawAll(
+    function withdrawMarkets(
         address user,
-        address[] calldata scys,
-        address[] calldata baseTokensOut,
-        address[] calldata yieldTokens,
         address[] calldata markets
     ) external;
 }

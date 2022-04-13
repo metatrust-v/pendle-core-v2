@@ -16,7 +16,7 @@ abstract contract PendleRouterRedeemBase {
         address[] memory scys,
         address[] memory yieldTokens,
         address[] memory gauges
-    ) internal {
+    ) internal { 
         for (uint256 i = 0; i < scys.length; ++i) {
             ISuperComposableYield(scys[i]).redeemReward(user, user);
         }
@@ -26,41 +26,15 @@ abstract contract PendleRouterRedeemBase {
         }
     }
 
-    function _withdrawAll(
+    function _withdrawMarkets(
         address user,
-        address[] memory scys,
-        address[] memory baseTokensOut,
-        address[] memory yieldTokens,
         address[] memory markets
     ) internal {
-        require(scys.length == baseTokensOut.length, "invalid scy data");
-        _redeemAll(user, scys, yieldTokens, new address[](0));
-
         for (uint256 i = 0; i < markets.length; ++i) {
             PendleMarket market = PendleMarket(markets[i]);
             uint256 lpAmount = market.balanceOf(user);
             _transferToken(address(market), user, address(market), lpAmount);
             market.removeLiquidity(user, lpAmount, abi.encode());
-        }
-
-        for (uint256 i = 0; i < yieldTokens.length; ++i) {
-            IPYieldToken yt = IPYieldToken(yieldTokens[i]);
-            IERC20 ot = IERC20(yt.OT());
-
-            uint256 yoAmount = ot.balanceOf(user);
-            if (!yt.isExpired()) {
-                yoAmount = Math.min(yoAmount, yt.balanceOf(user));
-                _transferToken(address(yt), user, address(yt), yoAmount);
-            }
-            _transferToken(address(ot), user, address(yt), yoAmount);
-            yt.redeemYO(user);
-        }
-
-        for (uint256 i = 0; i < scys.length; ++i) {
-            ISuperComposableYield scy = ISuperComposableYield(scys[i]);
-            uint256 scyAmount = scy.balanceOf(user);
-            _transferToken(address(scy), user, address(scy), scyAmount);
-            scy.redeem(user, baseTokensOut[i], 0);
         }
     }
 

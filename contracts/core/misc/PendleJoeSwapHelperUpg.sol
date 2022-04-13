@@ -23,6 +23,7 @@
 
 pragma solidity 0.8.9;
 import "../../interfaces/IJoeRouter01.sol";
+import "../../interfaces/IWETH.sol";
 import "../../libraries/JoeLibrary.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -31,15 +32,30 @@ abstract contract PendleJoeSwapHelperUpg {
     using SafeERC20 for IERC20;
     address public immutable joeRouter;
     address public immutable joeFactory;
+    address public immutable WNATIVE;
+
+    address private constant NATIVE_ADDRESS = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
     /// @dev since this contract will be proxied, it must not contains non-immutable variables
-    constructor(address _joeRouter, address _joeFactory) {
+    constructor(
+        address _joeRouter,
+        address _joeFactory,
+        address _WNATIVE
+    ) {
         joeRouter = _joeRouter;
         joeFactory = _joeFactory;
+        WNATIVE = _WNATIVE;
     }
 
     function _getFirstPair(address[] memory path) internal view returns (address pair) {
-        return JoeLibrary.pairFor(joeFactory, path[0], path[1]);
+        return
+            JoeLibrary.pairFor(joeFactory, path[0], path[1]);
+    }
+
+    function _wrapNativeBeforeSwap(address[] memory path) internal virtual {
+        if (path[0] != NATIVE_ADDRESS) return;
+        IWETH(WNATIVE).deposit{ value: address(this).balance }();
+        path[0] = WNATIVE;
     }
 
     /**
