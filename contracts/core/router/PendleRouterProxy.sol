@@ -7,6 +7,7 @@ import "../misc/BoringOwnableUpg.sol";
 import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "../../interfaces/IPRouterCore.sol";
 import "../../interfaces/IPRouterYT.sol";
+import "../../interfaces/IPRouterRedeem.sol";
 
 /// @dev this contract will be deployed behind an ERC1967 proxy
 /// calls to the ERC1967 proxy will be resolved at this contract, and proxied again to the
@@ -14,10 +15,12 @@ import "../../interfaces/IPRouterYT.sol";
 contract PendleRouterProxy is Proxy, Initializable, UUPSUpgradeable, BoringOwnableUpg {
     address public immutable PENDLE_ROUTER_CORE;
     address public immutable PENDLE_ROUTER_YT;
+    address public immutable PENDLE_ROUTER_REDEEM;
 
-    constructor(address _PENDLE_ROUTER_CORE, address _PENDLE_ROUTER_YT) {
+    constructor(address _PENDLE_ROUTER_CORE, address _PENDLE_ROUTER_YT, address _PENDLE_ROUTER_REDEEM) {
         PENDLE_ROUTER_CORE = _PENDLE_ROUTER_CORE;
         PENDLE_ROUTER_YT = _PENDLE_ROUTER_YT;
+        PENDLE_ROUTER_REDEEM = _PENDLE_ROUTER_REDEEM;
     }
 
     function initialize() external initializer {
@@ -49,6 +52,11 @@ contract PendleRouterProxy is Proxy, Initializable, UUPSUpgradeable, BoringOwnab
             sig == IPRouterYT.swapExactYtForRawToken.selector
         ) {
             return PENDLE_ROUTER_YT;
+        } else if (
+            sig == IPRouterRedeem.withdrawAll.selector ||
+            sig == IPRouterRedeem.redeemAll.selector
+        ) {
+            return PENDLE_ROUTER_REDEEM;
         } else if (sig == IPMarketSwapCallback.swapCallback.selector) {
             // only ROUTER_YT is doing callback
             return PENDLE_ROUTER_YT;
