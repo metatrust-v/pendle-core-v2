@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 pragma abicoder v2;
-import "../../SuperComposableYield/implementations/SCYBaseWithRewards.sol";
+import "../../SuperComposableYield/implementations/SCYBase.sol";
 import "../../interfaces/IQiErc20.sol";
 import "../../interfaces/IBenQiComptroller.sol";
 import "../../interfaces/IWETH.sol";
 
-contract PendleBenQiErc20SCY is SCYBaseWithRewards {
+contract PendleBenQiErc20SCY is SCYBase {
     using SafeERC20 for IERC20;
 
     address public immutable underlying;
@@ -27,7 +27,7 @@ contract PendleBenQiErc20SCY is SCYBaseWithRewards {
         address _comptroller,
         address _QI,
         address _WAVAX
-    ) SCYBaseWithRewards(_name, _symbol, __scydecimals, __assetDecimals) {
+    ) SCYBase(_name, _symbol, __scydecimals, __assetDecimals) {
         underlying = _underlying;
         qiToken = _qiToken;
         QI = _QI;
@@ -90,9 +90,9 @@ contract PendleBenQiErc20SCY is SCYBaseWithRewards {
     }
 
     function getRewardTokens() public view override returns (address[] memory res) {
-        res = new address[](2);
-        res[0] = QI;
-        res[1] = WAVAX;
+        // res = new address[](2);
+        // res[0] = QI;
+        // res[1] = WAVAX;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -113,15 +113,37 @@ contract PendleBenQiErc20SCY is SCYBaseWithRewards {
                                REWARDS-RELATED
     //////////////////////////////////////////////////////////////*/
 
-    function _redeemExternalReward() internal override {
-        address[] memory holders = new address[](1);
-        address[] memory qiTokens = new address[](1);
-        holders[0] = address(this);
-        qiTokens[0] = qiToken;
+    function _redeemExternalReward() internal {
+        // address[] memory holders = new address[](1);
+        // address[] memory qiTokens = new address[](1);
+        // holders[0] = address(this);
+        // qiTokens[0] = qiToken;
 
-        IBenQiComptroller(comptroller).claimReward(0, holders, qiTokens, false, true);
-        IBenQiComptroller(comptroller).claimReward(1, holders, qiTokens, false, true);
+        // IBenQiComptroller(comptroller).claimReward(0, holders, qiTokens, false, true);
+        // IBenQiComptroller(comptroller).claimReward(1, holders, qiTokens, false, true);
 
-        if (address(this).balance != 0) IWETH(WAVAX).deposit{ value: address(this).balance };
+        // if (address(this).balance != 0) IWETH(WAVAX).deposit{ value: address(this).balance };
+    }
+
+    function updateGlobalReward() public virtual override {
+        // address[] memory rewardTokens = getRewardTokens();
+        // _updateGlobalReward(rewardTokens, totalSupply());
+    }
+
+    function updateUserReward(address user) public virtual override {
+        // _updateUserReward(user, balanceOf(user), totalSupply());
+    }
+
+        function redeemReward(address user, address receiver)
+        public
+        virtual
+        override
+        returns (uint256[] memory outAmounts)
+    {
+        // if (user != msg.sender) require(receiver == user, "invalid receiver");
+        // else require(receiver != address(0), "zero address");
+
+        // _updateUserReward(user, balanceOf(user), totalSupply());
+        // outAmounts = _doTransferOutRewardsForUser(user, receiver);
     }
 }
