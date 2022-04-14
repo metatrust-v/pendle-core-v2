@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
-import "openzeppelin-solidity/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../interfaces/IPBaseToken.sol";
 
 abstract contract PendleBaseToken is ERC20, IPBaseToken {
@@ -11,10 +11,6 @@ abstract contract PendleBaseToken is ERC20, IPBaseToken {
     uint256 public immutable timeCreated;
     uint256 public immutable expiry;
     address public immutable factory;
-
-    event Burn(address indexed user, uint256 amount);
-
-    event Mint(address indexed user, uint256 amount);
 
     constructor(
         string memory _name,

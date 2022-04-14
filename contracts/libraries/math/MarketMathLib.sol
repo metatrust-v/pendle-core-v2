@@ -34,7 +34,7 @@ struct MarketStorage {
     uint32 lastTradeTime;
 }
 
-// solhint-disable reason-string, ordering
+// solhint-disable ordering
 library MarketMathLib {
     using FixedPoint for uint256;
     using FixedPoint for int256;
@@ -138,15 +138,18 @@ library MarketMathLib {
     function setInitialImpliedRate(
         MarketParameters memory market,
         SCYIndex index,
-        int256 anchorRoot,
+        int256 initialAnchor,
         uint256 blockTime
     ) internal pure {
+        require(blockTime < market.expiry, "market expired");
         int256 totalAsset = index.scyToAsset(market.totalScy);
+        uint256 timeToExpiry = market.expiry - blockTime;
+        int256 rateScalar = _getRateScalar(market, timeToExpiry);
         market.lastImpliedRate = _getImpliedRate(
             market.totalOt,
             totalAsset,
-            market.scalarRoot,
-            anchorRoot,
+            rateScalar,
+            initialAnchor,
             market.expiry - blockTime
         );
     }
@@ -211,19 +214,24 @@ library MarketMathLib {
             scyUsed = scyDesired;
             otUsed = otDesired;
         } else {
-            lpToAccount = FixedPoint.min(
-                (otDesired * market.totalLp) / market.totalOt,
-                (scyDesired * market.totalLp) / market.totalScy
-            );
-            scyUsed = (market.totalScy * lpToAccount) / market.totalLp;
-            otUsed = (market.totalOt * lpToAccount) / market.totalLp;
+            int256 netLpByOt = (otDesired * market.totalLp) / market.totalOt;
+            int256 netLpByScy = (scyDesired * market.totalLp) / market.totalScy;
+            if (netLpByOt < netLpByScy) {
+                lpToAccount = netLpByOt;
+                otUsed = otDesired;
+                scyUsed = (market.totalScy * lpToAccount) / market.totalLp;
+            } else {
+                lpToAccount = netLpByScy;
+                scyUsed = scyDesired;
+                otUsed = (market.totalOt * lpToAccount) / market.totalLp;
+            }
         }
+
+        require(lpToAccount > 0, "INSUFFICIENT_LIQUIDITY_MINTED");
 
         market.totalScy += scyUsed;
         market.totalOt += otUsed;
         market.totalLp += lpToAccount + lpToReserve;
-
-        require(lpToAccount > 0, "INSUFFICIENT_LIQUIDITY_MINTED");
     }
 
     function _removeLiquidity(MarketParameters memory market, int256 lpToRemove)
@@ -254,7 +262,7 @@ library MarketMathLib {
         int256 otToAccount,
         uint256 blockTime
     ) private pure returns (int256 netScyToAccount, int256 netScyToReserve) {
-        require(blockTime < market.expiry, "MARKET_EXPIRED");
+        require(blockTime < market.expiry, "market expired");
 
         ExecuteTradeSlot memory slot;
         slot.timeToExpiry = market.expiry - blockTime;
@@ -313,7 +321,7 @@ library MarketMathLib {
         // It's technically possible that the implied rate is actually exactly zero (or
         // more accurately the natural log rounds down to zero) but we will still fail
         // in this case. If this does happen we may assume that markets are not initialized.
-        require(market.lastImpliedRate != 0);
+        require(market.lastImpliedRate != 0, "zero impliedRate");
 
         (netScyToAccount, netScyToReserve) = _setNewMarketState(
             market,
@@ -345,7 +353,7 @@ library MarketMathLib {
         rateScalar = _getRateScalar(market, timeToExpiry);
         totalAsset = index.scyToAsset(market.totalScy);
 
-        require(market.totalOt != 0 && totalAsset != 0);
+        require(market.totalOt != 0 && totalAsset != 0, "invalid market state");
 
         // Get the rateAnchor given the market state, this will establish the baseline for where
         // the exchange rate is set.
@@ -545,7 +553,7 @@ library MarketMathLib {
         // removed). Over time, the yield from SCY will slightly decrease the proportion (the
         // amount of Asset in the market must be monotonically increasing). Therefore it is not
         // possible for the proportion to go over max market proportion unless borrowing occurs.
-        require(proportion <= MAX_MARKET_PROPORTION); // TODO: probably not applicable to Pendle
+        require(proportion <= MAX_MARKET_PROPORTION, "max proportion exceeded");
 
         int256 lnProportion = _logProportion(proportion);
 
@@ -558,7 +566,7 @@ library MarketMathLib {
 
     function _logProportion(int256 proportion) private pure returns (int256 res) {
         // This will result in divide by zero, short circuit
-        require(proportion != FixedPoint.ONE_INT);
+        require(proportion != FixedPoint.ONE_INT, "proportion must not be one");
 
         // Convert proportion to what is used inside the logit function (p / (1-p))
         int256 logitP = proportion.divDown(FixedPoint.ONE_INT - proportion);
