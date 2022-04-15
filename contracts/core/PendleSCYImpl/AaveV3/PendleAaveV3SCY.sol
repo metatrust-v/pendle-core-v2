@@ -34,7 +34,7 @@ contract PendleAaveV3SCY is SCYBaseWithRewards {
         pool = _aavePool;
         underlying = _underlying;
         rewardsController = _rewardsController;
-        IERC20(underlying).safeIncreaseAllowance(aToken, type(uint256).max);
+        IERC20(underlying).safeIncreaseAllowance(pool, type(uint256).max);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -88,7 +88,7 @@ contract PendleAaveV3SCY is SCYBaseWithRewards {
     }
 
     function getRewardTokens() public view override returns (address[] memory res) {
-        return IAaveRewardsController(rewardsController).getRewardsByAsset(aToken);
+        res = IAaveRewardsController(rewardsController).getRewardsByAsset(aToken);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -118,15 +118,9 @@ contract PendleAaveV3SCY is SCYBaseWithRewards {
 
     /// @dev balance of aToken is saved by scaledBalanceOf instead
     function _afterReceiveToken(address token) internal virtual override returns (uint256 res) {
-        if (token == aToken) {
-            uint256 curBalance = IAToken(aToken).scaledBalanceOf(address(this));
-            res = (curBalance - lastBalanceOf[token]).rayMul(scyIndexCurrent());
-            lastBalanceOf[token] = curBalance;
-        } else {
-            uint256 curBalance = IERC20(token).balanceOf(address(this));
-            res = curBalance - lastBalanceOf[token];
-            lastBalanceOf[token] = curBalance;
-        }
+        uint256 curBalance = (token == aToken)? IAToken(aToken).scaledBalanceOf(address(this)) : IERC20(token).balanceOf(address(this));
+        res = curBalance - lastBalanceOf[token];
+        lastBalanceOf[token] = curBalance;
     }
 
     function _afterSendToken(address token) internal virtual override {
