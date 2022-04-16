@@ -62,11 +62,7 @@ abstract contract RewardManager {
         internal
         virtual
     {
-        if(block.number - lastRewardUpdateBlock <= updateRewardFrequency) {
-            return;
-        }
-        lastRewardUpdateBlock = block.number;
-        
+        if (!_beforeUpdateGlobalReward()) return;
         _redeemExternalReward();
 
         _initGlobalReward(rewardTokens);
@@ -117,6 +113,14 @@ abstract contract RewardManager {
                 globalReward[rewardTokens[i]].index = INITIAL_REWARD_INDEX;
             }
         }
+    }
+
+    function _beforeUpdateGlobalReward() internal returns (bool) {
+        if(block.number - lastRewardUpdateBlock <= updateRewardFrequency) {
+            return false;
+        }
+        lastRewardUpdateBlock = block.number;
+        return true;
     }
 
     function setUpdateRewardFrequency(uint256 newFrequency) external {
