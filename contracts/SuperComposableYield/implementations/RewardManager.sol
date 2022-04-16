@@ -20,6 +20,9 @@ abstract contract RewardManager {
 
     uint256 internal constant INITIAL_REWARD_INDEX = 1;
 
+    uint256 internal updateRewardFrequency;
+    uint256 internal lastRewardUpdateBlock;
+
     mapping(address => GlobalReward) public globalReward;
     mapping(address => mapping(address => UserReward)) public userReward;
 
@@ -59,6 +62,11 @@ abstract contract RewardManager {
         internal
         virtual
     {
+        if(block.number - lastRewardUpdateBlock <= updateRewardFrequency) {
+            return;
+        }
+        lastRewardUpdateBlock = block.number;
+        
         _redeemExternalReward();
 
         _initGlobalReward(rewardTokens);
@@ -109,6 +117,10 @@ abstract contract RewardManager {
                 globalReward[rewardTokens[i]].index = INITIAL_REWARD_INDEX;
             }
         }
+    }
+
+    function setUpdateRewardFrequency(uint256 newFrequency) external {
+        updateRewardFrequency = newFrequency;
     }
 
     function getRewardTokens() public view virtual returns (address[] memory);
