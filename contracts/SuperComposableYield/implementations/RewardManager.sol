@@ -18,11 +18,14 @@ abstract contract RewardManager {
         uint256 accruedReward;
     }
 
+    struct RewardCaching {
+        uint112 updateRewardFrequency;
+        uint112 lastRewardUpdateBlock;
+    }
+
     uint256 internal constant INITIAL_REWARD_INDEX = 1;
 
-    uint256 internal updateRewardFrequency;
-    uint256 internal lastRewardUpdateBlock;
-
+    RewardCaching internal rewardCache;
     mapping(address => GlobalReward) public globalReward;
     mapping(address => mapping(address => UserReward)) public userReward;
 
@@ -62,7 +65,7 @@ abstract contract RewardManager {
         internal
         virtual
     {
-        if (!_beforeUpdateGlobalReward()) return;
+        if (!_needUpdateGlobalReward()) return;
         _redeemExternalReward();
 
         _initGlobalReward(rewardTokens);
@@ -79,6 +82,7 @@ abstract contract RewardManager {
 
             globalReward[token].lastBalance = currentRewardBalance;
         }
+        rewardCache.lastRewardUpdateBlock = uint112(block.number);
     }
 
     function _updateUserRewardSkipGlobal(
@@ -115,16 +119,13 @@ abstract contract RewardManager {
         }
     }
 
-    function _beforeUpdateGlobalReward() internal returns (bool) {
-        if(block.number - lastRewardUpdateBlock <= updateRewardFrequency) {
-            return false;
-        }
-        lastRewardUpdateBlock = block.number;
-        return true;
+    function _needUpdateGlobalReward() internal returns (bool) {
+        return
+            block.number - rewardCache.lastRewardUpdateBlock >= rewardCache.updateRewardFrequency;
     }
 
-    function setUpdateRewardFrequency(uint256 newFrequency) external {
-        updateRewardFrequency = newFrequency;
+    function setUpdateRewardFrequency(uint112 newFrequency) external {
+        rewardCache.updateRewardFrequency = newFrequency;
     }
 
     function getRewardTokens() public view virtual returns (address[] memory);
