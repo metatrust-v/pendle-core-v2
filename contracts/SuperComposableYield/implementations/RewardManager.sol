@@ -19,13 +19,13 @@ abstract contract RewardManager {
     }
 
     struct RewardCaching {
-        uint112 updateRewardFrequency;
-        uint112 lastRewardUpdateBlock;
+        uint128 updateRewardFrequency;
+        uint128 lastRewardUpdateBlock;
     }
 
     uint256 internal constant INITIAL_REWARD_INDEX = 1;
 
-    RewardCaching internal rewardCache;
+    RewardCaching public rewardCache;
     mapping(address => GlobalReward) public globalReward;
     mapping(address => mapping(address => UserReward)) public userReward;
 
@@ -124,7 +124,7 @@ abstract contract RewardManager {
             block.number - rewardCache.lastRewardUpdateBlock >= rewardCache.updateRewardFrequency;
     }
 
-    function setUpdateRewardFrequency(uint112 newFrequency) external {
+    function setUpdateRewardFrequency(uint128 newFrequency) external {
         rewardCache.updateRewardFrequency = newFrequency;
     }
 
