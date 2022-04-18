@@ -84,7 +84,7 @@ contract RouterStatic is IPRouterStatic {
         return SCYIndexLib.newIndex(IPMarket(market).SCY());
     }
 
-    function getOtImpliedYield(address market) external view returns (int256) {
+    function getOtImpliedYield(address market) public view returns (int256) {
         MarketState memory state = IPMarket(market).readState(false);
 
         int256 lnImpliedRate = (state.lastImpliedRate).Int();
@@ -103,5 +103,132 @@ contract RouterStatic is IPRouterStatic {
         if (yieldContractFactory.isOT(token)) isOT = true;
         else if (yieldContractFactory.isYT(token)) isYT = true;
         else if (marketFactory.isValidMarket(token)) isMarket = true;
+    }
+
+    function getUserYOInfo(address token, address user)
+        public
+        view
+        returns (UserYOInfo memory userYOInfo)
+    {
+        (userYOInfo.yt, userYOInfo.ot) = getYO(token);
+        IPYieldToken YT = IPYieldToken(userYOInfo.yt);
+        userYOInfo.ytBalance = YT.balanceOf(user);
+        userYOInfo.otBalance = IPOwnershipToken(userYOInfo.ot).balanceOf(user);
+        userYOInfo.unclaimedInterest.token = YT.SCY();
+        (, userYOInfo.unclaimedInterest.amount) = YT.getInterestData(user);
+        address[] memory rewardTokens = YT.getRewardTokens();
+        TokenAmount[] memory unclaimedRewards = new TokenAmount[](rewardTokens.length);
+        uint256 length = 0;
+        for (uint256 i = 0; i < rewardTokens.length; ++i) {
+            address rewardToken = rewardTokens[i];
+            (, uint256 amount) = YT.getUserReward(user, rewardToken);
+            if (amount > 0) {
+                unclaimedRewards[length].token = rewardToken;
+                unclaimedRewards[length].amount = amount;
+                ++length;
+            }
+        }
+        userYOInfo.unclaimedRewards = new TokenAmount[](length);
+        for (uint256 i = 0; i < length; ++i) {
+            userYOInfo.unclaimedRewards[i] = unclaimedRewards[i];
+        }
+    }
+
+    function getYOInfo(address token)
+        external
+        returns (
+            uint256 exchangeRate,
+            uint256 totalSupply,
+            RewardIndex[] memory rewardIndexes
+        )
+    {
+        (address yt, ) = getYO(token);
+        IPYieldToken YT = IPYieldToken(yt);
+        exchangeRate = YT.getScyIndexBeforeExpiry();
+        totalSupply = YT.totalSupply();
+        address[] memory rewardTokens = YT.getRewardTokens();
+        rewardIndexes = new RewardIndex[](rewardTokens.length);
+        for (uint256 i = 0; i < rewardTokens.length; ++i) {
+            address rewardToken = rewardTokens[i];
+            rewardIndexes[i].rewardToken = rewardToken;
+            (, rewardIndexes[i].index) = YT.getGlobalReward(rewardToken);
+        }
+    }
+
+    function getYO(address token) public view returns (address ot, address yt) {
+        if (yieldContractFactory.isOT(token)) {
+            yt = IPOwnershipToken(token).YT();
+            ot = token;
+        } else if (yieldContractFactory.isYT(token)) {
+            yt = token;
+            ot = IPYieldToken(token).OT();
+        } else if (marketFactory.isValidMarket(token)) {
+            yt = IPMarket(token).YT();
+            ot = IPMarket(token).OT();
+        }
+    }
+
+    function getMarketInfo(address market)
+        external
+        view
+        returns (
+            address ot,
+            address scy,
+            MarketState memory state,
+            int256 impliedYield,
+            uint256 exchangeRate
+        )
+    {
+        IPMarket _market = IPMarket(market);
+        ot = _market.OT();
+        scy = _market.SCY();
+        state = _market.readState(true);
+        impliedYield = getOtImpliedYield(market);
+        exchangeRate = 0; // TODO: get the actual exchange rate
+    }
+
+    function getUserMarketInfo(address market, address user)
+        public
+        view
+        returns (UserMarketInfo memory userMarketInfo)
+    {
+        IPMarket _market = IPMarket(market);
+        userMarketInfo.market = market;
+        // TODO: What will this return if the user's balance is staked?
+        userMarketInfo.lpBalance = _market.balanceOf(user);
+        // TODO: Is there a way to convert LP to OT and SCY?
+        userMarketInfo.otBalance = TokenAmount(_market.OT(), 0);
+        userMarketInfo.scyBalance = TokenAmount(_market.SCY(), 0);
+        // TODO: Get this from SCY once it is in the interface
+        userMarketInfo.assetBalance = TokenAmount(address(0), 0);
+    }
+
+    function getUserYOPositionsByTokens(address user, address[] calldata tokens)
+        external
+        view
+        returns (UserYOInfo[] memory userYOPositions)
+    {
+        userYOPositions = new UserYOInfo[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            userYOPositions[i] = getUserYOInfo(tokens[i], user);
+        }
+    }
+
+    function getUserMarketPositions(address user, address[] calldata markets)
+        external
+        view
+        returns (UserMarketInfo[] memory userMarketPositions)
+    {
+        userMarketPositions = new UserMarketInfo[](markets.length);
+        for (uint256 i = 0; i < markets.length; ++i) {
+            userMarketPositions[i] = getUserMarketInfo(markets[i], user);
+        }
+    }
+
+    function hasYOPosition(UserYOInfo memory userYOInfo) public pure returns (bool hasPosition) {
+        hasPosition = (userYOInfo.ytBalance > 0 ||
+            userYOInfo.otBalance > 0 ||
+            userYOInfo.unclaimedInterest.amount > 0 ||
+            userYOInfo.unclaimedRewards.length > 0);
     }
 }

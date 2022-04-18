@@ -4,6 +4,33 @@ pragma solidity 0.8.9;
 import "../libraries/math/MarketMathCore.sol";
 
 interface IPRouterStatic {
+    struct TokenAmount {
+        address token;
+        uint256 amount;
+    }
+
+    struct RewardIndex {
+        address rewardToken;
+        uint256 index;
+    }
+
+    struct UserYOInfo {
+        address yt;
+        address ot;
+        uint256 ytBalance;
+        uint256 otBalance;
+        TokenAmount unclaimedInterest;
+        TokenAmount[] unclaimedRewards;
+    }
+
+    struct UserMarketInfo {
+        address market;
+        uint256 lpBalance;
+        TokenAmount otBalance;
+        TokenAmount scyBalance;
+        TokenAmount assetBalance;
+    }
+
     function addLiquidityStatic(
         address market,
         uint256 scyDesired,
