@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
+import "../SuperComposableYield/ISuperComposableYield.sol";
+import "../SuperComposableYield/implementations/IRewardManager.sol";
 import "../interfaces/IPRouterStatic.sol";
 import "../interfaces/IPMarket.sol";
 import "../interfaces/IPYieldContractFactory.sol";
@@ -230,5 +232,21 @@ contract RouterStatic is IPRouterStatic {
             userYOInfo.otBalance > 0 ||
             userYOInfo.unclaimedInterest.amount > 0 ||
             userYOInfo.unclaimedRewards.length > 0);
+    }
+
+    function getUserSCYInfo(address scy, address user)
+        external
+        view
+        returns (uint256 balance, TokenAmount[] memory rewards)
+    {
+        ISuperComposableYield SCY = ISuperComposableYield(scy);
+        balance = SCY.balanceOf(scy);
+        address[] memory rewardTokens = SCY.getRewardTokens();
+        rewards = new TokenAmount[](rewardTokens.length);
+        for (uint256 i = 0; i < rewardTokens.length; ++i) {
+            address rewardToken = rewardTokens[i];
+            rewards[i].token = rewardToken;
+            (, rewards[i].amount) = IRewardManager(scy).getUserReward(user, rewardToken);
+        }
     }
 }

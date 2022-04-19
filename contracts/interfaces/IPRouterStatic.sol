@@ -68,4 +68,52 @@ interface IPRouterStatic {
             bool isYT,
             bool isMarket
         );
+
+    function getUserYOInfo(address token, address user)
+        external
+        view
+        returns (UserYOInfo memory userYOInfo);
+
+    function getYOInfo(address token)
+        external
+        returns (
+            uint256 exchangeRate,
+            uint256 totalSupply,
+            RewardIndex[] memory rewardIndexes
+        );
+
+    function getYO(address token) external view returns (address yt, address ot);
+
+    function getMarketInfo(address market)
+        external
+        view
+        returns (
+            address ot,
+            address scy,
+            MarketState memory state,
+            int256 impliedYield,
+            uint256 exchangeRate
+        );
+
+    function getUserMarketInfo(address market, address user)
+        external
+        view
+        returns (UserMarketInfo memory userMarketInfo);
+
+    function getUserYOPositionsByTokens(address user, address[] calldata tokens)
+        external
+        view
+        returns (UserYOInfo[] memory userYOPositions);
+
+    function getUserMarketPositions(address user, address[] calldata markets)
+        external
+        view
+        returns (UserMarketInfo[] memory userMarketPositions);
+
+    function hasYOPosition(UserYOInfo memory userYOInfo) external pure returns (bool hasPosition);
+
+    function getUserSCYInfo(address scy, address user)
+        external
+        view
+        returns (uint256 balance, TokenAmount[] memory rewards);
 }
