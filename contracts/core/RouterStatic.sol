@@ -107,12 +107,12 @@ contract RouterStatic is IPRouterStatic {
         else if (marketFactory.isValidMarket(token)) isMarket = true;
     }
 
-    function getUserYOInfo(address token, address user)
+    function getUserYOInfo(address yo, address user)
         public
         view
         returns (UserYOInfo memory userYOInfo)
     {
-        (userYOInfo.yt, userYOInfo.ot) = getYO(token);
+        (userYOInfo.yt, userYOInfo.ot) = getYO(yo);
         IPYieldToken YT = IPYieldToken(userYOInfo.yt);
         userYOInfo.ytBalance = YT.balanceOf(user);
         userYOInfo.otBalance = IPOwnershipToken(userYOInfo.ot).balanceOf(user);
@@ -136,7 +136,7 @@ contract RouterStatic is IPRouterStatic {
         }
     }
 
-    function getYOInfo(address token)
+    function getYOInfo(address yo)
         external
         returns (
             uint256 exchangeRate,
@@ -144,7 +144,7 @@ contract RouterStatic is IPRouterStatic {
             RewardIndex[] memory rewardIndexes
         )
     {
-        (address yt, ) = getYO(token);
+        (address yt, ) = getYO(yo);
         IPYieldToken YT = IPYieldToken(yt);
         exchangeRate = YT.getScyIndexBeforeExpiry();
         totalSupply = YT.totalSupply();
@@ -157,16 +157,13 @@ contract RouterStatic is IPRouterStatic {
         }
     }
 
-    function getYO(address token) public view returns (address ot, address yt) {
-        if (yieldContractFactory.isOT(token)) {
-            yt = IPOwnershipToken(token).YT();
-            ot = token;
-        } else if (yieldContractFactory.isYT(token)) {
-            yt = token;
-            ot = IPYieldToken(token).OT();
-        } else if (marketFactory.isValidMarket(token)) {
-            yt = IPMarket(token).YT();
-            ot = IPMarket(token).OT();
+    function getYO(address yo) public view returns (address ot, address yt) {
+        if (yieldContractFactory.isYT(yo)) {
+            yt = yo;
+            ot = IPYieldToken(yo).OT();
+        } else {
+            yt = IPOwnershipToken(yo).YT();
+            ot = yo;
         }
     }
 
@@ -196,7 +193,6 @@ contract RouterStatic is IPRouterStatic {
     {
         IPMarket _market = IPMarket(market);
         userMarketInfo.market = market;
-        // TODO: What will this return if the user's balance is staked?
         userMarketInfo.lpBalance = _market.balanceOf(user);
         // TODO: Is there a way to convert LP to OT and SCY?
         userMarketInfo.otBalance = TokenAmount(_market.OT(), 0);
@@ -205,14 +201,14 @@ contract RouterStatic is IPRouterStatic {
         userMarketInfo.assetBalance = TokenAmount(address(0), 0);
     }
 
-    function getUserYOPositionsByTokens(address user, address[] calldata tokens)
+    function getUserYOPositionsByYOs(address user, address[] calldata yos)
         external
         view
         returns (UserYOInfo[] memory userYOPositions)
     {
-        userYOPositions = new UserYOInfo[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; ++i) {
-            userYOPositions[i] = getUserYOInfo(tokens[i], user);
+        userYOPositions = new UserYOInfo[](yos.length);
+        for (uint256 i = 0; i < yos.length; ++i) {
+            userYOPositions[i] = getUserYOInfo(yos[i], user);
         }
     }
 
