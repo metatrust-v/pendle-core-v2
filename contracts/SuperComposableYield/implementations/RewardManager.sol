@@ -8,6 +8,8 @@ abstract contract RewardManager {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
+    uint256 public lastRewardUpdateBlock;
+
     struct GlobalReward {
         uint256 index;
         uint256 lastBalance;
@@ -59,6 +61,7 @@ abstract contract RewardManager {
         internal
         virtual
     {
+        if (!_shouldUpdateGlobalReward()) return;
         _redeemExternalReward();
 
         _initGlobalReward(rewardTokens);
@@ -109,6 +112,14 @@ abstract contract RewardManager {
                 globalReward[rewardTokens[i]].index = INITIAL_REWARD_INDEX;
             }
         }
+    }
+
+    function _shouldUpdateGlobalReward() internal returns (bool) {
+        if (lastRewardUpdateBlock == block.number) {
+            return false;
+        }
+        lastRewardUpdateBlock = block.number;
+        return true;
     }
 
     function getRewardTokens() public view virtual returns (address[] memory);

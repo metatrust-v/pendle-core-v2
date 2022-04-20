@@ -143,6 +143,7 @@ contract PendleYieldToken is PendleBaseToken, IPYieldToken, RewardManager {
         virtual
         override
     {
+        if (!_shouldUpdateGlobalReward()) return;
         _redeemExternalReward();
 
         _initGlobalReward(rewardTokens);
