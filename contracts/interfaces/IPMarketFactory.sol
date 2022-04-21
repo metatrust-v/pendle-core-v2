@@ -3,6 +3,7 @@ pragma solidity 0.8.9;
 
 interface IPMarketFactory {
     event CreateNewMarket(
+        address indexed market,
         address indexed OT,
         int256 scalarRoot,
         int256 initialAnchor
