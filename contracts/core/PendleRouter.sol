@@ -8,6 +8,7 @@ import "../interfaces/IPActionCore.sol";
 import "../interfaces/IPActionYT.sol";
 import "../interfaces/IPRouterStatic.sol";
 import "../interfaces/IPMarketSwapCallback.sol";
+import "../interfaces/IPActionRedeem.sol";
 import "../periphery/PermissionsV2Upg.sol";
 
 /// @dev this contract will be deployed behind an ERC1967 proxy
@@ -19,16 +20,19 @@ contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, PermissionsV2Upg
     address public immutable ACTION_CORE;
     address public immutable ACTION_YT;
     address public immutable ACTION_CALLBACK;
+    address public immutable ACTION_REDEEM;
 
     constructor(
         address _ACTION_CORE,
         address _ACTION_YT,
         address _ACTION_CALLBACK,
+        address _ACTION_REDEEM,
         address _governanceManager
     ) PermissionsV2Upg(_governanceManager) initializer {
         ACTION_CORE = _ACTION_CORE;
         ACTION_YT = _ACTION_YT;
         ACTION_CALLBACK = _ACTION_CALLBACK;
+        ACTION_REDEEM = _ACTION_REDEEM;
     }
 
     function initialize() external initializer {
@@ -63,6 +67,11 @@ contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, PermissionsV2Upg
             return ACTION_YT;
         } else if (sig == IPMarketSwapCallback.swapCallback.selector) {
             return ACTION_CALLBACK;
+        } else if (
+            sig == IPActionRedeem.redeemDueIncome.selector ||
+            sig == IPActionRedeem.withdrawMarkets.selector
+        ) {
+            return ACTION_REDEEM;
         }
         require(false, "invalid market sig");
     }
