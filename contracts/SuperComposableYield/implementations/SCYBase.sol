@@ -46,7 +46,7 @@ abstract contract SCYBase is ERC20, ISuperComposableYield, ReentrancyGuard {
         uint256 minAmountScyOut
     ) external nonReentrant returns (uint256 amountScyOut) {
         IERC20(baseTokenIn).safeTransferFrom(msg.sender, address(this), amountBaseToPull);
-        amountScyOut = mintNoPull(receiver, baseTokenIn, minAmountScyOut);
+        amountScyOut = _mintFresh(receiver, baseTokenIn, minAmountScyOut);
     }
 
     function redeem(
@@ -56,14 +56,30 @@ abstract contract SCYBase is ERC20, ISuperComposableYield, ReentrancyGuard {
         uint256 minAmountBaseOut
     ) external nonReentrant returns (uint256 amountBaseOut) {
         transferFrom(msg.sender, address(this), amountScyToPull);
-        amountBaseOut = redeemNoPull(receiver, baseTokenOut, minAmountBaseOut);
+        amountBaseOut = _redeemFresh(receiver, baseTokenOut, minAmountBaseOut);
     }
 
     function mintNoPull(
         address receiver,
         address baseTokenIn,
         uint256 minAmountScyOut
-    ) public virtual override nonReentrant returns (uint256 amountScyOut) {
+    ) public virtual override nonReentrant returns (uint256) {
+        return _mintFresh(receiver, baseTokenIn, minAmountScyOut);
+    }
+
+    function redeemNoPull(
+        address receiver,
+        address baseTokenOut,
+        uint256 minAmountBaseOut
+    ) public virtual override nonReentrant returns (uint256) {
+        return _redeemFresh(receiver, baseTokenOut, minAmountBaseOut);
+    }
+
+    function _mintFresh(
+        address receiver,
+        address baseTokenIn,
+        uint256 minAmountScyOut
+    ) internal virtual returns (uint256 amountScyOut) {
         require(isValidBaseToken(baseTokenIn), "invalid base token");
 
         uint256 amountBaseIn = _afterReceiveToken(baseTokenIn);
@@ -75,11 +91,11 @@ abstract contract SCYBase is ERC20, ISuperComposableYield, ReentrancyGuard {
         _mint(receiver, amountScyOut);
     }
 
-    function redeemNoPull(
+    function _redeemFresh(
         address receiver,
         address baseTokenOut,
         uint256 minAmountBaseOut
-    ) public virtual override nonReentrant returns (uint256 amountBaseOut) {
+    ) internal virtual returns (uint256 amountBaseOut) {
         require(isValidBaseToken(baseTokenOut), "invalid base token");
 
         uint256 amountScyRedeem = balanceOf(address(this));

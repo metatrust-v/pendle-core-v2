@@ -59,7 +59,11 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
      * @notice this function splits scy into OT + YT of equal qty
      * @dev the scy to tokenize has to be pre-transferred to this contract prior to the function call
      */
-    function mintYO(address receiverOT, address receiverYT) public nonReentrant returns (uint256 amountYOOut) {
+    function mintYO(address receiverOT, address receiverYT)
+        public
+        nonReentrant
+        returns (uint256 amountYOOut)
+    {
         uint256 amountToTokenize = _receiveSCY();
 
         amountYOOut = _calcAmountToMint(amountToTokenize);
@@ -111,12 +115,20 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
         emit RedeemInterest(user, interestOut);
     }
 
-    function redeemDueRewards(address user) public nonReentrant returns (uint256[] memory rewardsOut) {
+    function redeemDueRewards(address user)
+        public
+        nonReentrant
+        returns (uint256[] memory rewardsOut)
+    {
         updateUserReward(user);
         rewardsOut = _doTransferOutRewardsForUser(user, user);
         emit RedeemReward(user, rewardsOut);
     }
-
+    
+    /**
+     * @notice: updateGlobalReward does not need reentrancy modifier since the rewards
+     * will be transfered directly from SCY to YT, without triggering any callbacks
+     */
     function updateGlobalReward() external {
         address[] memory rewardTokens = getRewardTokens();
         _updateGlobalReward(rewardTokens, IERC20(SCY).balanceOf(address(this)));
