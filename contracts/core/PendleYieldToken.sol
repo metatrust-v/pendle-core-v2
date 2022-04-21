@@ -74,7 +74,10 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
         IPOwnershipToken(OT).mintByYT(receiverOT, amountYOOut);
     }
 
-    /// @dev this function converts YO tokens into scy, but interests & rewards are not redeemed at the same time
+    /**
+     * @notice 
+     * @dev this function converts YO tokens into scy, but interests & rewards are not redeemed at the same time
+     */
     function redeemYO(address receiver) public nonReentrant returns (uint256 amountScyOut) {
         // minimum of OT & YT balance
         uint256 amountYOToRedeem = IERC20(OT).balanceOf(address(this));
@@ -94,6 +97,10 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
         _afterTransferOutSCY();
     }
 
+    /**
+     * @notice this function redeems both due interest and rewards 
+     * @dev as mentioned in doc, updateDueReward should be placed strictly before every redeemDueInterest
+     */
     function redeemDueInterestAndRewards(address user)
         public
         nonReentrant
@@ -108,7 +115,10 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
         emit RedeemReward(user, rewardsOut);
         emit RedeemInterest(user, interestOut);
     }
-
+    /**
+     * @notice This function redeems due interest to user
+     * @dev as mentioned in doc, updateDueReward should be placed strictly before every redeemDueInterest
+     */
     function redeemDueInterest(address user) public nonReentrant returns (uint256 interestOut) {
         updateUserReward(user); /// strictly required, see above for explanation
         updateUserInterest(user);
@@ -116,16 +126,19 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
         emit RedeemInterest(user, interestOut);
     }
 
-    function redeemDueRewards(address user)
-        public
-        nonReentrant
-        returns (uint256[] memory rewardsOut)
-    {
+    /**
+     * @notice This function update & redeems due reward to user
+     */
+    function redeemDueRewards(address user) public nonReentrant returns (uint256[] memory rewardsOut) {
         updateUserReward(user);
         rewardsOut = _doTransferOutRewardsForUser(user, user);
         emit RedeemReward(user, rewardsOut);
     }
     
+    /**
+     * The upcoming external update function does not have any restriction on their execution excepts non-reentrant
+     */
+
     /**
      * @notice: updateGlobalReward does not need reentrancy modifier since the rewards
      * will be transfered directly from SCY to YT, without triggering any callbacks
@@ -236,10 +249,10 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
     }
 
     /**
-     * In case the pool is expired and there is left some SCY not yet redeemed from the contract, the rewards should
+     * @note In case the pool is expired and there is left some SCY not yet redeemed from the contract, the rewards should
      * be claimed before withdrawing to treasury.
      *
-     * And since the reward distribution (which based on users' dueInterest) stopped at the scyIndexBeforeExpiry, it is not
+     * @note And since the reward distribution (which based on users' dueInterest) stopped at the scyIndexBeforeExpiry, it is not
      * necessary to updateUserInterest along with reward here.
      */
     function withdrawFeeToTreasury() public {

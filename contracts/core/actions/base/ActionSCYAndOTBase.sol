@@ -178,6 +178,13 @@ abstract contract ActionSCYAndOTBase {
         IPMarket(market).swapScyForExactOt(receiver, exactOtOut, maxScyIn, abi.encode()); // ignore return
     }
 
+    /**
+     * @note swap exact amount of Scy to OT
+     * @dev inner working steps:
+       - The outcome amount of OT in is approximated
+       - market.swapExactOtToScy() is called, user will receive their OT
+       - The approximated amount of OT is transferred from msg.sender to market via router
+     */
     function _swapExactScyForOt(
         address receiver,
         address market,

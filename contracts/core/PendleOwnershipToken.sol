@@ -38,10 +38,16 @@ contract PendleOwnershipToken is PendleBaseToken, IPOwnershipToken {
         emit YTSet(_YT);
     }
 
+    /**
+     * @notice: This function call only be called by YT
+     */
     function burnByYT(address user, uint256 amount) external onlyYT {
         _burn(user, amount);
     }
 
+    /**
+     * @notice: This function call only be called by YT
+     */
     function mintByYT(address user, uint256 amount) external onlyYT {
         _mint(user, amount);
     }

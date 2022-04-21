@@ -30,6 +30,9 @@ contract ActionCallback is IPMarketSwapCallback, ActionType {
         marketFactory = _marketFactory;
     }
 
+    /**
+     * @dev: This callback function can only be called by market
+     */
     function swapCallback(
         int256 otToAccount,
         int256 scyToAccount,
