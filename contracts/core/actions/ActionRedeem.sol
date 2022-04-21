@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.9;
 
-import "./base/ActionRedeemBase.sol";
 import "../../interfaces/IPActionRedeem.sol";
+import "../../SuperComposableYield/ISuperComposableYield.sol";
+import "../../interfaces/IPYieldToken.sol";
+import "../../core/PendleMarket.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract PendleRouterRedeemUpg is IPActionRedeem, ActionRedeemBase {
+contract PendleRouterRedeemUpg is IPActionRedeem {
     function redeemDueIncome(
+        address user,
         address[] calldata scys,
         address[] calldata yieldTokens,
-        address[] calldata gauges
-    ) external {
-        _redeemDueIncome(scys, yieldTokens, gauges);
-    }
-
-    function withdrawMarkets(address[] calldata markets) external {
-        _withdrawMarkets(markets);
+        address[] calldata /*gauges*/
+    ) external returns (uint256[][] memory scyRewards) {
+        scyRewards = new uint256[][](scys.length);
+        for (uint256 i = 0; i < scys.length; ++i) {
+            ISuperComposableYield(scys[i]).redeemReward(user);
+        }
+        for (uint256 i = 0; i < yieldTokens.length; ++i) {
+            IPYieldToken(yieldTokens[i]).redeemDueInterestAndRewards(user);
+        }
     }
 }

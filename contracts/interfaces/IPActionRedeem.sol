@@ -3,12 +3,9 @@ pragma solidity 0.8.9;
 
 interface IPActionRedeem {
     function redeemDueIncome(
+        address user,
         address[] calldata scys,
         address[] calldata yieldTokens,
-        address[] calldata gauges
-    ) external;
-
-    function withdrawMarkets(
-        address[] calldata markets
+        address[] calldata /*gauges*/
     ) external;
 }
