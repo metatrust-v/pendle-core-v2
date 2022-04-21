@@ -7,5 +7,11 @@ interface IPActionRedeem {
         address[] calldata scys,
         address[] calldata yieldTokens,
         address[] calldata /*gauges*/
-    ) external;
+    )
+        external
+        returns (
+            uint256[][] memory scyRewards,
+            uint256[] memory ytInterests,
+            uint256[][] memory ytRewards
+        );
 }

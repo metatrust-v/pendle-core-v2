@@ -13,13 +13,24 @@ contract PendleRouterRedeemUpg is IPActionRedeem {
         address[] calldata scys,
         address[] calldata yieldTokens,
         address[] calldata /*gauges*/
-    ) external returns (uint256[][] memory scyRewards) {
+    )
+        external
+        returns (
+            uint256[][] memory scyRewards,
+            uint256[] memory ytInterests,
+            uint256[][] memory ytRewards
+        )
+    {
         scyRewards = new uint256[][](scys.length);
         for (uint256 i = 0; i < scys.length; ++i) {
-            ISuperComposableYield(scys[i]).redeemReward(user);
+            scyRewards[i] = ISuperComposableYield(scys[i]).redeemReward(user);
         }
+
+        ytInterests = new uint256[](yieldTokens.length);
+        ytRewards = new uint256[][](yieldTokens.length);
         for (uint256 i = 0; i < yieldTokens.length; ++i) {
-            IPYieldToken(yieldTokens[i]).redeemDueInterestAndRewards(user);
+            (ytInterests[i], ytRewards[i]) = IPYieldToken(yieldTokens[i])
+                .redeemDueInterestAndRewards(user);
         }
     }
 }
