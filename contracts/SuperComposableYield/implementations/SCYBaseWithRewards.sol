@@ -40,6 +40,7 @@ abstract contract SCYBaseWithRewards is SCYBase, RewardManager {
         public
         virtual
         override
+        nonReentrant
         returns (uint256[] memory outAmounts)
     {
         _updateUserReward(user, balanceOf(user), totalSupply());
