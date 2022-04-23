@@ -42,24 +42,14 @@ abstract contract ActionSCYAndPTBase {
             uint256 ptUsed
         )
     {
-        (ISuperComposableYield SCY, IPPrincipalToken PT, ) = IPMarket(market).readTokens();
-
-        MarketState memory state = IPMarket(market).readState(false);
-        (, netLpOut, scyUsed, ptUsed) = state.addLiquidity(
-            SCYIndexLib.newIndex(SCY),
-            scyDesired,
+        (netLpOut, scyUsed, ptUsed) = IPMarket(market).addLiquidity(
+            receiver,
             ptDesired,
-            false
+            scyDesired,
+            abi.encode(msg.sender, doPull)
         );
 
         require(netLpOut >= minLpOut, "insufficient lp out");
-
-        if (doPull) {
-            IERC20(SCY).safeTransferFrom(msg.sender, market, scyUsed);
-            IERC20(PT).safeTransferFrom(msg.sender, market, ptUsed);
-        }
-
-        IPMarket(market).addLiquidity(receiver, ptDesired, scyDesired, abi.encode()); // ignore return
     }
 
     /**
@@ -78,17 +68,13 @@ abstract contract ActionSCYAndPTBase {
         uint256 ptOutMin,
         bool doPull
     ) internal returns (uint256 netScyOut, uint256 netPtOut) {
-        MarketState memory state = IPMarket(market).readState(false);
-
-        (netScyOut, netPtOut) = state.removeLiquidity(lpToRemove, false);
+        (netScyOut, netPtOut) = IPMarket(market).removeLiquidity(
+            receiver,
+            lpToRemove,
+            abi.encode(msg.sender, doPull)
+        );
         require(netScyOut >= scyOutMin, "insufficient scy out");
         require(netPtOut >= ptOutMin, "insufficient pt out");
-
-        if (doPull) {
-            IERC20(market).safeTransferFrom(msg.sender, market, lpToRemove);
-        }
-
-        IPMarket(market).removeLiquidity(receiver, lpToRemove, abi.encode()); // ignore return
     }
 
     /**
@@ -106,19 +92,12 @@ abstract contract ActionSCYAndPTBase {
         uint256 minScyOut,
         bool doPull
     ) internal returns (uint256 netScyOut) {
-        if (doPull) {
-            address PT = IPMarket(market).PT();
-            IERC20(PT).safeTransferFrom(msg.sender, market, exactPtIn);
-        }
-
         (netScyOut, ) = IPMarket(market).swapExactPtForScy(
             receiver,
             exactPtIn,
             minScyOut,
-            abi.encode()
+            abi.encode(msg.sender, doPull)
         );
-
-        require(netScyOut >= minScyOut, "insufficient scy out");
     }
 
     function _swapPtForExactScy(
@@ -160,22 +139,12 @@ abstract contract ActionSCYAndPTBase {
         uint256 maxScyIn,
         bool doPull
     ) internal returns (uint256 netScyIn) {
-        MarketState memory state = IPMarket(market).readState(false);
-        address SCY = IPMarket(market).SCY();
-
-        (netScyIn, ) = state.swapScyForExactPt(
-            SCYIndexLib.newIndex(SCY),
+        (netScyIn, ) = IPMarket(market).swapScyForExactPt(
+            receiver,
             exactPtOut,
-            block.timestamp,
-            false
+            maxScyIn,
+            abi.encode(msg.sender, doPull)
         );
-        require(netScyIn <= maxScyIn, "exceed limit scy in");
-
-        if (doPull) {
-            IERC20(SCY).safeTransferFrom(msg.sender, market, netScyIn);
-        }
-
-        IPMarket(market).swapScyForExactPt(receiver, exactPtOut, maxScyIn, abi.encode()); // ignore return
     }
 
     /**
