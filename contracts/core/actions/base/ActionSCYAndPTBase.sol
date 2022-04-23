@@ -7,9 +7,10 @@ import "../../../interfaces/IPMarketAddRemoveCallback.sol";
 import "../../../interfaces/IPMarketSwapCallback.sol";
 import "../../../libraries/math/MarketApproxLib.sol";
 import "../../../libraries/math/MarketMathAux.sol";
+import "./ActionType.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-abstract contract ActionSCYAndPTBase {
+abstract contract ActionSCYAndPTBase is ActionType {
     using Math for uint256;
     using Math for int256;
     using MarketMathCore for MarketState;
@@ -46,7 +47,7 @@ abstract contract ActionSCYAndPTBase {
             receiver,
             ptDesired,
             scyDesired,
-            abi.encode(msg.sender, doPull)
+            doPull ? abi.encode(ACTION_TYPE.AddLiquidity, msg.sender) : abi.encode()
         );
 
         require(netLpOut >= minLpOut, "insufficient lp out");
@@ -71,7 +72,7 @@ abstract contract ActionSCYAndPTBase {
         (netScyOut, netPtOut) = IPMarket(market).removeLiquidity(
             receiver,
             lpToRemove,
-            abi.encode(msg.sender, doPull)
+            doPull ? abi.encode(ACTION_TYPE.RemoveLiquidity, msg.sender) : abi.encode()
         );
         require(netScyOut >= scyOutMin, "insufficient scy out");
         require(netPtOut >= ptOutMin, "insufficient pt out");
@@ -96,7 +97,7 @@ abstract contract ActionSCYAndPTBase {
             receiver,
             exactPtIn,
             minScyOut,
-            abi.encode(msg.sender, doPull)
+            doPull ? abi.encode(ACTION_TYPE.SwapExactPtForScy, msg.sender) : abi.encode()
         );
     }
 
@@ -143,7 +144,7 @@ abstract contract ActionSCYAndPTBase {
             receiver,
             exactPtOut,
             maxScyIn,
-            abi.encode(msg.sender, doPull)
+            doPull ? abi.encode(ACTION_TYPE.SwapScyForExactPt, msg.sender) : abi.encode()
         );
     }
 

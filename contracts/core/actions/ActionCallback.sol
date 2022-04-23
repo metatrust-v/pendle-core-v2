@@ -18,6 +18,7 @@ contract ActionCallback is IPMarketSwapCallback, ActionType {
     using Math for uint256;
     using SafeERC20 for ISuperComposableYield;
     using SafeERC20 for IPYieldToken;
+    using SafeERC20 for IPPrincipalToken;
 
     modifier onlyPendleMarket(address market) {
         require(IPMarketFactory(marketFactory).isValidMarket(market), "INVALID_MARKET");
@@ -38,18 +39,39 @@ contract ActionCallback is IPMarketSwapCallback, ActionType {
         int256 scyToAccount,
         bytes calldata data
     ) external override onlyPendleMarket(msg.sender) {
-        (ACTION_TYPE swapType, ) = abi.decode(data, (ACTION_TYPE, address));
-        if (swapType == ACTION_TYPE.SwapExactScyForYt) {
+        (ACTION_TYPE actionType, ) = abi.decode(data, (ACTION_TYPE, address));
+        if (actionType == ACTION_TYPE.AddLiquidity) {
+            _basic_callback(msg.sender, ptToAccount, scyToAccount, data);
+        } else if (actionType == ACTION_TYPE.RemoveLiquidity) {
+            _basic_callback(msg.sender, ptToAccount, scyToAccount, data);
+        } else if (actionType == ACTION_TYPE.SwapExactPtForScy) {
+            _basic_callback(msg.sender, ptToAccount, scyToAccount, data);
+        } else if (actionType == ACTION_TYPE.SwapScyForExactPt) {
+            _basic_callback(msg.sender, ptToAccount, scyToAccount, data);
+        } else if (actionType == ACTION_TYPE.SwapExactScyForYt) {
             _swapExactScyForYt_callback(msg.sender, ptToAccount, scyToAccount, data);
-        } else if (swapType == ACTION_TYPE.SwapSCYForExactYt) {
+        } else if (actionType == ACTION_TYPE.SwapSCYForExactYt) {
             _swapScyForExactYt_callback(msg.sender, ptToAccount, scyToAccount, data);
         } else if (
-            swapType == ACTION_TYPE.SwapYtForExactScy || swapType == ACTION_TYPE.SwapExactYtForScy
+            actionType == ACTION_TYPE.SwapYtForExactScy ||
+            actionType == ACTION_TYPE.SwapExactYtForScy
         ) {
             _swapYtForScy_callback(msg.sender, ptToAccount, scyToAccount, data);
         } else {
-            require(false, "unknown swapType");
+            require(false, "unknown actionType");
         }
+    }
+
+    function _basic_callback(
+        address market,
+        int256 ptToAccount,
+        int256 scyToAccount,
+        bytes calldata data
+    ) internal {
+        (, address payer) = abi.decode(data, (ACTION_TYPE, address));
+        (ISuperComposableYield SCY, IPPrincipalToken PT, ) = IPMarket(market).readTokens();
+        if (ptToAccount > 0) PT.safeTransferFrom(payer, market, ptToAccount.Uint());
+        if (scyToAccount > 0) SCY.safeTransferFrom(payer, market, ptToAccount.Uint());
     }
 
     function _swapExactScyForYt_callback(
