@@ -8,6 +8,7 @@ import "../interfaces/IPActionCore.sol";
 import "../interfaces/IPActionYT.sol";
 import "../interfaces/IPRouterStatic.sol";
 import "../interfaces/IPMarketSwapCallback.sol";
+import "../interfaces/IPMarketAddRemoveCallback.sol";
 import "../interfaces/IPActionRedeem.sol";
 import "../periphery/PermissionsV2Upg.sol";
 
@@ -74,10 +75,14 @@ contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, PermissionsV2Upg
             return ACTION_YT;
         } else if (sig == IPActionRedeem.redeemDueIncome.selector) {
             return ACTION_REDEEM;
-        } else if (sig == IPMarketSwapCallback.swapCallback.selector) {
+        } else if (
+            sig == IPMarketAddRemoveCallback.addLiquidityCallback.selector ||
+            sig == IPMarketAddRemoveCallback.removeLiquidityCallback.selector ||
+            sig == IPMarketSwapCallback.swapCallback.selector
+        ) {
             return ACTION_CALLBACK;
         }
-        require(false, "invalid market sig");
+        require(false, "invalid function sig");
     }
 
     function _implementation() internal view override returns (address) {

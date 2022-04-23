@@ -47,7 +47,7 @@ abstract contract ActionSCYAndPTBase is ActionType {
             receiver,
             ptDesired,
             scyDesired,
-            doPull ? abi.encode(ACTION_TYPE.AddLiquidity, msg.sender) : abi.encode()
+            doPull ? abi.encode(msg.sender) : abi.encode()
         );
 
         require(netLpOut >= minLpOut, "insufficient lp out");
@@ -72,7 +72,7 @@ abstract contract ActionSCYAndPTBase is ActionType {
         (netScyOut, netPtOut) = IPMarket(market).removeLiquidity(
             receiver,
             lpToRemove,
-            doPull ? abi.encode(ACTION_TYPE.RemoveLiquidity, msg.sender) : abi.encode()
+            doPull ? abi.encode(msg.sender) : abi.encode()
         );
         require(netScyOut >= scyOutMin, "insufficient scy out");
         require(netPtOut >= ptOutMin, "insufficient pt out");

@@ -12,13 +12,14 @@ import "./base/ActionSCYAndPYBase.sol";
 import "./base/ActionType.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract ActionCallback is IPMarketSwapCallback, ActionType {
+contract ActionCallback is IPMarketSwapCallback, IPMarketAddRemoveCallback, ActionType {
     address public immutable marketFactory;
     using Math for int256;
     using Math for uint256;
     using SafeERC20 for ISuperComposableYield;
     using SafeERC20 for IPYieldToken;
     using SafeERC20 for IPPrincipalToken;
+    using SafeERC20 for IPMarket;
 
     modifier onlyPendleMarket(address market) {
         require(IPMarketFactory(marketFactory).isValidMarket(market), "INVALID_MARKET");
@@ -31,6 +32,30 @@ contract ActionCallback is IPMarketSwapCallback, ActionType {
         marketFactory = _marketFactory;
     }
 
+    function addLiquidityCallback(
+        uint256, /*lpToAccount*/
+        uint256 scyOwed,
+        uint256 ptOwed,
+        bytes calldata data
+    ) external onlyPendleMarket(msg.sender) {
+        address market = msg.sender;
+        address payer = abi.decode(data, (address));
+        (ISuperComposableYield SCY, IPPrincipalToken PT, ) = IPMarket(market).readTokens();
+        SCY.safeTransferFrom(payer, market, scyOwed);
+        PT.safeTransferFrom(payer, market, ptOwed);
+    }
+
+    function removeLiquidityCallback(
+        uint256 lpOwed,
+        uint256, /*scyToAccount*/
+        uint256, /*ptToAccount*/
+        bytes calldata data
+    ) external onlyPendleMarket(msg.sender) {
+        address market = msg.sender;
+        address payer = abi.decode(data, (address));
+        IPMarket(market).safeTransferFrom(payer, market, lpOwed);
+    }
+
     /**
      * @dev The callback is only callable by a Pendle Market created by the factory
      */
@@ -40,14 +65,10 @@ contract ActionCallback is IPMarketSwapCallback, ActionType {
         bytes calldata data
     ) external override onlyPendleMarket(msg.sender) {
         (ACTION_TYPE actionType, ) = abi.decode(data, (ACTION_TYPE, address));
-        if (actionType == ACTION_TYPE.AddLiquidity) {
-            _basic_callback(msg.sender, ptToAccount, scyToAccount, data);
-        } else if (actionType == ACTION_TYPE.RemoveLiquidity) {
-            _basic_callback(msg.sender, ptToAccount, scyToAccount, data);
-        } else if (actionType == ACTION_TYPE.SwapExactPtForScy) {
-            _basic_callback(msg.sender, ptToAccount, scyToAccount, data);
+        if (actionType == ACTION_TYPE.SwapExactPtForScy) {
+            _basicSwap_callback(msg.sender, ptToAccount, scyToAccount, data);
         } else if (actionType == ACTION_TYPE.SwapScyForExactPt) {
-            _basic_callback(msg.sender, ptToAccount, scyToAccount, data);
+            _basicSwap_callback(msg.sender, ptToAccount, scyToAccount, data);
         } else if (actionType == ACTION_TYPE.SwapExactScyForYt) {
             _swapExactScyForYt_callback(msg.sender, ptToAccount, scyToAccount, data);
         } else if (actionType == ACTION_TYPE.SwapSCYForExactYt) {
@@ -62,7 +83,7 @@ contract ActionCallback is IPMarketSwapCallback, ActionType {
         }
     }
 
-    function _basic_callback(
+    function _basicSwap_callback(
         address market,
         int256 ptToAccount,
         int256 scyToAccount,
