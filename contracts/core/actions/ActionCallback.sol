@@ -91,8 +91,8 @@ contract ActionCallback is IPMarketSwapCallback, IPMarketAddRemoveCallback, Acti
     ) internal {
         (, address payer) = abi.decode(data, (ACTION_TYPE, address));
         (ISuperComposableYield SCY, IPPrincipalToken PT, ) = IPMarket(market).readTokens();
-        if (ptToAccount > 0) PT.safeTransferFrom(payer, market, ptToAccount.Uint());
-        if (scyToAccount > 0) SCY.safeTransferFrom(payer, market, ptToAccount.Uint());
+        if (ptToAccount < 0) PT.safeTransferFrom(payer, market, ptToAccount.abs());
+        if (scyToAccount < 0) SCY.safeTransferFrom(payer, market, scyToAccount.abs());
     }
 
     function _swapExactScyForYt_callback(
