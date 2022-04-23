@@ -6,7 +6,7 @@ import "../../interfaces/IQiErc20.sol";
 import "../../interfaces/IBenQiComptroller.sol";
 import "../../interfaces/IWETH.sol";
 
-contract PendleBenQiErc20SCY is SCYBaseWithRewards {
+contract PendleBenQiErc20SCY is SCYBase {
     using SafeERC20 for IERC20;
 
     address public immutable underlying;
@@ -27,7 +27,7 @@ contract PendleBenQiErc20SCY is SCYBaseWithRewards {
         address _comptroller,
         address _QI,
         address _WAVAX
-    ) SCYBaseWithRewards(_name, _symbol, __scydecimals, __assetDecimals) {
+    ) SCYBase(_name, _symbol, __scydecimals, __assetDecimals) {
         require(
             _qiToken != address(0) &&
                 _QI != address(0) &&
@@ -94,12 +94,6 @@ contract PendleBenQiErc20SCY is SCYBaseWithRewards {
         return scyIndexStored;
     }
 
-    function getRewardTokens() public view override returns (address[] memory res) {
-        res = new address[](2);
-        res[0] = QI;
-        res[1] = WAVAX;
-    }
-
     /*///////////////////////////////////////////////////////////////
                 MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
@@ -117,16 +111,19 @@ contract PendleBenQiErc20SCY is SCYBaseWithRewards {
     /*///////////////////////////////////////////////////////////////
                                REWARDS-RELATED
     //////////////////////////////////////////////////////////////*/
+    //solhint-disable-next-line no-empty-blocks
+    function redeemReward(address user) public virtual override returns (uint256[] memory) {}
 
-    function _redeemExternalReward() internal override {
-        address[] memory holders = new address[](1);
-        address[] memory qiTokens = new address[](1);
-        holders[0] = address(this);
-        qiTokens[0] = qiToken;
+    //solhint-disable-next-line no-empty-blocks
+    function updateGlobalReward() public virtual override {}
 
-        IBenQiComptroller(comptroller).claimReward(0, holders, qiTokens, false, true);
-        IBenQiComptroller(comptroller).claimReward(1, holders, qiTokens, false, true);
+    //solhint-disable-next-line no-empty-blocks
+    function updateUserReward(address user) public virtual override {}
 
-        if (address(this).balance != 0) IWETH(WAVAX).deposit{ value: address(this).balance };
+    function getRewardTokens() public view virtual returns (address[] memory res) {
+        res = new address[](0);
     }
+
+    //solhint-disable-next-line no-empty-blocks
+    function _redeemExternalReward() internal virtual {}
 }

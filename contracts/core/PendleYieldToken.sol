@@ -20,7 +20,7 @@ It has been proven and tested that impliedScyBalance will not change over time, 
 
 Due to this, it is required to update users' accruedReward STRICTLY BEFORE redeeming their interest.
 */
-contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, ReentrancyGuard {
+contract PendleYieldToken is PendleBaseToken, IPYieldToken, ReentrancyGuard {
     using Math for uint256;
     using SafeERC20 for IERC20;
 
@@ -103,9 +103,7 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
         returns (uint256 interestOut, uint256[] memory rewardsOut)
     {
         // redeemDueRewards before redeemDueInterest
-        _updateUserReward(user);
         _updateUserInterest(user);
-        rewardsOut = _doTransferOutRewardsForUser(user, user);
         interestOut = _doTransferOutDueInterest(user);
 
         emit RedeemReward(user, rewardsOut);
@@ -116,8 +114,6 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
      * @dev as mentioned in doc, updateDueReward should be placed strictly before every redeemDueInterest
      */
     function redeemDueInterest(address user) external nonReentrant returns (uint256 interestOut) {
-        _updateUserReward(user); /// strictly required, see above for explanation
-
         _updateUserInterest(user);
         interestOut = _doTransferOutDueInterest(user);
         emit RedeemInterest(user, interestOut);
@@ -128,9 +124,6 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
         nonReentrant
         returns (uint256[] memory rewardsOut)
     {
-        _updateUserReward(user);
-
-        rewardsOut = _doTransferOutRewardsForUser(user, user);
         emit RedeemReward(user, rewardsOut);
     }
 
@@ -138,13 +131,9 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
      * @dev updateGlobalReward does not need reentrancy modifier since the rewards
      * will be transfered directly from SCY to YT, without triggering any callbacks
      */
-    function updateGlobalReward() external nonReentrant {
-        _updateGlobalReward();
-    }
+    function updateGlobalReward() external nonReentrant {}
 
-    function updateUserReward(address user) external nonReentrant {
-        _updateUserReward(user);
-    }
+    function updateUserReward(address user) external nonReentrant {}
 
     function updateUserInterest(address user) external nonReentrant {
         _updateUserInterest(user);
@@ -179,34 +168,6 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
         return (interestData[user].lastScyIndex, interestData[user].dueInterest);
     }
 
-    /// @dev override the default updateGlobalReward to avoid distributing the rewards after
-    /// YT has expired. Instead, these funds will go to the treasury
-    function _updateGlobalReward() internal virtual override {
-        if (!_shouldUpdateGlobalReward()) return;
-        _redeemExternalReward();
-
-        uint256 totalShares = _rewardSharesTotal();
-
-        address[] memory rewardTokens = getRewardTokens();
-        _initGlobalReward(rewardTokens);
-
-        bool _isExpired = isExpired();
-        for (uint256 i = 0; i < rewardTokens.length; ++i) {
-            address token = rewardTokens[i];
-
-            uint256 currentRewardBalance = IERC20(token).balanceOf(address(this));
-            uint256 totalIncomeReward = currentRewardBalance - globalReward[token].lastBalance;
-
-            if (_isExpired) {
-                totalRewardsPostExpiry[token] += totalIncomeReward;
-            } else if (totalShares != 0) {
-                globalReward[token].index += totalIncomeReward.divDown(totalShares);
-            }
-
-            globalReward[token].lastBalance = currentRewardBalance;
-        }
-    }
-
     function _doTransferOutDueInterest(address user) internal returns (uint256 interestOut) {
         uint256 interestPreFee = interestData[user].dueInterest;
         interestData[user].dueInterest = 0;
@@ -220,25 +181,11 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
         _afterTransferOutSCY();
     }
 
-    function _redeemExternalReward() internal virtual override {
-        ISuperComposableYield(SCY).redeemReward(address(this)); // ignore return
-    }
-
-    /// @dev to be overriden if there is rewards
-    function _rewardSharesTotal() internal virtual override returns (uint256) {
-        return IERC20(SCY).balanceOf(address(this));
-    }
-
-    /// @dev to be overriden if there is rewards
-    function _rewardSharesUser(address user) internal virtual override returns (uint256) {
-        return getImpliedScyBalance(user);
-    }
-
     function getRewardTokens()
         public
         view
         virtual
-        override(RewardManager, IRewardManager)
+        override(IRewardManager)
         returns (address[] memory)
     {
         return ISuperComposableYield(SCY).getRewardTokens();
@@ -262,9 +209,6 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
      */
     function withdrawFeeToTreasury() public {
         address[] memory rewardTokens = getRewardTokens();
-        if (isExpired()) {
-            _updateGlobalReward(); // as refered to the doc above
-        }
 
         uint256 length = rewardTokens.length;
         address treasury = IPYieldContractFactory(factory).treasury();
@@ -324,17 +268,25 @@ contract PendleYieldToken is PendleBaseToken, RewardManager, IPYieldToken, Reent
         address to,
         uint256
     ) internal override {
-        _updateGlobalReward();
-
         // Before the change in YT balance, users' impliedScyBalance is kept unchanged from last time
         // Therefore, both updating due interest before or after due reward work the same.
         if (from != address(0) && from != address(this)) {
             _updateUserInterest(from);
-            _updateUserRewardSkipGlobal(from);
         }
         if (to != address(0) && to != address(this)) {
             _updateUserInterest(to);
-            _updateUserRewardSkipGlobal(to);
         }
     }
+
+    function getGlobalReward(address rewardToken)
+        external
+        view
+        returns (uint256 index, uint256 lastBalance)
+    {}
+
+    function getUserReward(address user, address rewardToken)
+        external
+        view
+        returns (uint256 lastIndex, uint256 accruedReward)
+    {}
 }
