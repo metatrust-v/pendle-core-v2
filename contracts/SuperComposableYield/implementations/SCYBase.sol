@@ -13,6 +13,8 @@ abstract contract SCYBase is ERC20, ISuperComposableYield, ReentrancyGuard {
     using Math for uint256;
 
     event UpdateScyIndex(uint256 scyIndex);
+    event Mint(uint256 amount, address baseTokenIn, uint256 amountBaseIn);
+    event Burn(uint256 amount, address baseTokenOut, uint256 amountBaseOut);
 
     uint8 private immutable _scyDecimals;
     uint8 private immutable _assetDecimals;
@@ -86,6 +88,8 @@ abstract contract SCYBase is ERC20, ISuperComposableYield, ReentrancyGuard {
         require(amountScyOut >= minAmountScyOut, "insufficient out");
 
         _mint(receiver, amountScyOut);
+
+        emit Mint(amountScyOut, baseTokenIn, amountBaseIn);
     }
 
     function _redeemFresh(
@@ -105,6 +109,8 @@ abstract contract SCYBase is ERC20, ISuperComposableYield, ReentrancyGuard {
 
         IERC20(baseTokenOut).safeTransfer(receiver, amountBaseOut);
         _afterSendToken(baseTokenOut);
+
+        emit Burn(amountScyRedeem, baseTokenOut, amountBaseOut);
     }
 
     function _deposit(address token, uint256 amountBase)
