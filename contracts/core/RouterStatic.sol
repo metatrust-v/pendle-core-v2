@@ -123,7 +123,7 @@ contract RouterStatic is IPRouterStatic {
         uint256 length = 0;
         for (uint256 i = 0; i < rewardTokens.length; ++i) {
             address rewardToken = rewardTokens[i];
-            (, uint256 amount) = YT.getUserReward(user, rewardToken);
+            uint256 amount = YT.userRewardAccrued(rewardToken, user);
             if (amount > 0) {
                 unclaimedRewards[length].token = rewardToken;
                 unclaimedRewards[length].amount = amount;
@@ -153,7 +153,7 @@ contract RouterStatic is IPRouterStatic {
         for (uint256 i = 0; i < rewardTokens.length; ++i) {
             address rewardToken = rewardTokens[i];
             rewardIndexes[i].rewardToken = rewardToken;
-            (, rewardIndexes[i].index) = YT.getGlobalReward(rewardToken);
+            (rewardIndexes[i].index, ) = YT.rewardState(rewardToken);
         }
     }
 
@@ -242,7 +242,7 @@ contract RouterStatic is IPRouterStatic {
         for (uint256 i = 0; i < rewardTokens.length; ++i) {
             address rewardToken = rewardTokens[i];
             rewards[i].token = rewardToken;
-            (, rewards[i].amount) = IRewardManager(scy).getUserReward(user, rewardToken);
+            rewards[i].amount = IRewardManager(scy).userRewardAccrued(rewardToken, user);
         }
     }
 }
