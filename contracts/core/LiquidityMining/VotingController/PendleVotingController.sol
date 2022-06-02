@@ -17,8 +17,8 @@ Voting accounting:
     - If the reward duration for the last pack of money has not ended, it will combine
     the leftover reward with the current reward to distribute.
 
-    - In the very extreme case where no one broadcast the result of week x, and at week x+1, 
-    the results for both are now broadcasted, then the WEEK of (block.timestamp -> WEEK) 
+    - In the very extreme case where no one broadcast the result of week x, and at week x+1,
+    the results for both are now broadcasted, then the WEEK of (block.timestamp -> WEEK)
     will receive both of the reward pack
     - Each pack of money will has it own id as timestamp, a gauge controller does not
     receive a pack of money with the same id twice, this allow governance to rebroadcast
@@ -63,7 +63,7 @@ contract PendleVotingController is CelerSender, VotingControllerStorage {
         uint64 chainId = poolInfos[pool].chainId;
         chainPools[chainId].remove(pool);
         allPools.remove(pool);
-        poolInfos[pool] = PoolInfo(0, 0, VeBalance(0, 0));
+        poolInfos[pool] = PoolInfo(0, 0, VeBalance(0, 0)); // this is more gas efficient delete poolInfos[pool];
     }
 
     function vote(address pool, uint64 weight) external {
@@ -73,7 +73,7 @@ contract PendleVotingController is CelerSender, VotingControllerStorage {
         address user = msg.sender;
 
         updatePoolVotes(pool);
-        _removeUserPoolVote(user, pool);
+        _removeUserPoolVote(user, pool); // normally the name should be in pair, like "unset" & "set"
         _setUserVote(user, pool, weight);
     }
 
@@ -109,10 +109,17 @@ contract PendleVotingController is CelerSender, VotingControllerStorage {
 
         VeBalance memory votes = poolInfos[pool].vote;
         while (timestamp < currentWeekStart) {
+            // why is this not <= btw
             timestamp += WEEK;
             votes = votes.sub(poolSlopeChangesAt[pool][timestamp], timestamp);
             _setPoolVoteAt(pool, timestamp, votes.getValueAt(timestamp));
         }
+        // should do struct or something? This assignment looks bad
+        // all the data manipulation should be moved to the storage contract.
+        // functions in storage contract should only focus on manipulating data effectively & not care about data validation
+        // basically like getters & setters
+
+        // what is the timestamp for the poolInfos is for?
         poolInfos[pool].vote = votes;
         poolInfos[pool].timestamp = timestamp;
     }
@@ -128,6 +135,8 @@ contract PendleVotingController is CelerSender, VotingControllerStorage {
 
     function broadcastVotingResults(uint64 chainId) external payable {
         uint128 timestamp = WeekMath.getCurrentWeekStartTimestamp();
+        // do we need to have this isEpochFinalized thing? Seems to me that we can just loop through
+        // all pools, check if this pool has been broadcasted, then broadcast it
         require(isEpochFinalized[timestamp], "epoch not finalized");
         _broadcastVotingResults(chainId, timestamp, pendlePerSec);
     }
@@ -137,6 +146,7 @@ contract PendleVotingController is CelerSender, VotingControllerStorage {
         uint128 timestamp,
         uint128 forcedPendlePerSec
     ) external payable onlyGovernance {
+        // force broadcast and you still need to check and stuff?
         require(isEpochFinalized[timestamp], "epoch not finalized");
         _broadcastVotingResults(chainId, timestamp, forcedPendlePerSec);
     }
@@ -168,10 +178,11 @@ contract PendleVotingController is CelerSender, VotingControllerStorage {
         );
     }
 
+    // what can prevent this from double-broadcasting?
     function _broadcastVotingResults(
         uint64 chainId,
         uint128 timestamp,
-        uint128 totalPendlePerSec
+        uint128 totalPendlePerSec // this variable is necessary? Yes it is. But there is another pendlePerSec variable that
     ) internal {
         uint256 length = chainPools[chainId].length();
         address[] memory pools = chainPools[chainId].values();
@@ -186,8 +197,8 @@ contract PendleVotingController is CelerSender, VotingControllerStorage {
             // poolVotes can be as large as pendle supply ~ 1e27
             // pendle per sec can be as large as 1e20
             // casting to uint256 here to prevent overflow
-            uint256 pendlePerSec = (uint256(totalPendlePerSec) * getPoolVotesAt(pools[i], timestamp)) /
-                totalVotes;
+            uint256 pendlePerSec = (uint256(totalPendlePerSec) *
+                getPoolVotesAt(pools[i], timestamp)) / totalVotes;
             incentives[i] = pendlePerSec * WEEK;
         }
 

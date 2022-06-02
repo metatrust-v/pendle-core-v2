@@ -28,6 +28,8 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
         pendle = _pendle;
     }
 
+    // the expiry % WEEK is just very bug prone and easy to forget
+    // input's validation should go first, then come internal data validation
     function lock(uint128 amount, uint128 expiry) external returns (uint128) {
         address user = msg.sender;
         require(
@@ -39,6 +41,7 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
         require(amount > 0, "zero amount");
 
         pendle.safeTransferFrom(user, address(this), amount);
+        // it's good to note what this function is returning here
         return _increasePosition(user, expiry, amount);
     }
 
@@ -59,7 +62,6 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
 
     /**
      * @dev anyone can top up one user's pendle locked amount
-     // I don't like this, it's a surprising behavior
      */
     function increaseLockAmount(uint128 amount) external returns (uint128 newVeBalance) {
         address user = msg.sender;
@@ -73,8 +75,10 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
     /**
      * @dev there is not a need for broadcasting in withdrawing thanks to the definition of _totalSupply
      */
+    // huh why suddenly allows the withdraw of a random user?
+    // Also, there should be a function to allow users to renew the lock position?
     function withdraw(address user) external returns (uint128 amount) {
-        require(isPositionExpired(user), "user position not expired"); // not expired, not unexpired
+        require(isPositionExpired(user), "user position not expired");
         amount = positionData[user].amount; // should require amount != 0
         require(amount > 0, "position already withdrawed");
         positionData[user] = LockedPosition(0, 0);
@@ -86,6 +90,7 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
         return supply.getCurrentValue();
     }
 
+    // do we really need to like broadcast all the chains at once?
     function broadcastTotalSupply() public payable {
         (VeBalance memory supply, uint128 timestamp) = _updateGlobalSupply();
         uint256 length = sidechainContracts.length();
@@ -96,9 +101,8 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
         }
     }
 
+    // for users, hmm suddenly we need to pass in the list of chains to broadcast, not very fun
     function broadcastUserPosition(address user, uint256[] calldata chainIds) external payable {
-        (VeBalance memory supply, uint256 timestamp) = _updateGlobalSupply();
-
         for (uint256 i = 0; i < chainIds.length; ++i) {
             uint256 chainId = chainIds[i];
             require(sidechainContracts.contains(chainId), "not supported chain");
@@ -112,7 +116,7 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
      */
     function _increasePosition(
         address user,
-        uint128 expiryToIncrease,
+        uint128 expiryToIncrease, // duration to increase btw
         uint128 amountToIncrease
     ) internal returns (uint128) {
         LockedPosition memory oldPosition = positionData[user];
@@ -133,7 +137,7 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
         VeBalance memory newBalance = convertToVeBalance(newPosition);
         {
             // add new position
-            slopeChanges[newPosition.expiry] += newBalance.slope;
+            slopeChanges[newPosition.expiry] += newBalance.slope; // the order should be similar to other parts
             supply = supply.add(newBalance);
         }
 

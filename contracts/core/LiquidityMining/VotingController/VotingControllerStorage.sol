@@ -32,6 +32,8 @@ abstract contract VotingControllerStorage {
     EnumerableSet.AddressSet internal allPools;
     mapping(address => PoolInfo) public poolInfos;
 
+    // timestamp should always go first? then we can bundle these data together
+
     // [pool, timestamp] => [uint128 vote]
     mapping(address => mapping(uint128 => uint128)) private poolVotesAt;
 
@@ -83,11 +85,15 @@ abstract contract VotingControllerStorage {
         return totalVotesAt[timestamp];
     }
 
+    // setPoolVote but += newVote here?
     function _setPoolVoteAt(
         address pool,
         uint128 timestamp,
         uint128 newVote
     ) internal {
+        // why do we need to maintain the vote at different timestamp? I thought we can just always
+        // maintain the current data
+
         totalVotesAt[timestamp] += newVote;
         poolVotesAt[pool][timestamp] = newVote;
     }
@@ -100,9 +106,8 @@ abstract contract VotingControllerStorage {
     function _removeUserPoolVote(address user, address pool) internal {
         VeBalance memory oldUVote = userPoolVotes[user][pool].vote;
         if (
-            _isPoolActive(pool) &&
-            oldUVote.slope > 0 &&
-            oldUVote.getExpiry() > poolInfos[pool].timestamp
+            // all of these logics should be bundled in a function
+            _isPoolActive(pool) && oldUVote.getExpiry() > poolInfos[pool].timestamp
         ) {
             poolInfos[pool].vote = poolInfos[pool].vote.sub(oldUVote);
             poolSlopeChangesAt[pool][oldUVote.getExpiry()] -= oldUVote.slope;

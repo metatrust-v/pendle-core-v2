@@ -49,7 +49,7 @@ contract VotingEscrowPendleSidechain is VotingEscrowToken, CelerReceiver {
 
     function _setNewTotalSupply(uint128 timestamp, VeBalance memory supply) internal {
         // this should never happen
-        assert(timestamp % WEEK == 0);
+        assert(timestamp % WEEK == 0); // I just really hate this % WEEK == 0 thing, it's out of no where
         lastSupplyUpdatedAt = timestamp;
         _totalSupply = supply;
     }

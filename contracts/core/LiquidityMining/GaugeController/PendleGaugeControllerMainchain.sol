@@ -21,6 +21,7 @@ contract PendleGaugeControllerMainchain is PendleGaugeController {
         uint256[] memory pendleSpeeds
     ) external {
         require(msg.sender == votingController, "not voting controller");
+        // should do a modifier. Basically access control should always be included in modifiers
         _receiveVotingResults(timestamp, markets, pendleSpeeds);
     }
 }

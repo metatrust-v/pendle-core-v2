@@ -27,7 +27,7 @@ abstract contract VotingEscrowToken is IPVeToken {
 
     struct LockedPosition {
         uint128 amount;
-        uint128 expiry; // confirm can't use 2 slots
+        uint128 expiry;
     }
 
     VeBalance internal _totalSupply;
@@ -45,14 +45,6 @@ abstract contract VotingEscrowToken is IPVeToken {
         return convertToVeBalance(positionData[user]).getCurrentValue();
     }
 
-    /**
-     * @dev There will be a short delay every start of the week where this function
-     * will be reverted, on both mainchain & sidechain. This also implies Gauge pause.
-     * This will be resolved as soon as broadcastSupply is called on mainchain
-     * @dev Gauges will use totalSupplyCurrent to get totalSupply, this will
-     * prevent the pause for gauges on mainchain.
-     */
-    // hmm I don't like this pause
     function totalSupply() public view virtual returns (uint128) {
         return _totalSupply.getCurrentValue();
     }

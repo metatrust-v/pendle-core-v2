@@ -33,11 +33,10 @@ abstract contract PendleGaugeController is IPGaugeController, PermissionsV2Upg {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     struct PoolRewardData {
-        // 4 uint256, damn. pendlePerSec is at most <= 1e18, accumulatedPendle <= 10 mil * 1e18 ...
-        uint128 pendlePerSec;
-        uint128 accumulatedPendle;
-        uint128 accumulatedTimestamp;
-        uint128 incentiveEndsAt;
+        uint128 pendlePerSec; // can be 96 bits
+        uint128 accumulatedPendle; // 96 bits
+        uint128 accumulatedTimestamp; // 32 bits
+        uint128 incentiveEndsAt; // 32 bits
     }
 
     uint128 public constant WEEK = 1 weeks;
@@ -64,7 +63,6 @@ abstract contract PendleGaugeController is IPGaugeController, PermissionsV2Upg {
      * @dev this function is restricted to be called by gauge only
      */
     function claimMarketReward() external onlyMarket {
-        // should do modifier here
         address market = msg.sender;
         updateMarketIncentive(market);
 
@@ -99,6 +97,7 @@ abstract contract PendleGaugeController is IPGaugeController, PermissionsV2Upg {
         return rwd;
     }
 
+    // the name seems out of place, should be update accumulatedPendle and stuff
     function updateMarketIncentive(address market) public {
         rewardData[market] = _getUpdatedMarketIncentives(market);
     }
@@ -107,8 +106,9 @@ abstract contract PendleGaugeController is IPGaugeController, PermissionsV2Upg {
     function _receiveVotingResults(
         uint128 timestamp,
         address[] memory markets,
-        uint256[] memory incentives
+        uint256[] memory incentives // generally we should only do safeCast, or better, just do uint96 here
     ) internal {
+        // this is quite out of nowhere, really don't like it
         if (epochRewardReceived[timestamp]) return;
         // hmm I don't like these kinds of asserts. We will have to evaluate cases that due to Celer stop functioning
         // the entire system is halted forever (due to permanent state mismatch)
@@ -120,12 +120,13 @@ abstract contract PendleGaugeController is IPGaugeController, PermissionsV2Upg {
 
             PoolRewardData memory rwd = _getUpdatedMarketIncentives(market);
             uint128 leftover = (rwd.incentiveEndsAt - rwd.accumulatedTimestamp) * rwd.pendlePerSec;
-            uint128 newSpeed = (leftover + amount) / WEEK;
+            uint128 newSpeed = (leftover + amount) / WEEK; // hmm this leftover + amount is quite a surprising thing
+            // kinda feel like this entire portion of logic should be separated out
             rewardData[market] = PoolRewardData({
                 pendlePerSec: newSpeed,
                 accumulatedPendle: rwd.accumulatedPendle,
-                accumulatedTimestamp: uint128(block.timestamp),
-                incentiveEndsAt: uint128(block.timestamp) + WEEK
+                accumulatedTimestamp: uint128(block.timestamp), // has it accrued until this timestamp?
+                incentiveEndsAt: uint128(block.timestamp) + WEEK // huh is this correct?
             });
         }
         epochRewardReceived[timestamp] = true;
