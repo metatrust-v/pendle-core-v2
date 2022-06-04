@@ -73,6 +73,8 @@ abstract contract PendleGaugeController is IPGaugeController, PermissionsV2Upg {
             rewardData[market].accumulatedPendle = 0;
             IERC20(pendle).safeTransfer(market, amount);
         }
+
+        emit MarketClaimReward(market, amount);
     }
 
     function fundPendle(uint256 amount) external onlyGovernance {
@@ -118,6 +120,8 @@ abstract contract PendleGaugeController is IPGaugeController, PermissionsV2Upg {
             _incentivizeMarket(markets[i], uint128(incentives[i]));
         }
         epochRewardReceived[timestamp] = true;
+
+        emit ReceiveVotingResult(timestamp, markets, incentives);
     }
 
     function _incentivizeMarket(address market, uint128 amount) internal {

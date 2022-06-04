@@ -59,4 +59,33 @@ library VeBalanceLib {
 
     // hmm I'm not the biggest fan of the random hooks, very hard to rmb when to call
     // and this is not "isValid"
+
+    function getCheckpointValueAt(Checkpoint[] storage checkpoints, uint128 timestamp)
+        internal
+        view
+        returns (uint128)
+    {
+        if (checkpoints.length == 0 || checkpoints[0].timestamp > timestamp) {
+            return 0;
+        }
+
+        uint256 left = 0;
+        uint256 right = checkpoints.length;
+
+        while (left < right) {
+            uint256 mid = (left + right) / 2;
+            if (checkpoints[mid].timestamp <= timestamp) {
+                left = mid;
+            } else {
+                right = mid - 1;
+            }
+        }
+
+        VeBalance memory bal = checkpoints[left].balance;
+        if (getExpiry(bal) <= timestamp) {
+            return 0;
+        } else {
+            return getValueAt(bal, timestamp);
+        }
+    }
 }

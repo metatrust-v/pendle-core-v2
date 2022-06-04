@@ -70,8 +70,20 @@ abstract contract VotingControllerStorage {
         return weekData[timestamp].totalVotes;
     }
 
-    function getUserPoolVote(address user, address pool) public view returns (UserPoolInfo memory) {
+    function getUserPoolVote(address user, address pool)
+        external
+        view
+        returns (UserPoolInfo memory)
+    {
         return userDatas[user].voteForPools[pool];
+    }
+
+    function getUserPoolVoteAt(
+        address user,
+        address pool,
+        uint128 timestamp
+    ) external view returns (uint128) {
+        return VeBalanceLib.getCheckpointValueAt(userPoolCheckpoints[user][pool], timestamp);
     }
 
     function _addPool(uint64 chainId, address pool) internal {
