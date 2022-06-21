@@ -66,9 +66,12 @@ contract PendleAaveV3SCY is SCYBaseWithRewards {
         if (tokenOut == aToken) {
             amountTokenOut = _scaledBalanceToAToken(amountSharesToRedeem);
         } else {
+            uint256 preBalanceUnderlying = _selfBalance(underlying);
+
             uint256 amountATokenToWithdraw = _scaledBalanceToAToken(amountSharesToRedeem);
             IAavePool(pool).withdraw(underlying, amountATokenToWithdraw, address(this));
-            amountTokenOut = _selfBalance(underlying);
+
+            amountTokenOut = _selfBalance(underlying) - preBalanceUnderlying;
         }
     }
 
@@ -77,7 +80,7 @@ contract PendleAaveV3SCY is SCYBaseWithRewards {
     }
 
     function _getFloatingAmount(address token) internal view virtual override returns (uint256) {
-        if (token != aToken) return _selfBalance(token);
+        if (token != aToken) return _selfBalance(token) - rewardState[token].lastBalance;
         // the only reserve token is aToken
         uint256 scaledATokenAmount = IAToken(aToken).scaledBalanceOf(address(this)) -
             yieldTokenReserve;
