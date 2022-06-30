@@ -2,6 +2,7 @@
 pragma solidity 0.8.13;
 import "../../../interfaces/IPVotingEscrow.sol";
 import "../../../libraries/helpers/MiniHelpers.sol";
+import "../../../libraries/VeHistoryLib.sol";
 import "./VotingEscrowToken.sol";
 import "../CelerAbstracts/CelerSender.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -11,6 +12,7 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
     using SafeERC20 for IERC20;
     using VeBalanceLib for VeBalance;
     using VeBalanceLib for LockedPosition;
+    using Checkpoints for Checkpoints.History;
     using EnumerableMap for EnumerableMap.UintToAddressMap;
 
     bytes private constant EMPTY_BYTES = abi.encode();
@@ -26,7 +28,7 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
 
     // Saving VeBalance checkpoint for users of each week, can later use binary search
     // to ask for their vePendle balance at any wTime
-    mapping(address => Checkpoint[]) public userCheckpoints;
+    mapping(address => Checkpoints.History) internal userHistory;
 
     constructor(IERC20 _pendle, address _governanceManager) CelerSender(_governanceManager) {
         pendle = _pendle;
@@ -132,7 +134,7 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
 
     /// @notice binary search to find balance at a timestamp. This timestamp does not need to be divisible by week
     function getUserVeBalanceAt(address user, uint128 timestamp) external view returns (uint128) {
-        return VeBalanceLib.getCheckpointValueAt(userCheckpoints[user], timestamp);
+        return userHistory[user].getAtTimestamp(timestamp);
     }
 
     /**
@@ -173,7 +175,7 @@ contract VotingEscrowPendleMainchain is VotingEscrowToken, IPVotingEscrow, Celer
 
         _totalSupply = newSupply;
         positionData[user] = newPosition;
-        userCheckpoints[user].push(Checkpoint(newBalance, uint128(block.timestamp)));
+        userHistory[user].push(newBalance);
         return newBalance.getCurrentValue();
     }
 

@@ -5,6 +5,7 @@ import "../../../interfaces/IPVeToken.sol";
 import "../../../libraries/VeBalanceLib.sol";
 import "../../../libraries/math/WeekMath.sol";
 import "../../../libraries/helpers/MiniHelpers.sol";
+import "../../../libraries/VeHistoryLib.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 // no reentracy protection yet?
@@ -12,6 +13,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 abstract contract VotingControllerStorage {
     using VeBalanceLib for VeBalance;
     using EnumerableSet for EnumerableSet.AddressSet;
+    using Checkpoints for Checkpoints.History;
 
     struct PoolInfo {
         uint64 chainId;
@@ -65,7 +67,7 @@ abstract contract VotingControllerStorage {
     mapping(uint128 => bool) public isEpochFinalized;
 
     // [user][pool] => checkpoint
-    mapping(address => mapping(address => Checkpoint[])) public userPoolCheckpoints;
+    mapping(address => mapping(address => Checkpoints.History)) internal userPoolHistory;
 
     constructor(address _vePendle) {
         vePendle = IPVeToken(_vePendle);
@@ -104,7 +106,7 @@ abstract contract VotingControllerStorage {
         address pool,
         uint128 timestamp
     ) external view returns (uint128) {
-        return VeBalanceLib.getCheckpointValueAt(userPoolCheckpoints[user][pool], timestamp);
+        return userPoolHistory[user][pool].getAtTimestamp(timestamp);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -198,9 +200,7 @@ abstract contract VotingControllerStorage {
         address pool,
         VeBalance memory vote
     ) internal {
-        userPoolCheckpoints[user][pool].push(
-            Checkpoint({ balance: vote, timestamp: uint128(block.timestamp) })
-        );
+        userPoolHistory[user][pool].push(vote);
     }
 
     function _setAllPastEpochsAsFinalized() internal {
