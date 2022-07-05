@@ -104,12 +104,14 @@ contract PendleYieldToken is
     /// @dev this function limit how much each receiver will receive. For example, if the totalOut is 100,
     /// and the max are 50 30 INF, the first receiver will receive 50, the second will receive 30, and the third will receive 20.
     /// @dev intended to mostly be used by Pendle router
-    function redeemPY(address[] memory receivers, uint256[] memory maxAmountScyOuts)
+    function redeemPY(address[] calldata receivers, uint256[] calldata maxAmountScyOuts)
         external
         nonReentrant
         updateScyReserve
         returns (uint256 totalAmountScyOut)
     {
+        require(receivers.length == maxAmountScyOuts.length, "not same length");
+        require(receivers.length != 0, "empty array");
         (totalAmountScyOut, ) = _redeemPY(receivers, maxAmountScyOuts);
     }
 
@@ -168,6 +170,8 @@ contract PendleYieldToken is
         returns (uint256[] memory rewardsOut)
     {
         require(isExpired(), "not expired");
+        finalizeAfterExpiryData();
+
         address[] memory rewardTokens = _getRewardTokens();
         uint256[] memory preBalances = _selfBalances(rewardTokens);
 
@@ -179,10 +183,12 @@ contract PendleYieldToken is
 
     /// @notice can be called by anyone to lock in all the indexes
     function finalizeAfterExpiryData() public {
-        if (!isExpired() || afterExpiry.isFinalized) return;
-        afterExpiry.isFinalized = true;
-        afterExpiry.firstScyIndex = scyIndexCurrent().Uint128();
-        (, afterExpiry.firstRewardIndexes) = _updateRewardIndex();
+        require(isExpired(), "not expired");
+        if (!afterExpiry.isFinalized) {
+            afterExpiry.isFinalized = true;
+            afterExpiry.firstScyIndex = scyIndexCurrent().Uint128();
+            afterExpiry.firstRewardIndexes = ISuperComposableYield(SCY).rewardIndexesCurrent();
+        }
     }
 
     /// @dev maximize the current rate with the previous rate to guarantee non-decreasing rate
@@ -214,6 +220,8 @@ contract PendleYieldToken is
             _transferOut(SCY, treasury, scyInterestAfterExpiry);
         }
 
+        // all the leftover SCY will be transferred to the last receiver
+        maxAmountScyOuts[maxAmountScyOuts.length - 1] = type(uint256).max;
         _transferOutMaxMulti(SCY, totalScyToReceivers, receivers, maxAmountScyOuts);
     }
 
