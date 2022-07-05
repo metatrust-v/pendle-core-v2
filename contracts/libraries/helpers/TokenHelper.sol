@@ -63,9 +63,9 @@ abstract contract TokenHelper {
             _transferOut(token, tos[i], maxAmount);
             unchecked {
                 leftover -= maxAmount;
+                if (leftover == 0) break;
                 i++;
             }
-            if (leftover == 0) break;
         }
     }
 
