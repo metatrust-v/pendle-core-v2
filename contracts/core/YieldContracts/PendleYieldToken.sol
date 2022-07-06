@@ -13,7 +13,7 @@ import "../../interfaces/IPYieldContractFactory.sol";
 import "../../libraries/SCY/SCYUtils.sol";
 import "../../libraries/helpers/MiniHelpers.sol";
 import "../../libraries/RewardManagerAbstract.sol";
-import "../PendleERC20Permit.sol";
+import "../PendleERC20.sol";
 import "./InterestManagerYT.sol";
 
 /*
@@ -26,7 +26,7 @@ Due to this, it is required to update users' accruedReward STRICTLY BEFORE redee
 */
 contract PendleYieldToken is
     IPYieldToken,
-    PendleERC20Permit,
+    PendleERC20,
     RewardManagerAbstract,
     InterestManagerYT
 {
@@ -62,7 +62,7 @@ contract PendleYieldToken is
         string memory _symbol,
         uint8 __decimals,
         uint256 _expiry
-    ) PendleERC20Permit(_name, _symbol, __decimals) {
+    ) PendleERC20(_name, _symbol, __decimals) {
         SCY = _SCY;
         PT = _PT;
         expiry = _expiry;
