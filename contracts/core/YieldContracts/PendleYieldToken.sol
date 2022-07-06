@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../interfaces/ISuperComposableYield.sol";
 import "../../interfaces/IPYieldToken.sol";
@@ -85,6 +85,8 @@ contract PendleYieldToken is
         _mint(receiverYT, amountPYOut);
 
         IPPrincipalToken(PT).mintByYT(receiverPT, amountPYOut);
+
+        emit Mint(msg.sender, receiverPT, receiverYT, amountPYOut);
     }
 
     /// @dev this function converts PY tokens into scy, but interests & rewards are not redeemed at the same time
@@ -99,6 +101,8 @@ contract PendleYieldToken is
         (receivers[0], amounts[0]) = (receiver, type(uint256).max);
 
         (amountScyOut, ) = _redeemPY(receivers, amounts);
+
+        emit Redeem(msg.sender, receiver, amountScyOut);
     }
 
     /// @dev this function limit how much each receiver will receive. For example, if the totalOut is 100,
