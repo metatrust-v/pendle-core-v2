@@ -27,10 +27,10 @@ import "../../interfaces/IPYieldContractFactory.sol";
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "../../libraries/helpers/ExpiryUtilsLib.sol";
-import "../../libraries/solmate/LibRLP.sol";
-import "../../libraries/helpers/MiniDeployer.sol";
+import "../../libraries/helpers/SSTORE2Deployer.sol";
 
 import "../../periphery/PermissionsV2Upg.sol";
 
@@ -38,13 +38,13 @@ import "./PendlePrincipalToken.sol";
 import "./PendleYieldToken.sol";
 
 /// @dev If this contract is ever made upgradeable, please pay attention to the numContractDeployed variable
-contract PendleYieldContractFactory is PermissionsV2Upg, MiniDeployer, IPYieldContractFactory {
+contract PendleYieldContractFactory is PermissionsV2Upg, Initializable, IPYieldContractFactory {
     using ExpiryUtils for string;
 
     string private constant PT_PREFIX = "PT";
     string private constant YT_PREFIX = "YT";
 
-    address public immutable pendleYtCreationCodePointer;
+    address public pendleYtCreationCodePointer;
 
     uint256 public expiryDivisor;
     uint256 public interestFeeRate;
@@ -64,14 +64,16 @@ contract PendleYieldContractFactory is PermissionsV2Upg, MiniDeployer, IPYieldCo
         uint256 _expiryDivisor,
         uint256 _interestFeeRate,
         address _treasury,
-        address _governanceManager,
-        bytes memory _pendleYtCreationCode
+        address _governanceManager
     ) PermissionsV2Upg(_governanceManager) {
         setExpiryDivisor(_expiryDivisor);
         setInterestFeeRate(_interestFeeRate);
         setTreasury(_treasury);
-        pendleYtCreationCodePointer = _setCreationCode(_pendleYtCreationCode);
         numContractDeployed++;
+    }
+
+    function initialize(bytes memory _pendleYtCreationCode) external initializer {
+        pendleYtCreationCodePointer = SSTORE2Deployer.setCreationCode(_pendleYtCreationCode);
     }
 
     /**
@@ -91,13 +93,12 @@ contract PendleYieldContractFactory is PermissionsV2Upg, MiniDeployer, IPYieldCo
 
         (, , uint8 assetDecimals) = _SCY.assetInfo();
 
-        address predictedPTAddress = LibRLP.computeAddress(address(this), ++numContractDeployed);
-        address predictedYTAddress = LibRLP.computeAddress(address(this), ++numContractDeployed);
-
-        PT = address(
-            new PendlePrincipalToken(
+        // no need salt since PT (and also YT) existence has been checked before hand
+        PT = SSTORE2Deployer.create2(
+            type(PendlePrincipalToken).creationCode,
+            bytes32(0),
+            abi.encode(
                 SCY,
-                predictedYTAddress,
                 PT_PREFIX.concat(_SCY.name(), expiry, " "),
                 PT_PREFIX.concat(_SCY.symbol(), expiry, "-"),
                 assetDecimals,
@@ -105,13 +106,12 @@ contract PendleYieldContractFactory is PermissionsV2Upg, MiniDeployer, IPYieldCo
             )
         );
 
-        require(PT == predictedPTAddress, "IE predictedPTAddress");
-
-        YT = _deployWithArgs(
+        YT = SSTORE2Deployer.create2(
             pendleYtCreationCodePointer,
+            bytes32(0),
             abi.encode(
                 SCY,
-                predictedPTAddress,
+                PT,
                 YT_PREFIX.concat(_SCY.name(), expiry, " "),
                 YT_PREFIX.concat(_SCY.symbol(), expiry, "-"),
                 assetDecimals,
@@ -119,7 +119,7 @@ contract PendleYieldContractFactory is PermissionsV2Upg, MiniDeployer, IPYieldCo
             )
         );
 
-        require(YT == predictedYTAddress, "IE predictedYTAddress");
+        IPPrincipalToken(PT).initialize(YT);
 
         getPT[SCY][expiry] = PT;
         getYT[SCY][expiry] = YT;

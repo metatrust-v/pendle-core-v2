@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.13;
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "../../interfaces/IPMarket.sol";
 import "../../interfaces/IPYieldContractFactory.sol";
 import "../../interfaces/IPMarketFactory.sol";
 
-import "../../libraries/helpers/MiniDeployer.sol";
+import "../../libraries/helpers/SSTORE2Deployer.sol";
 import "../../periphery/PermissionsV2Upg.sol";
 
 import "./PendleMarket.sol";
 import "../LiquidityMining/PendleGauge.sol";
 
-contract PendleMarketFactory is PermissionsV2Upg, MiniDeployer, IPMarketFactory {
+contract PendleMarketFactory is PermissionsV2Upg, Initializable, IPMarketFactory {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     struct MarketConfig {
@@ -27,7 +28,7 @@ contract PendleMarketFactory is PermissionsV2Upg, MiniDeployer, IPMarketFactory 
     uint256 private constant MIN_RATE_ORACLE_TIME_WINDOW = 300 seconds;
 
     address public immutable yieldContractFactory;
-    address public immutable marketCreationCodePointer;
+    address public marketCreationCodePointer;
     uint256 public immutable maxLnFeeRateRoot;
 
     // PT -> scalarRoot -> initialAnchor
@@ -45,8 +46,7 @@ contract PendleMarketFactory is PermissionsV2Upg, MiniDeployer, IPMarketFactory 
         address _treasury,
         uint96 _lnFeeRateRoot,
         uint32 _rateOracleTimeWindow,
-        uint8 _reserveFeePercent,
-        bytes memory _marketCreationCode
+        uint8 _reserveFeePercent
     ) PermissionsV2Upg(_governanceManager) {
         require(_yieldContractFactory != address(0), "zero address");
         yieldContractFactory = _yieldContractFactory;
@@ -56,7 +56,10 @@ contract PendleMarketFactory is PermissionsV2Upg, MiniDeployer, IPMarketFactory 
         setlnFeeRateRoot(_lnFeeRateRoot);
         setRateOracleTimeWindow(_rateOracleTimeWindow);
         setReserveFeePercent(_reserveFeePercent);
-        marketCreationCodePointer = _setCreationCode(_marketCreationCode);
+    }
+
+    function initialize(bytes memory _marketCreationCode) external onlyGovernance initializer {
+        marketCreationCodePointer = SSTORE2Deployer.setCreationCode(_marketCreationCode);
     }
 
     /**
@@ -76,8 +79,10 @@ contract PendleMarketFactory is PermissionsV2Upg, MiniDeployer, IPMarketFactory 
             "duplicated creation params"
         );
 
-        market = _deployWithArgs(
+        // no need salt since market's existence has been checked before hand
+        market = SSTORE2Deployer.create2(
             marketCreationCodePointer,
+            bytes32(0),
             abi.encode(PT, scalarRoot, initialAnchor, vePendle, gaugeController)
         );
 
