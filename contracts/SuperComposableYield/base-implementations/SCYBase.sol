@@ -38,20 +38,27 @@ abstract contract SCYBase is ISuperComposableYield, PendleERC20, TokenHelper {
         uint256 amountTokenToDeposit,
         uint256 minSharesOut
     ) external payable nonReentrant returns (uint256 amountSharesOut) {
-        require(isValidBaseToken(tokenIn), "SCY: Invalid tokenIn");
-
         if (tokenIn == NATIVE) {
             require(msg.value >= amountTokenToDeposit, "insufficient eth");
             _transferOut(NATIVE, msg.sender, msg.value - amountTokenToDeposit);
         } else if (amountTokenToDeposit != 0) {
             _transferIn(tokenIn, msg.sender, amountTokenToDeposit);
         }
+        amountSharesOut = _deposit(receiver, tokenIn, amountTokenToDeposit, minSharesOut);
+    }
 
-        amountSharesOut = _deposit(tokenIn, amountTokenToDeposit);
-        require(amountSharesOut >= minSharesOut, "insufficient out");
-
-        _mint(receiver, amountSharesOut);
-        emit Deposit(msg.sender, receiver, tokenIn, amountTokenToDeposit, amountSharesOut);
+    function depositAfterTransfer(
+        address receiver,
+        address tokenIn,
+        uint256 minSharesOut
+    ) external payable nonReentrant returns (uint256 amountSharesOut) {
+        uint256 amountTokenToDeposit;
+        if (tokenIn == NATIVE) {
+            amountTokenToDeposit = msg.value;
+        } else if (amountTokenToDeposit != 0) {
+            amountTokenToDeposit = _selfBalance(tokenIn);
+        }
+        amountSharesOut = _deposit(receiver, tokenIn, amountTokenToDeposit, minSharesOut);
     }
 
     /**
@@ -75,6 +82,21 @@ abstract contract SCYBase is ISuperComposableYield, PendleERC20, TokenHelper {
         uint256 amountSharesToRedeem = balanceOf(address(this));
         _burn(address(this), amountSharesToRedeem);
         amountTokenOut = _redeem(receiver, amountSharesToRedeem, tokenOut, minTokenOut);
+    }
+
+    function _deposit(
+        address receiver,
+        address tokenIn,
+        uint256 amountTokenToDeposit,
+        uint256 minSharesOut
+    ) internal returns (uint256 amountSharesOut) {
+        require(isValidBaseToken(tokenIn), "SCY: Invalid tokenIn");
+
+        amountSharesOut = _deposit(tokenIn, amountTokenToDeposit);
+        require(amountSharesOut >= minSharesOut, "insufficient out");
+
+        _mint(receiver, amountSharesOut);
+        emit Deposit(msg.sender, receiver, tokenIn, amountTokenToDeposit, amountSharesOut);
     }
 
     function _redeem(

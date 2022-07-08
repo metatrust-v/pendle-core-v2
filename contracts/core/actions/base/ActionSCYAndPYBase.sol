@@ -63,20 +63,18 @@ abstract contract ActionSCYAndPYBase is PendleJoeSwapHelperUpg, TokenHelper {
     ) internal returns (uint256 netScyOut) {
         uint256 amountBaseToken;
         if (path.length == 1) {
-            if (doPull) IERC20(path[0]).safeTransferFrom(msg.sender, address(this), netRawTokenIn);
+            if (doPull) IERC20(path[0]).safeTransferFrom(msg.sender, SCY, netRawTokenIn);
             amountBaseToken = netRawTokenIn;
         } else {
             if (doPull)
                 IERC20(path[0]).safeTransferFrom(msg.sender, _getFirstPair(path), netRawTokenIn);
-            amountBaseToken = _swapExactIn(path, netRawTokenIn, address(this));
+            amountBaseToken = _swapExactIn(path, netRawTokenIn, SCY);
         }
 
         address baseToken = path[path.length - 1];
-        IERC20(baseToken).approve(SCY, amountBaseToken);
-        netScyOut = ISuperComposableYield(SCY).deposit(
+        netScyOut = ISuperComposableYield(SCY).depositAfterTransfer(
             receiver,
             baseToken,
-            amountBaseToken,
             minScyOut
         );
         emit MintScyFromRawToken(msg.sender, path[0], netRawTokenIn, SCY, netScyOut);

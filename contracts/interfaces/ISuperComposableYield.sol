@@ -71,6 +71,12 @@ interface ISuperComposableYield is IERC20Metadata {
         uint256 minSharesOut
     ) external payable returns (uint256 amountSharesOut);
 
+    function depositAfterTransfer(
+        address receiver,
+        address tokenIn,
+        uint256 minSharesOut
+    ) external payable returns (uint256 amountSharesOut);
+
     /**
      * @notice redeems an amount of base tokens by burning some shares
      * @param receiver recipient address
