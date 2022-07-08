@@ -55,10 +55,12 @@ abstract contract SCYBase is ISuperComposableYield, PendleERC20, TokenHelper {
         uint256 amountTokenToDeposit;
         if (tokenIn == NATIVE) {
             amountTokenToDeposit = msg.value;
-        } else if (amountTokenToDeposit != 0) {
+        } else {
             amountTokenToDeposit = _selfBalance(tokenIn);
         }
-        amountSharesOut = _deposit(receiver, tokenIn, amountTokenToDeposit, minSharesOut);
+        if (amountTokenToDeposit != 0) {
+            amountSharesOut = _deposit(receiver, tokenIn, amountTokenToDeposit, minSharesOut);
+        }
     }
 
     /**
