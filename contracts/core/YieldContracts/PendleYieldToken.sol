@@ -12,7 +12,7 @@ import "../../libraries/helpers/ArrayLib.sol";
 import "../../interfaces/IPYieldContractFactory.sol";
 import "../../libraries/SCY/SCYUtils.sol";
 import "../../libraries/helpers/MiniHelpers.sol";
-import "../../libraries/RewardManagerAbstract.sol";
+import "../../libraries/RewardManager.sol";
 import "../PendleERC20Permit.sol";
 import "./InterestManagerYT.sol";
 
@@ -21,20 +21,13 @@ Invariances to maintain:
 - address(0) & address(this) should never have any rewards & activeBalance accounting done. This is
     guaranteed by address(0) & address(this) check in each updateForTwo function
 */
-contract PendleYieldToken is
-    IPYieldToken,
-    PendleERC20Permit,
-    RewardManagerAbstract,
-    InterestManagerYT
-{
+contract PendleYieldToken is IPYieldToken, PendleERC20Permit, RewardManager, InterestManagerYT {
     using Math for uint256;
     using SafeERC20 for IERC20;
     using ArrayLib for uint256[];
 
     struct PostExpiryData {
         uint128 firstScyIndex;
-        mapping(address => uint256) firstRewardIndex;
-        mapping(address => uint256) userRewardOwed;
     }
 
     address public immutable SCY;
@@ -148,26 +141,6 @@ contract PendleYieldToken is
         }
     }
 
-    function redeemRewardsPostExpiryForTreasury()
-        external
-        nonReentrant
-        updateData
-        returns (uint256[] memory rewardsOut)
-    {
-        require(isExpired(), "not expired");
-
-        address[] memory tokens = getRewardTokens();
-        uint256[] memory rewardOuts = new uint256[](tokens.length);
-
-        _redeemExternalReward();
-
-        for (uint256 i = 0; i < tokens.length; i++) {
-            rewardOuts[i] = _selfBalance(tokens[i]) - postExpiry.userRewardOwed[tokens[i]];
-        }
-
-        _transferOut(tokens, IPYieldContractFactory(factory).treasury(), rewardsOut);
-    }
-
     function rewardIndexesCurrent() external override returns (uint256[] memory) {
         return ISuperComposableYield(SCY).rewardIndexesCurrent();
     }
@@ -239,16 +212,7 @@ contract PendleYieldToken is
     function _setPostExpiryData() internal {
         PostExpiryData storage local = postExpiry;
         if (local.firstScyIndex != 0) return; // already set
-
-        _redeemExternalReward(); // do a final redeem. All the future reward income will belong to the treasury
-
         local.firstScyIndex = scyIndexCurrent().Uint128();
-        address[] memory rewardTokens = ISuperComposableYield(SCY).getRewardTokens();
-        uint256[] memory rewardIndexes = ISuperComposableYield(SCY).rewardIndexesCurrent();
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            local.firstRewardIndex[rewardTokens[i]] = rewardIndexes[i];
-            local.userRewardOwed[rewardTokens[i]] = _selfBalance(rewardTokens[i]);
-        }
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -272,47 +236,6 @@ contract PendleYieldToken is
         return ISuperComposableYield(SCY).getRewardTokens();
     }
 
-    function _doTransferOutRewards(address user, address receiver)
-        internal
-        virtual
-        override
-        returns (uint256[] memory rewardAmounts)
-    {
-        address[] memory tokens = getRewardTokens();
-
-        if (isExpired()) {
-            // post-expiry, all incoming rewards will go to the treasury
-            // hence, we can save users one _redeemExternal here
-            rewardAmounts = __doTransferOutRewardsLocal(tokens, user, receiver);
-            for (uint256 i = 0; i < tokens.length; i++)
-                postExpiry.userRewardOwed[tokens[i]] -= rewardAmounts[i];
-        } else {
-            _redeemExternalReward();
-            rewardAmounts = __doTransferOutRewardsLocal(tokens, user, receiver);
-        }
-    }
-
-    function __doTransferOutRewardsLocal(
-        address[] memory tokens,
-        address user,
-        address receiver
-    ) internal returns (uint256[] memory rewardAmounts) {
-        address treasury = IPYieldContractFactory(factory).treasury();
-        uint256 feeRate = IPYieldContractFactory(factory).rewardFeeRate();
-
-        rewardAmounts = new uint256[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            uint256 rewardPreFee = userReward[tokens[i]][user].accrued;
-            userReward[tokens[i]][user].accrued = 0;
-
-            uint256 feeAmount = rewardPreFee.mulDown(feeRate);
-            rewardAmounts[i] = rewardPreFee - feeAmount;
-
-            _transferOut(tokens[i], treasury, feeAmount);
-            _transferOut(tokens[i], receiver, rewardAmounts[i]);
-        }
-    }
-
     function _redeemExternalReward() internal virtual override {
         ISuperComposableYield(SCY).claimRewards(address(this));
     }
@@ -324,19 +247,12 @@ contract PendleYieldToken is
         return SCYUtils.assetToScy(index, balanceOf(user)) + userInterest[user].accrued;
     }
 
-    function _updateRewardIndex()
-        internal
-        override
-        returns (address[] memory tokens, uint256[] memory indexes)
-    {
-        tokens = getRewardTokens();
-        if (isExpired()) {
-            indexes = new uint256[](tokens.length);
-            for (uint256 i = 0; i < tokens.length; i++)
-                indexes[i] = postExpiry.firstRewardIndex[tokens[i]];
-        } else {
-            indexes = ISuperComposableYield(SCY).rewardIndexesCurrent();
-        }
+    function _getRewardTokens() internal view virtual override returns (address[] memory) {
+        return ISuperComposableYield(SCY).getRewardTokens();
+    }
+
+    function _rewardSharesTotal() internal view virtual override returns (uint256) {
+        return scyReserve;
     }
 
     //solhint-disable-next-line ordering
