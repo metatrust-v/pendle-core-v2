@@ -83,7 +83,13 @@ contract PendleYearnVaultSCY is SCYBase {
      * @dev It is the price per share of the yvToken
      */
     function exchangeRate() public view override returns (uint256) {
-        return IYearnVault(yvToken).pricePerShare();
+        uint256 decimals = IYearnVault(yvToken).decimals();
+        uint256 price = IYearnVault(yvToken).pricePerShare();
+        if (decimals <= 18) {
+            return price * (10 ** (18 - decimals));
+        } else {
+            return price / (10 ** (decimals - 18));
+        }
     }
 
     /*///////////////////////////////////////////////////////////////
