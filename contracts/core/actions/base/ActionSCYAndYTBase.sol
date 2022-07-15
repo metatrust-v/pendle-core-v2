@@ -18,8 +18,6 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
     using SafeERC20 for IPYieldToken;
     using SCYIndexLib for ISuperComposableYield;
 
-    event SwapYTAndSCY(address indexed user, int256 ytToAccount, int256 scyToAccount);
-
     /**
     * @notice swap exact SCY to YT with the help of flashswaps & YT tokenization / redemption
     * @dev inner working of this function:
@@ -60,8 +58,6 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
             netYtOut, // exactPtIn = netYtOut
             _encodeSwapExactScyForYt(receiver, minYtOut)
         );
-
-        emit SwapYTAndSCY(receiver, netYtOut.Int(), exactScyIn.neg());
     }
 
     /**
@@ -96,8 +92,6 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
         ); // ignore return
 
         netScyOut = SCY.balanceOf(receiver) - preScyBalance;
-
-        emit SwapYTAndSCY(receiver, exactYtIn.neg(), netScyOut.Int());
     }
 
     /**
@@ -122,8 +116,6 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
             exactYtOut, // exactPtIn = exactYtOut
             _encodeSwapScyForExactYt(msg.sender, receiver, maxScyIn)
         );
-
-        emit SwapYTAndSCY(receiver, exactYtOut.Int(), netScyIn.neg());
     }
 
     /**
@@ -165,8 +157,6 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
             netYtIn, // exactPtOut = netYtIn
             _encodeSwapYtForScy(receiver, exactScyOut)
         ); // ignore return
-
-        emit SwapYTAndSCY(receiver, netYtIn.neg(), exactScyOut.Int());
     }
 
     /**
