@@ -22,7 +22,7 @@ Invariances to maintain:
 - address(0) & address(this) should never have any rewards & activeBalance accounting done. This is
     guaranteed by address(0) & address(this) check in each updateForTwo function
 */
-contract PendleMarket is PendleERC20Permit, PendleGauge, IPMarket {
+contract PendleMarket is PendleERC20, PendleGauge, IPMarket {
     using Math for uint256;
     using Math for int256;
     using MarketMathCore for MarketState;
@@ -65,7 +65,7 @@ contract PendleMarket is PendleERC20Permit, PendleGauge, IPMarket {
         address _vePendle,
         address _gaugeController
     )
-        PendleERC20Permit(NAME, SYMBOL, 18)
+        PendleERC20(NAME, SYMBOL, 18)
         PendleGauge(IPPrincipalToken(_PT).SCY(), _vePendle, _gaugeController)
     {
         PT = IPPrincipalToken(_PT);
