@@ -12,7 +12,7 @@ Deposit Fee
 Staking into sJOE may come with a fee
 The fee can scale up to 3% Max, depending on the number of JOEs already Staked
 The 3% Fee is taken from the JOEs that you deposit into the sJOE Pool
-Currently any deposit fee taken will be sent to the Treasury 
+Currently any deposit fee taken will be sent to the Treasury
 
 
 Yield Generating Mechanism - Stake JOE into SJOE Contract
@@ -42,7 +42,6 @@ contract PendleSJoeSCY is SCYBaseWithRewards {
         address _sJOE
     ) SCYBaseWithRewards(_name, _symbol, _sJOE) {
         require(_sJOE != address(0), "zero address");
-
         SJOE = _sJOE;
         JOE = ISJoe(SJOE).joe();
 
