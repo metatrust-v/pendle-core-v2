@@ -151,7 +151,7 @@ contract RouterStatic is IPRouterStatic, Initializable, UUPSUpgradeable, Ownable
             scyIndex(market),
             scyDesired,
             ptDesired,
-            false
+            block.timestamp
         );
     }
 
@@ -161,7 +161,7 @@ contract RouterStatic is IPRouterStatic, Initializable, UUPSUpgradeable, Ownable
         returns (uint256 netScyOut, uint256 netPtOut)
     {
         MarketState memory state = IPMarket(market).readState(false);
-        (netScyOut, netPtOut) = state.removeLiquidity(lpToRemove, false);
+        (netScyOut, netPtOut) = state.removeLiquidity(lpToRemove);
     }
 
     function swapPtForScyStatic(address market, uint256 exactPtIn)
