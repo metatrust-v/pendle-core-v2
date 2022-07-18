@@ -81,9 +81,8 @@ library MarketApproxLib {
         VarsSwapPtForExactScy memory vars;
         MarketPreCompute memory comp = market.getMarketPreCompute(index, blockTime);
 
-        if (approx.guessMax == type(uint256).max) {
-            approx.guessMax = calcMaxPtIn(market.totalPt, comp.totalAsset);
-        }
+        if (approx.guessMax == type(uint256).max) approx.guessMax = calcMaxPtIn(comp.totalAsset);
+
         vars.minAssetOut = index.scyToAsset(minScyOut);
 
         for (uint256 iter = 0; iter < approx.maxIteration; ) {
@@ -174,9 +173,7 @@ library MarketApproxLib {
         VarsSwapExactScyForYt memory vars;
         MarketPreCompute memory comp = market.getMarketPreCompute(index, blockTime);
 
-        if (approx.guessMax == type(uint256).max) {
-            approx.guessMax = calcMaxPtIn(market.totalPt, comp.totalAsset);
-        }
+        if (approx.guessMax == type(uint256).max) approx.guessMax = calcMaxPtIn(comp.totalAsset);
 
         vars.maxAssetIn = index.scyToAsset(maxScyIn);
 
@@ -403,8 +400,8 @@ library MarketApproxLib {
         return (maxPtOut.Uint() * 999) / 1000;
     }
 
-    function calcMaxPtIn(int256 totalPt, int256 totalAsset) internal pure returns (uint256) {
-        return Math.min(totalPt, totalAsset).Uint() - 1;
+    function calcMaxPtIn(int256 totalAsset) internal pure returns (uint256) {
+        return totalAsset.Uint() - 1;
     }
 
     function isValidApproxParams(ApproxParams memory approx) internal pure returns (bool) {
