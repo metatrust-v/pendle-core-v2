@@ -2,8 +2,10 @@
 pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+
 interface ISJoe {
-    
+    function joe() external returns (address);
+
     function internalJoeBalance() external returns (uint256);
 
     /**
@@ -29,6 +31,8 @@ interface ISJoe {
      * @return The length of the array
      */
     function rewardTokensLength() external view returns (uint256);
+
+    function rewardTokens(uint256 _index) external view returns (address);
 
     /**
      * @notice View function to see pending reward token on frontend

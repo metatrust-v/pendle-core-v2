@@ -35,26 +35,21 @@ contract PendleSJoeSCY is SCYBaseWithRewards {
 
     address public immutable SJOE;
     address public immutable JOE;
-    address public immutable USDC;
 
     constructor(
         string memory _name,
         string memory _symbol,
-        address _sJOE,
-        address _JOE,
-        address _USDC
-    ) SCYBaseWithRewards(_name, _symbol, _JOE) {
+        address _sJOE
+    ) SCYBaseWithRewards(_name, _symbol, _sJOE) {
         require(_sJOE != address(0), "zero address");
-         require(_JOE != address(0), "zero address");
-         require(_USDC != address(0), "zero address");
+
         SJOE = _sJOE;
-        JOE = _JOE;
-        USDC = _USDC;
+        JOE = ISJoe(SJOE).joe();
 
         _safeApprove(JOE, SJOE, type(uint256).max);
     }
 
-        /*///////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
                     DEPOSIT/REDEEM USING BASE TOKENS
     //////////////////////////////////////////////////////////////*/
 
@@ -67,41 +62,34 @@ contract PendleSJoeSCY is SCYBaseWithRewards {
 
     * Each time deposit() is called, any pending rewards will be sent back to the SCY by default.
      */
-      function _deposit(address tokenIn, uint256 amount)
+    function _deposit(address, uint256 amount)
         internal
         override
         returns (uint256 amountSharesOut)
     {
-      // tokenIn is underlying == yield token (JOE)
-      require(tokenIn == JOE, "invalid yield token");
+        uint256 preBalanceSJoe = ISJoe(SJOE).internalJoeBalance();
 
-      uint256 preBalanceSJoe = ISJoe(SJOE).internalJoeBalance();
-
-      ISJoe(SJOE).deposit(amount);
+        ISJoe(SJOE).deposit(amount);
 
         // Depositing JOE will incur deposit fee, hence amountSharesOut has to be calculated like this for accurate amount of SCY exchanged.
-      amountSharesOut = ISJoe(SJOE).internalJoeBalance() - preBalanceSJoe;
-
-
+        amountSharesOut = ISJoe(SJOE).internalJoeBalance() - preBalanceSJoe;
     }
 
-
-       /**
+    /**
      * @dev See {SCYBase-_redeem}
      *
      * The shares are redeemed into the same amount of JOE Tokens. Hence `tokenOut` will only be the underlying asset (JOE) in this case. Since there will NOT be any withdrawal fee from sJOE, amountSharesToRedeem will always correspond amountTokenOut.
      */
-    function _redeem(address tokenOut, uint256 amountSharesToRedeem)
+    function _redeem(address, uint256 amountSharesToRedeem)
         internal
         override
         returns (uint256 amountTokenOut)
     {
-    ISJoe(SJOE).withdraw(amountSharesToRedeem);
-    amountTokenOut = amountSharesToRedeem;
+        ISJoe(SJOE).withdraw(amountSharesToRedeem);
+        amountTokenOut = amountSharesToRedeem;
     }
 
-
-     /*///////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
                                EXCHANGE-RATE
     //////////////////////////////////////////////////////////////*/
 
@@ -109,7 +97,7 @@ contract PendleSJoeSCY is SCYBaseWithRewards {
      * @notice Exchange rate for JOE to SCY is 1:1
      * @dev It is the exchange rate of Shares in sJOE to its underlying asset (JOE)
      */
-    function exchangeRate() public view override returns (uint256) {
+    function exchangeRate() public pure override returns (uint256) {
         return SCYUtils.ONE;
     }
 
@@ -121,14 +109,22 @@ contract PendleSJoeSCY is SCYBaseWithRewards {
      * @dev See {ISuperComposableYield-getRewardTokens}
      */
     function _getRewardTokens() internal view override returns (address[] memory res) {
-        res = new address[](1);
-        res[0] = USDC;
-   
+        ISJoe SJOEContract = ISJoe(SJOE);
+
+        uint256 length = SJOEContract.rewardTokensLength();
+
+        res = new address[](length);
+        for (uint256 i = 0; i < length; ) {
+            res[i] = SJOEContract.rewardTokens(i);
+            unchecked {
+                i++;
+            }
+        }
     }
 
     function _redeemExternalReward() internal override {
         // Since sJOE contract has no 'claimRewards' function, call withdraw() with a 0 amount to claim the rewards - Same as how sJOE pool is doing for their frontend.
-         ISJoe(SJOE).withdraw(0);
+        ISJoe(SJOE).withdraw(0);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -147,7 +143,7 @@ contract PendleSJoeSCY is SCYBaseWithRewards {
      * @dev See {ISuperComposableYield-isValidBaseToken}
      */
     function isValidBaseToken(address token) public view override returns (bool res) {
-        res = ( token == JOE);
+        res = (token == JOE);
     }
 
     function assetInfo()
@@ -159,11 +155,6 @@ contract PendleSJoeSCY is SCYBaseWithRewards {
             uint8 assetDecimals
         )
     {
-        return (
-            AssetType.TOKEN,
-            JOE,
-        IERC20Metadata(JOE).decimals()
-        );
+        return (AssetType.TOKEN, JOE, IERC20Metadata(JOE).decimals());
     }
 }
-
