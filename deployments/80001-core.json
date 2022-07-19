@@ -2,14 +2,14 @@
     "deployer": "0x1FcCC097db89A86Bfc474A1028F93958295b1Fb7",
     "network": 80001,
     "celerBus": "0x7d43AABC515C356145049227CeE54B608342c0ad",
-    "treasury": "0x28FcFb63c8ab55E3710e51441d003318eE235FE8",
-    "governanceManager": "0x27FaF900007B4cBa7803000251ec96Bc69ff1BEa",
-    "PENDLE": "0x8553e57B13aECb9704Be27d7BF0067211dEaed00",
-    "yieldContractFactory": "0xE6DD1433d59B2eaf26E7B2107c574d3c3299023e",
-    "marketFactory": "0x191c677bc1d2BbcBfa99fd68b34ed4fb2E157eFD",
-    "router": "0xCd6fC1E4f430976fB5c20E747f861E6bd14454d4",
-    "routerStatic": "0xeb83006b0aADdD15AD8AFbebE2f4e0937f210673",
+    "treasury": "0xFF4a4515888AEf82C9557A56E37A55a5dDe6EFF1",
+    "governanceManager": "0xE4a112A028D93e9E9b207eBedB1e1D6Cf5FdCEe9",
+    "PENDLE": "0x6D998d832b82f6307c5a2592d59A4cba7f15167f",
+    "yieldContractFactory": "0x058Ceec78EB7F854daBfdDd894e841423Ca344c3",
+    "marketFactory": "0xD33F62424acC95704D43E725B11b9e770505B425",
+    "router": "0x24d7CEaFBA7c7b32BE200aD6dA38C03797F0611f",
+    "routerStatic": "0x9902C57F6bc1e7737238777Fc52dA8A2161759f7",
     "startTime": 1657756800,
-    "vePendle": "0xd160cd8eeb79F976d6f08EaeAA3C93612D543c2c",
-    "gaugeController": "0x52dFCD0b5DCaa16E697de2cc4A1F404DDC41fC42"
+    "vePendle": "0x1b615005157B9B0DDc7c0Af817f4A570cE3b591e",
+    "gaugeController": "0x3663E54bf1334B60FC97d3781460Bcf73d008116"
 }
