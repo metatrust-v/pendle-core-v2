@@ -118,7 +118,6 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
             exactYtOut, // exactPtIn = exactYtOut
             _encodeSwapScyForExactYt(msg.sender, receiver, maxScyIn)
         );
-
         netScyIn = preScyBalance - SCY.balanceOf(msg.sender);
     }
 
