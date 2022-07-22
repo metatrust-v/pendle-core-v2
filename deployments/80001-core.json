@@ -8,7 +8,7 @@
     "yieldContractFactory": "0xa8E22cc2E74dACb43E73cFa89172bfa30eFA0A56",
     "marketFactory": "0x5539C4BCcff8d5881eCb1B95D2f6E7Eb47f0f801",
     "router": "0x24d7CEaFBA7c7b32BE200aD6dA38C03797F0611f",
-    "routerStatic": "0x62c42ec5ebD0f587C61A078a656A4235582131Fd",
+    "routerStatic": "0xf68aD0dF5E6034A934bE0e3E8b23Ab77f9778315",
     "startTime": 1657756800,
     "vePendle": "0x35d294d0922838b0899Cbf4C35f4945B2b3D20f1",
     "gaugeController": "0x36e65521b2a1AEBA9a009226e75125cEcf00702f"
