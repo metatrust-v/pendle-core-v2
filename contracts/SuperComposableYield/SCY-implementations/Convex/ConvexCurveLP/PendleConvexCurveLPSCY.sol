@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.13;
 
-import "../../base-implementations/SCYBaseWithDynamicRewards.sol";
-import "../../../interfaces/ConvexCurve/IBooster.sol";
-import "../../../interfaces/ConvexCurve/IRewards.sol";
-import "../../../interfaces/Curve/ICrvMetapool.sol";
+import "../../../base-implementations/SCYBaseWithDynamicRewards.sol";
+import "../../../../interfaces/ConvexCurve/IBooster.sol";
+import "../../../../interfaces/ConvexCurve/IRewards.sol";
+import "../../../../interfaces/Curve/ICrvPool.sol";
 
 /*
 Convex Curve LP Tokens Staking:
@@ -89,13 +89,13 @@ CVX Token ERC20 Contract -> 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B
 
 */
 
-contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
+abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     using SafeERC20 for IERC20;
 
     uint256 public immutable PID;
     address public immutable BOOSTER; // set as immutable instead
     address public immutable BASE_REWARDS;
-    // address public immutable BASE_CRV_POOL;
+    address public immutable BASE_CRV_POOL;
 
     address public immutable CRV;
     address public immutable CVX;
@@ -107,21 +107,27 @@ contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         string memory _name,
         string memory _symbol,
         uint256 _pid,
-        address _baseRewards,
+        address _convexBooster,
+        address _wrappedLpToken,
         address _cvx,
+        address _baseCrvPool,
         address[] memory _currentExtraRewards
     )
         // To Change _yieldToken
-        SCYBaseWithDynamicRewards(_name, _symbol, _baseRewards, _currentExtraRewards)
+        SCYBaseWithDynamicRewards(_name, _symbol, _wrappedLpToken, _currentExtraRewards)
     {
-        require(_baseRewards != address(0), "zero address");
+        require(_convexBooster != address(0), "zero address");
+        require(_wrappedLpToken != address(0), "zero address");
         require(_cvx != address(0), "zero address");
-        PID = _pid;
-        BASE_REWARDS = _baseRewards;
-        CVX = _cvx;
+        require(_baseCrvPool != address(0), "zero address");
 
-        BOOSTER = _getConvexBooster();
-        (CRV_LP_TOKEN, W_CRV_LP_TOKEN, CRV) = _getPoolInfo(PID);
+        PID = _pid;
+        CVX = _cvx;
+        W_CRV_LP_TOKEN = _wrappedLpToken;
+        BASE_CRV_POOL = _baseCrvPool;
+
+        BOOSTER = _convexBooster;
+        (CRV_LP_TOKEN, BASE_REWARDS, CRV) = _getPoolInfo(PID);
 
         _safeApprove(CRV_LP_TOKEN, BOOSTER, type(uint256).max);
         _safeApprove(W_CRV_LP_TOKEN, BOOSTER, type(uint256).max);
@@ -132,18 +138,14 @@ contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         view
         returns (
             address lptoken,
-            address token,
+            address crvRewards,
             address crv
         )
     {
-        require(pid <= IBooster(BOOSTER).poolLength(), "invalid pid.");
+        require(pid <= IBooster(BOOSTER).poolLength(), "invalid pid");
 
-        (lptoken, token, , , , ) = IBooster(BOOSTER).poolInfo(pid);
+        (lptoken, , , crvRewards, , ) = IBooster(BOOSTER).poolInfo(pid);
         crv = IBooster(BOOSTER).crv();
-    }
-
-    function _getConvexBooster() internal view returns (address) {
-        IRewards(BASE_REWARDS).operator();
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -159,6 +161,7 @@ contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
      */
     function _deposit(address tokenIn, uint256 amount)
         internal
+        virtual
         override
         returns (uint256 amountSharesOut)
     {
@@ -177,6 +180,7 @@ contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
      */
     function _redeem(address tokenOut, uint256 amountSharesToRedeem)
         internal
+        virtual
         override
         returns (uint256 amountTokenOut)
     {
@@ -190,18 +194,20 @@ contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         amountTokenOut = amountSharesToRedeem;
     }
 
-    function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
+    function _previewDeposit(address, uint256 amountTokenToDeposit)
         internal
         view
+        virtual
         override
         returns (uint256 amountSharesOut)
     {
-        amountSharesOut = (amountTokenToDeposit * exchangeRate()) / 1e18;
+        amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
     }
 
-    function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
+    function _previewRedeem(address, uint256 amountSharesToRedeem)
         internal
         view
+        virtual
         override
         returns (uint256 amountTokenOut)
     {
@@ -214,10 +220,13 @@ contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
 
     /**
      * @notice Exchange rate for CURVE_LP_TOKEN to SCY is the amount of liquidity it is entitled to redeeming which will increase over time.
-     * @dev It is the exchange rate of Shares in Convex Curve LP Staking to its underlying asset (CURVE_LP_TOKEN)
+     * @dev It is the exchange rate of Shares in Convex Curve LP Staking to its underlying asset (CURVE_LP_TOKEN).
+     *
+     * The current price of the pool LP token relative to the underlying pool assets. Given as an integer with 1e18 precision.
+     *
      */
     function exchangeRate() public view override returns (uint256) {
-        return ((SCYUtils.ONE * 1e18) / IERC20(CRV_LP_TOKEN).totalSupply()); // Should be the one on Curve which will allow user to redeem more liquidity
+        return ICrvPool(BASE_CRV_POOL).get_virtual_price();
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -244,7 +253,7 @@ contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     /**
      * @dev See {ISuperComposableYield-getBaseTokens}
      */
-    function getBaseTokens() public view override returns (address[] memory res) {
+    function getBaseTokens() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = CRV_LP_TOKEN;
         res[1] = W_CRV_LP_TOKEN;
@@ -253,7 +262,7 @@ contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     /**
      * @dev See {ISuperComposableYield-isValidBaseToken}
      */
-    function isValidBaseToken(address token) public view override returns (bool res) {
+    function isValidBaseToken(address token) public view virtual override returns (bool res) {
         res = (token == CRV_LP_TOKEN || token == W_CRV_LP_TOKEN);
     }
 
