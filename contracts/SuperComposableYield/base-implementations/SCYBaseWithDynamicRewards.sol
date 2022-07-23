@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.13;
 import "../../interfaces/ISuperComposableYield.sol";
-import "../../libraries/RewardManager.sol";
-import "./SCYBase.sol";
+import "./SCYBaseWithRewards.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../../libraries/math/Math.sol";
 
 /// This contract makes an important assumption that yieldToken is never a rewardToken
 /// Please make sure that assumption always holds
-abstract contract SCYBaseWithDynamicRewards is SCYBase, RewardManager {
-    using Math for uint256;
-    using ArrayLib for address[];
-
+abstract contract SCYBaseWithDynamicRewards is SCYBaseWithRewards {
     address[] public currentExtraRewards;
 
     constructor(
@@ -20,112 +16,10 @@ abstract contract SCYBaseWithDynamicRewards is SCYBase, RewardManager {
         address _yieldToken,
         address[] memory _currentExtraRewards
     )
-        SCYBase(_name, _symbol, _yieldToken) // solhint-disable-next-line no-empty-blocks
+        SCYBaseWithRewards(_name, _symbol, _yieldToken) // solhint-disable-next-line no-empty-blocks
     {
         for (uint256 i = 0; i < _currentExtraRewards.length; i++) {
             currentExtraRewards[i] = _currentExtraRewards[i];
         }
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                               REWARDS-RELATED
-    //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @dev See {ISuperComposableYield-claimRewards}
-     */
-    function claimRewards(address user)
-        external
-        virtual
-        override
-        nonReentrant
-        returns (uint256[] memory rewardAmounts)
-    {
-        _updateAndDistributeRewards(user);
-        rewardAmounts = _doTransferOutRewards(user, user);
-
-        emit ClaimRewards(user, _getRewardTokens(), rewardAmounts);
-    }
-
-    /**
-     * @dev See {ISuperComposableYield-getRewardTokens}
-     */
-    function getRewardTokens()
-        external
-        view
-        virtual
-        override
-        returns (address[] memory rewardTokens)
-    {
-        rewardTokens = _getRewardTokens();
-    }
-
-    /**
-     * @dev See {ISuperComposableYield-accruedRewards}
-     */
-    function accruedRewards(address user)
-        external
-        view
-        virtual
-        override
-        returns (uint256[] memory rewardAmounts)
-    {
-        address[] memory rewardTokens = _getRewardTokens();
-        rewardAmounts = new uint256[](rewardTokens.length);
-        for (uint256 i = 0; i < rewardTokens.length; ) {
-            rewardAmounts[i] = userReward[user][rewardTokens[i]].accrued;
-            unchecked {
-                i++;
-            }
-        }
-    }
-
-    function rewardIndexesCurrent() external override returns (uint256[] memory indexes) {
-        _updateRewardIndex();
-        return rewardIndexesStored();
-    }
-
-    function rewardIndexesStored()
-        public
-        view
-        virtual
-        override
-        returns (uint256[] memory indexes)
-    {
-        address[] memory rewardTokens = _getRewardTokens();
-        indexes = new uint256[](rewardTokens.length);
-        for (uint256 i = 0; i < rewardTokens.length; ) {
-            indexes[i] = rewardState[rewardTokens[i]].index;
-            unchecked {
-                i++;
-            }
-        }
-    }
-
-    /**
-     * @notice returns the total number of reward shares
-     * @dev this is simply the total supply of shares, as rewards shares are equivalent to SCY shares
-     */
-    function _rewardSharesTotal() internal view virtual override returns (uint256) {
-        return totalSupply();
-    }
-
-    /**
-     * @notice returns the reward shares of (`user`)
-     * @dev this is simply the SCY balance of (`user`), as rewards shares are equivalent to SCY shares
-     */
-    function _rewardSharesUser(address user) internal view virtual override returns (uint256) {
-        return balanceOf(user);
-    }
-
-    /*///////////////////////////////////////////////////////////////
-                            TRANSFER HOOKS
-    //////////////////////////////////////////////////////////////*/
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256
-    ) internal virtual override {
-        _updateAndDistributeRewardsForTwo(from, to);
     }
 }

@@ -4,6 +4,7 @@ pragma solidity 0.8.13;
 import "../../base-implementations/SCYBaseWithDynamicRewards.sol";
 import "../../../interfaces/ConvexCurve/ICrvDepositor.sol";
 import "../../../interfaces/ConvexCurve/IRewards.sol";
+import "../../../interfaces/ConvexCurve/ICvxCrv.sol";
 
 /*
 CRV -> CvxCRV Staking:
@@ -87,37 +88,32 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
     address public immutable CVX;
     address public immutable CVX_CRV;
 
+    
+
     constructor(
         string memory _name,
         string memory _symbol,
-        address _crvDepositor,
-        address _baseRewards,
+        address _cvxCrv,
         address _cvx,
+        address _baseRewards,
         address[] memory _currentExtraRewards
-    ) SCYBaseWithDynamicRewards(_name, _symbol, _baseRewards, _currentExtraRewards) {
-        require(_crvDepositor != address(0), "zero address");
-        require(_baseRewards != address(0), "zero address");
+    ) SCYBaseWithDynamicRewards(_name, _symbol, _cvxCrv, _currentExtraRewards) {
+        require(_cvxCrv != address(0), "zero address");
         require(_cvx != address(0), "zero address");
+        require(_baseRewards != address(0), "zero address");
 
-        CRV_DEPOSITOR = _crvDepositor;
-        BASE_REWARDS = _baseRewards;
+        CVX_CRV = _cvxCrv;
         CVX = _cvx;
+        BASE_REWARDS = _baseRewards;
 
-        (CRV, CVX_CRV) = _getCvxCrvUnderlyingTokens(CRV_DEPOSITOR);
+        // Retrieve CrvDepositor contract
+        CRV_DEPOSITOR = ICvxCrv(CVX_CRV).operator();
+
+        // Retrieve underlying token crv
+        CRV = ICrvDepositor(CRV_DEPOSITOR).crv();
 
         _safeApprove(CRV, CRV_DEPOSITOR, type(uint256).max);
         _safeApprove(CVX_CRV, CRV_DEPOSITOR, type(uint256).max);
-    }
-
-    function _getCvxCrvUnderlyingTokens(address _crvDepositor)
-        internal
-        view
-        returns (address crv, address cvxCrv)
-    {
-        ICrvDepositor CrvDepositor = ICrvDepositor(_crvDepositor);
-
-        crv = CrvDepositor.crv();
-        cvxCrv = CrvDepositor.minter();
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -158,23 +154,23 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
         returns (uint256 amountTokenOut)
     {
         // Just an additional check since CRV will disappear after staking. Can be implemented in external function also.
-        require(tokenOut != CRV, "crv is locked");
+        require(tokenOut != CRV, "CRV cannot be withdrawn from Cvx-CRV");
         IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
         amountTokenOut = amountSharesToRedeem;
     }
 
-    function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
+    function _previewDeposit(address, uint256 amountTokenToDeposit)
         internal
-        view
+        pure
         override
         returns (uint256 amountSharesOut)
     {
         amountSharesOut = (amountTokenToDeposit * exchangeRate()) / 1e18;
     }
 
-    function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
+    function _previewRedeem(address, uint256 amountSharesToRedeem)
         internal
-        view
+        pure
         override
         returns (uint256 amountTokenOut)
     {
@@ -189,7 +185,7 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
      * @notice Exchange rate for CvxCRV to SCY is 1:1
      * @dev It is the exchange rate of Shares in cvxCRV Staking to its underlying asset (cvxCRV)
      */
-    function exchangeRate() public view override returns (uint256) {
+    function exchangeRate() public pure override returns (uint256) {
         return SCYUtils.ONE; // No interest coming from them , just the token
     }
 
