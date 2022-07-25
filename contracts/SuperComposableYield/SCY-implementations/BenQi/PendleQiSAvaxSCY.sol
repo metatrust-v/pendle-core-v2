@@ -34,20 +34,12 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
         QI_SAVAX = _qiSAvax;
         WAVAX = _WAVAX;
 
-        SAVAX = _getUnderlyingOfQiSAvax();
+        SAVAX = IQiErc20(QI_SAVAX).underlying();
         comptroller = IQiToken(_qiSAvax).comptroller();
 
         QI = IBenQiComptroller(comptroller).qiAddress();
 
         _safeApprove(SAVAX, QI_SAVAX, type(uint256).max);
-    }
-
-    function _getUnderlyingOfQiSAvax() internal view returns (address) {
-        try IQiErc20(QI_SAVAX).underlying() returns (address res) {
-            return res;
-        } catch {
-            return NATIVE;
-        }
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -164,13 +156,13 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
 
     function assetInfo()
         external
-        view
+        pure
         returns (
             AssetType assetType,
             address assetAddress,
             uint8 assetDecimals
         )
     {
-        return (AssetType.TOKEN, SAVAX, IERC20Metadata(SAVAX).decimals());
+        return (AssetType.TOKEN, NATIVE, 18);
     }
 }
