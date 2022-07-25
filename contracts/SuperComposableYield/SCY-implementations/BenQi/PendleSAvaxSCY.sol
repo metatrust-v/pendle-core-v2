@@ -101,13 +101,13 @@ contract PendleSAvaxSCY is SCYBase {
 
     function assetInfo()
         external
-        view
+        pure
         returns (
             AssetType assetType,
             address assetAddress,
             uint8 assetDecimals
         )
     {
-        return (AssetType.TOKEN, SAVAX, 18);
+        return (AssetType.TOKEN, NATIVE, 18);
     }
 }
