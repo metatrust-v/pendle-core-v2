@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 interface ISJoe {
-    function joe() external returns (address);
+    function joe() external view returns (address);
 
-    function internalJoeBalance() external returns (uint256);
+    function depositFeePercent() external view returns (uint256);
+
+    function internalJoeBalance() external view returns (uint256);
 
     /**
      * @notice Deposit JOE for reward token allocation

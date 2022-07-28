@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../base-implementations/SCYBase.sol";
 import "../../../interfaces/ISAvax.sol";
@@ -83,20 +83,43 @@ contract PendleSAvaxSCY is SCYBase {
                 MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @dev See {ISuperComposableYield-getBaseTokens}
-     */
-    function getBaseTokens() public view virtual override returns (address[] memory res) {
-        res = new address[](2);
-        res[0] = SAVAX;
-        res[1] = NATIVE;
+    function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
+        internal
+        view
+        override
+        returns (uint256 amountSharesOut)
+    {
+        if (tokenIn == SAVAX) amountSharesOut = amountTokenToDeposit;
+        else amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
     }
 
-    /**
-     * @dev See {ISuperComposableYield-isValidBaseToken}
-     */
-    function isValidBaseToken(address token) public view virtual override returns (bool) {
-        return token == SAVAX || token == NATIVE;
+    function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
+        internal
+        view
+        override
+        returns (uint256 amountTokenOut)
+    {
+        // Since only SAvax can be redeemed
+        amountTokenOut = amountSharesToRedeem;
+    }
+
+    function getTokensIn() public view virtual override returns (address[] memory res) {
+        res = new address[](2);
+        res[0] = NATIVE;
+        res[1] = SAVAX;
+    }
+
+    function getTokensOut() public view virtual override returns (address[] memory res) {
+        res = new address[](1);
+        res[0] = SAVAX;
+    }
+
+    function isValidTokenIn(address token) public view virtual override returns (bool) {
+        return token == NATIVE || token == SAVAX;
+    }
+
+    function isValidTokenOut(address token) public view virtual override returns (bool) {
+        return token == SAVAX;
     }
 
     function assetInfo()

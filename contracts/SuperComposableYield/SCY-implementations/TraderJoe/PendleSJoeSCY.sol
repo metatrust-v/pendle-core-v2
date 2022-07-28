@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../base-implementations/SCYBaseWithRewards.sol";
 import "../../../interfaces/ISJoe.sol";
@@ -127,22 +127,47 @@ contract PendleSJoeSCY is SCYBaseWithRewards {
     }
 
     /*///////////////////////////////////////////////////////////////
-                    MISC FUNCTIONS FOR METADATA
+                MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @dev See {ISuperComposableYield-getBaseTokens}
-     */
-    function getBaseTokens() public view override returns (address[] memory res) {
+    function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
+        internal
+        view
+        override
+        returns (uint256 amountSharesOut)
+    {
+        uint256 sJoeDepositFeePrecision = ISJoe(SJOE).depositFeePercent();
+
+        amountSharesOut =
+            (((1e18 - sJoeDepositFeePrecision / 1e18) * amountTokenToDeposit) * 1e18) /
+            exchangeRate();
+    }
+
+    function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
+        internal
+        pure
+        override
+        returns (uint256 amountTokenOut)
+    {
+        amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+    }
+
+    function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](1);
         res[0] = JOE;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-isValidBaseToken}
-     */
-    function isValidBaseToken(address token) public view override returns (bool res) {
-        res = (token == JOE);
+    function getTokensOut() public view virtual override returns (address[] memory res) {
+        res = new address[](1);
+        res[0] = JOE;
+    }
+
+    function isValidTokenIn(address token) public view virtual override returns (bool) {
+        return token == JOE;
+    }
+
+    function isValidTokenOut(address token) public view virtual override returns (bool) {
+        return token == JOE;
     }
 
     function assetInfo()

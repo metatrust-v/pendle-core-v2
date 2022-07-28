@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../base-implementations/SCYBaseWithRewards.sol";
 import "../../../interfaces/IQiErc20.sol";
@@ -138,20 +138,46 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
                     MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @dev See {ISuperComposableYield-getBaseTokens}
-     */
-    function getBaseTokens() public view override returns (address[] memory res) {
+    function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
+        internal
+        view
+        override
+        returns (uint256 amountSharesOut)
+    {
+        if (tokenIn == QI_SAVAX) amountSharesOut = amountTokenToDeposit;
+        else amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
+    }
+
+    function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
+        internal
+        view
+        override
+        returns (uint256 amountTokenOut)
+    {
+        if (tokenOut == QI_SAVAX) amountTokenOut = amountSharesToRedeem;
+        else amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+    }
+
+    function getTokensIn() public view virtual override returns (address[] memory res) {
+        res = new address[](2);
+        res[0] = QI_SAVAX;
+        res[1] = SAVAX;
+        res[2] = WAVAX;
+        res[4] = NATIVE;
+    }
+
+    function getTokensOut() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = QI_SAVAX;
         res[1] = SAVAX;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-isValidBaseToken}
-     */
-    function isValidBaseToken(address token) public view override returns (bool res) {
-        res = (token == SAVAX || token == QI_SAVAX);
+    function isValidTokenIn(address token) public view virtual override returns (bool) {
+        return token == QI_SAVAX || token == SAVAX || token == WAVAX || token == NATIVE;
+    }
+
+    function isValidTokenOut(address token) public view virtual override returns (bool) {
+        return token == QI_SAVAX || token == SAVAX;
     }
 
     function assetInfo()
