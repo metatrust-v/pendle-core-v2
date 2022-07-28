@@ -4,6 +4,7 @@ import "../../interfaces/ISuperComposableYield.sol";
 import "../../libraries/RewardManager.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "../../libraries/math/Math.sol";
 import "../../libraries/SCY/SCYUtils.sol";
 import "../../libraries/helpers/TokenHelper.sol";
@@ -86,7 +87,8 @@ abstract contract SCYBase is ISuperComposableYield, PendleERC20, TokenHelper {
         amountTokenOut = _redeem(tokenOut, amountSharesToRedeem);
         require(amountTokenOut >= minTokenOut, "SCY: insufficient out");
 
-        _transferOut(tokenOut, receiver, amountTokenOut);
+        if (tokenOut == NATIVE) Address.sendValue(payable(receiver), amountTokenOut);
+        else _transferOut(tokenOut, receiver, amountTokenOut);
 
         emit Redeem(msg.sender, receiver, tokenOut, amountSharesToRedeem, amountTokenOut);
     }
