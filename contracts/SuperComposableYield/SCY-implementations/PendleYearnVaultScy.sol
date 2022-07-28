@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../base-implementations/SCYBase.sol";
 import "../../interfaces/IYearnVault.sol";
@@ -7,6 +7,7 @@ import "../../interfaces/IYearnVault.sol";
 contract PendleYearnVaultSCY is SCYBase {
     address public immutable underlying;
     address public immutable yvToken;
+    uint256 internal immutable yvTokenDecimals;
 
     constructor(
         string memory _name,
@@ -16,6 +17,7 @@ contract PendleYearnVaultSCY is SCYBase {
         require(_yvToken != address(0), "zero address");
         yvToken = _yvToken;
         underlying = IYearnVault(yvToken).token();
+        yvTokenDecimals = IYearnVault(yvToken).decimals();
         _safeApprove(underlying, yvToken, type(uint256).max);
     }
 
@@ -63,14 +65,18 @@ contract PendleYearnVaultSCY is SCYBase {
             amountTokenOut = amountSharesToRedeem;
         } else {
             // tokenOut == underlying
-            uint256 sharesRedeemed = IYearnVault(yvToken).withdraw(amountSharesToRedeem);
+            uint256 preBalanceYvToken = _selfBalance(yvToken);
 
-            require(
-                sharesRedeemed != amountSharesToRedeem,
-                "Yearn Vault SCY: Not allowed to redeem all shares"
+            amountTokenOut = IYearnVault(yvToken).withdraw(
+                amountSharesToRedeem,
+                address(this),
+                10000
             );
 
-            amountTokenOut = _selfBalance(underlying);
+            require(
+                preBalanceYvToken - _selfBalance(yvToken) == amountSharesToRedeem,
+                "Yearn Vault SCY: Not allowed to redeem all shares"
+            );
         }
     }
 
@@ -83,26 +89,55 @@ contract PendleYearnVaultSCY is SCYBase {
      * @dev It is the price per share of the yvToken
      */
     function exchangeRate() public view override returns (uint256) {
-        return IYearnVault(yvToken).pricePerShare();
+        uint256 price = IYearnVault(yvToken).pricePerShare();
+        if (yvTokenDecimals <= 18) {
+            return price * (10**(18 - yvTokenDecimals));
+        } else {
+            return price / (10**(yvTokenDecimals - 18));
+        }
     }
 
     /*///////////////////////////////////////////////////////////////
                 MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @dev See {ISuperComposableYield-getBaseTokens}
-     */
-    function getBaseTokens() public view virtual override returns (address[] memory res) {
+    function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
+        internal
+        view
+        override
+        returns (uint256 amountSharesOut)
+    {
+        if (tokenIn == yvToken) amountSharesOut = amountTokenToDeposit;
+        else amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
+    }
+
+    function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
+        internal
+        view
+        override
+        returns (uint256 amountTokenOut)
+    {
+        if (tokenOut == yvToken) amountTokenOut = amountSharesToRedeem;
+        else amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+    }
+
+    function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = underlying;
         res[1] = yvToken;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-isValidBaseToken}
-     */
-    function isValidBaseToken(address token) public view virtual override returns (bool) {
+    function getTokensOut() public view virtual override returns (address[] memory res) {
+        res = new address[](2);
+        res[0] = underlying;
+        res[1] = yvToken;
+    }
+
+    function isValidTokenIn(address token) public view virtual override returns (bool) {
+        return token == underlying || token == yvToken;
+    }
+
+    function isValidTokenOut(address token) public view virtual override returns (bool) {
         return token == underlying || token == yvToken;
     }
 

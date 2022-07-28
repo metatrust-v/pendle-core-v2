@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../../interfaces/IPMarketFactory.sol";
 import "../../../interfaces/IPMarket.sol";
@@ -45,7 +45,7 @@ abstract contract ActionSCYAndPTBase is ActionSCYAndPYBase {
             SCY.newIndex(),
             scyDesired,
             ptDesired,
-            false
+            block.timestamp
         );
 
         // early-check
@@ -72,7 +72,7 @@ abstract contract ActionSCYAndPTBase is ActionSCYAndPYBase {
     ) internal returns (uint256 netScyOut, uint256 netPtOut) {
         MarketState memory state = IPMarket(market).readState(false);
 
-        (netScyOut, netPtOut) = state.removeLiquidity(lpToRemove, false);
+        (netScyOut, netPtOut) = state.removeLiquidity(lpToRemove);
 
         // early-check
         require(netScyOut >= scyOutMin, "insufficient SCY out");
@@ -121,7 +121,7 @@ abstract contract ActionSCYAndPTBase is ActionSCYAndPYBase {
         MarketState memory state = IPMarket(market).readState(false);
         (ISuperComposableYield SCY, IPPrincipalToken PT, ) = IPMarket(market).readTokens();
 
-        (netPtIn, ) = state.approxSwapPtForExactScy(
+        (netPtIn, , ) = state.approxSwapPtForExactScy(
             SCY.newIndex(),
             exactScyOut,
             block.timestamp,
@@ -177,7 +177,7 @@ abstract contract ActionSCYAndPTBase is ActionSCYAndPYBase {
         MarketState memory state = IPMarket(market).readState(false);
         (ISuperComposableYield SCY, , ) = IPMarket(market).readTokens();
 
-        (netPtOut, ) = state.approxSwapExactScyForPt(
+        (netPtOut, , ) = state.approxSwapExactScyForPt(
             SCY.newIndex(),
             exactScyIn,
             block.timestamp,

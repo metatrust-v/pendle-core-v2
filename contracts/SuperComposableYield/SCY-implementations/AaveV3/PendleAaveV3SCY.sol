@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 import "../../base-implementations/SCYBaseWithRewards.sol";
 import "../../../interfaces/IAToken.sol";
 import "../../../interfaces/IAavePool.sol";
@@ -111,14 +111,40 @@ contract PendleAaveV3SCY is SCYBaseWithRewards {
                             MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
 
-    function getBaseTokens() public view virtual override returns (address[] memory res) {
+    function _previewDeposit(
+        address, /*tokenIn*/
+        uint256 amountTokenToDeposit
+    ) internal view override returns (uint256 amountSharesOut) {
+        // if tokenIn == aToken => convert aToken to scaledBalance
+        // if tokenIn == underlying => also convert aToken to scaledBalance since 1 aToken = 1 underlying
+        amountSharesOut = _aTokenToScaledBalance(amountTokenToDeposit);
+    }
+
+    function _previewRedeem(
+        address, /*tokenOut*/
+        uint256 amountSharesToRedeem
+    ) internal view override returns (uint256 amountTokenOut) {
+        amountTokenOut = _scaledBalanceToAToken(amountSharesToRedeem);
+    }
+
+    function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = underlying;
         res[1] = aToken;
     }
 
-    function isValidBaseToken(address token) public view virtual override returns (bool res) {
-        res = (token == underlying || token == aToken);
+    function getTokensOut() public view virtual override returns (address[] memory res) {
+        res = new address[](2);
+        res[0] = underlying;
+        res[1] = aToken;
+    }
+
+    function isValidTokenIn(address token) public view virtual override returns (bool) {
+        return token == underlying || token == aToken;
+    }
+
+    function isValidTokenOut(address token) public view virtual override returns (bool) {
+        return token == underlying || token == aToken;
     }
 
     function assetInfo()

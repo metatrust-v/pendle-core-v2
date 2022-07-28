@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../PendleERC20.sol";
 import "../../interfaces/IPPrincipalToken.sol";
@@ -103,7 +103,7 @@ contract PendleMarket is PendleERC20Permit, PendleGauge, IPMarket {
             index,
             scyDesired,
             ptDesired,
-            true
+            block.timestamp
         );
 
         // initializing the market
@@ -116,7 +116,7 @@ contract PendleMarket is PendleERC20Permit, PendleGauge, IPMarket {
 
         _writeState(market);
 
-        emit AddLiquidity(receiver, lpToAccount, scyUsed, ptUsed);
+        emit Mint(receiver, lpToAccount, scyUsed, ptUsed);
     }
 
     /**
@@ -133,14 +133,14 @@ contract PendleMarket is PendleERC20Permit, PendleGauge, IPMarket {
         uint256 lpToRemove = balanceOf(address(this));
         _burn(address(this), lpToRemove);
 
-        (scyToAccount, ptToAccount) = market.removeLiquidity(lpToRemove, true);
+        (scyToAccount, ptToAccount) = market.removeLiquidity(lpToRemove);
 
         IERC20(SCY).safeTransfer(receiverScy, scyToAccount);
         IERC20(PT).safeTransfer(receiverPt, ptToAccount);
 
         _writeState(market);
 
-        emit RemoveLiquidity(receiverScy, receiverPt, lpToRemove, scyToAccount, ptToAccount);
+        emit Burn(receiverScy, receiverPt, lpToRemove, scyToAccount, ptToAccount);
     }
 
     /**

@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  */
 
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 interface ISuperComposableYield is IERC20Metadata {
@@ -136,16 +136,23 @@ interface ISuperComposableYield is IERC20Metadata {
      */
     function yieldToken() external view returns (address);
 
-    /**
-     * @notice returns a list of all the base tokens that can be deposited to mint shares
-     */
-    function getBaseTokens() external view returns (address[] memory res);
+    function getTokensIn() external view returns (address[] memory res);
 
-    /**
-     * @notice checks whether a token is a valid base token
-     * @notice returns a boolean indicating whether this is a valid token
-     */
-    function isValidBaseToken(address token) external view returns (bool);
+    function getTokensOut() external view returns (address[] memory res);
+
+    function isValidTokenIn(address token) external view returns (bool);
+
+    function isValidTokenOut(address token) external view returns (bool);
+
+    function previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
+        external
+        view
+        returns (uint256 amountSharesOut);
+
+    function previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
+        external
+        view
+        returns (uint256 amountTokenOut);
 
     /**
     * @notice This function contains information to interpret what the asset is

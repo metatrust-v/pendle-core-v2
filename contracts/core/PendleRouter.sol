@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -48,8 +48,16 @@ contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, PermissionsV2Upg
             sig == IPActionCore.redeemScyToRawToken.selector ||
             sig == IPActionCore.mintPyFromRawToken.selector ||
             sig == IPActionCore.redeemPyToRawToken.selector ||
+            sig == IPActionCore.mintPyFromScy.selector ||
+            sig == IPActionCore.redeemPyToScy.selector ||
             sig == IPActionCore.addLiquidity.selector ||
+            sig == IPActionCore.addLiquiditySinglePt.selector ||
+            sig == IPActionCore.addLiquiditySingleScy.selector ||
+            sig == IPActionCore.addLiquiditySingleRawToken.selector ||
             sig == IPActionCore.removeLiquidity.selector ||
+            sig == IPActionCore.removeLiquiditySinglePt.selector ||
+            sig == IPActionCore.removeLiquiditySingleScy.selector ||
+            sig == IPActionCore.removeLiquiditySingleRawToken.selector ||
             sig == IPActionCore.swapExactPtForScy.selector ||
             sig == IPActionCore.swapPtForExactScy.selector ||
             sig == IPActionCore.swapScyForExactPt.selector ||

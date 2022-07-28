@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 import "../../interfaces/ISuperComposableYield.sol";
 import "./SCYUtils.sol";
 import "../math/Math.sol";
@@ -32,6 +32,23 @@ library SCYIndexLib {
         returns (uint256)
     {
         return SCYUtils.assetToScy(SCYIndex.unwrap(index), assetAmount);
+    }
+
+    function assetToScyUp(SCYIndex index, uint256 assetAmount)
+        internal
+        pure
+        returns (uint256)
+    {
+        return SCYUtils.assetToScyUp(SCYIndex.unwrap(index), assetAmount);
+    }
+
+    function scyToAssetUp(SCYIndex index, uint256 scyAmount)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 _index = SCYIndex.unwrap(index);
+        return SCYUtils.scyToAssetUp(_index, scyAmount);
     }
 
     function scyToAsset(SCYIndex index, int256 scyAmount)

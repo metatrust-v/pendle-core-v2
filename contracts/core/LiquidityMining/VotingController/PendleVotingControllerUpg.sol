@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "./VotingControllerStorageUpg.sol";
 import "../CelerAbstracts/CelerSenderUpg.sol";
@@ -59,140 +59,91 @@ contract PendleVotingControllerUpg is
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice unvote for pools in poolsToUnvote, and vote for those in poolsToVote
-     * @dev pre-condition:
-        - voting pools should be added beforehand
-        - the vePENDLE position must still be active
-     * @dev for multiple voting case
-        - This function will unvote on every pool first to ensure the largest space before voting
      * @dev state changes expected:
         - update weekData (if any)
-        - update poolInfo, userData to reflect the new vote
-        - add 1 check point for each of the unvote pool and vote pool
+        - update poolData, userData to reflect the new vote
+        - add 1 check point for each of pools
      * @dev vePENDLE position not expired is a must, else bias - t*slope < 0 & it will be
         negative weight
      */
-    function voteForMany(
-        address[] calldata poolsToUnvote,
-        address[] calldata poolsToVote,
-        uint64[] calldata weights
-    ) external {
+    function vote(address[] calldata pools, uint64[] calldata weights) external {
         address user = msg.sender;
 
-        require(weights.length == poolsToVote.length, "invaid array length");
-        require(vePendle.balanceOf(user) > 0, "zero vependle balance");
-        for (uint256 i = 0; i < poolsToVote.length; ++i) {
-            require(_isPoolVotable(poolsToVote[i]), "invalid pool");
-            require(weights[i] > 0, "zero weight");
-        }
-
-        for (uint256 i = 0; i < poolsToUnvote.length; ++i) {
-            unvote(poolsToUnvote[i]);
-        }
-
-        for (uint256 i = 0; i < poolsToVote.length; ++i) {
-            applyPoolSlopeChanges(poolsToUnvote[i]);
-            _unvote(user, poolsToUnvote[i], false);
-        }
-
-        for (uint256 i = 0; i < poolsToVote.length; ++i) {
-            _vote(user, poolsToVote[i], weights[i]);
-        }
-    }
-
-    /**
-     * @notice set a new voting weight for the target pool
-     * @dev pre-condition:
-        - pool must have been added before
-        - the vePENDLE position must still be active
-     * @dev state changes expected:
-        - update weekData (if any)
-        - update poolInfo, userData to reflect the new vote
-        - add 1 check point for both the unvote & new vote
-     * @dev vePENDLE position not expired is a must, else bias - t*slope < 0 & it will be
-        negative weight
-     */
-    function vote(address pool, uint64 weight) external {
-        address user = msg.sender;
-
-        require(weight != 0, "zero weight");
-        require(_isPoolVotable(pool), "invalid pool");
+        require(weights.length == pools.length, "invaid array length");
         require(vePendle.balanceOf(user) > 0, "zero vependle balance");
 
-        applyPoolSlopeChanges(pool);
-        _unvote(user, pool, false);
-        _vote(user, pool, weight);
-    }
+        UserData storage uData = userData[user];
+        LockedPosition memory userPosition = _getUserVePendlePosition(user);
 
-    /**
-     * @notice remove the vote from the current pool
-     * @dev no pre-condition as opposed to vote since this function is to clear the vote
-     * @dev allow removing vote from a non-votable pool BY not requiring pool to be votable
-     * @dev state changes expected:
-        - update weekData (if any)
-        - update poolInfo, userData to reflect the new vote
-        - add 1 check point for the unvote
-     */
-    function unvote(address pool) public {
-        if (_isPoolVotable(pool)) {
-            applyPoolSlopeChanges(pool);
+        for (uint256 i = 0; i < pools.length; ++i) {
+            if (_isPoolActive(pools[i])) applyPoolSlopeChanges(pools[i]);
         }
-        _unvote(msg.sender, pool, true);
+
+        for (uint256 i = 0; i < pools.length; ++i) {
+            if (uData.voteForPools[pools[i]].weight <= weights[i])
+                _modifyVoteWeight(user, pools[i], userPosition, weights[i]);
+        }
+
+        for (uint256 i = 0; i < pools.length; ++i) {
+            if (uData.voteForPools[pools[i]].weight > weights[i])
+                _modifyVoteWeight(user, pools[i], userPosition, weights[i]);
+        }
     }
 
     /**
      * @notice Process all the slopeChanges that haven't been processed & update these data into
-        poolInfo
-     * @dev pre-condition: the pool must be votable
+        poolData
+     * @dev pre-condition: the pool must be active
      * @dev state changes expected:
         - update weekData
-        - update poolInfo
+        - update poolData
      */
     function applyPoolSlopeChanges(address pool) public {
-        require(_isPoolVotable(pool), "invalid pool");
+        require(_isPoolActive(pool), "invalid pool");
 
-        uint128 wTime = poolInfo[pool].lastSlopeChangeAppliedAt;
+        uint128 wTime = poolData[pool].lastSlopeChangeAppliedAt;
         uint128 currentWeekStart = WeekMath.getCurrentWeekStart();
 
         // no state changes are expected
         if (wTime >= currentWeekStart) return;
 
-        VeBalance memory currentVote = poolInfo[pool].vote;
+        VeBalance memory currentVote = poolData[pool].totalVote;
         while (wTime < currentWeekStart) {
             wTime += WEEK;
-            currentVote = currentVote.sub(poolInfo[pool].slopeChanges[wTime], wTime);
+            currentVote = currentVote.sub(poolData[pool].slopeChanges[wTime], wTime);
             _setFinalPoolVoteForWeek(pool, wTime, currentVote.getValueAt(wTime));
         }
 
-        _setNewVotePoolInfo(pool, currentVote, wTime);
+        _setNewVotePoolData(pool, currentVote, wTime);
     }
 
     /**
      * @notice finalize the voting results of all pools, up to the current epoch
      * @dev state changes expected:
-        - weekData, poolInfo is updated for all pools in allPools
+        - weekData, poolData is updated for all pools in allActivePools
         - isEpochFinalized is set to true for all epochs since the last time until now
      * @dev this function might take a lot of gas, but can be mitigated by calling applyPoolSlopeChanges
         separately, hence reduce the number of states to be updated
      */
     function finalizeEpoch() public {
-        uint256 length = allPools.length();
+        uint256 length = allActivePools.length();
         for (uint256 i = 0; i < length; ++i) {
-            applyPoolSlopeChanges(allPools.at(i));
+            applyPoolSlopeChanges(allActivePools.at(i));
         }
         _setAllPastEpochsAsFinalized();
     }
 
     /**
      * @notice broadcast the voting results of the current week to the chain with chainId. Can be
-        called by anyone
+        called by anyone. It's intentional to allow the same results to be broadcasted multiple
+        times. The receiver should be able to filter these duplicated messages
      * @dev pre-condition: the epoch must have already been finalized by finalizeEpoch
      * @dev state changes expected:
         - the gaugeController receives the new pendle allocation
      */
     function broadcastResults(uint64 chainId) external payable {
         uint128 wTime = WeekMath.getCurrentWeekStart();
-        require(isEpochFinalized[wTime], "epoch not finalized");
+        require(weekData[wTime].isEpochFinalized, "epoch not finalized");
         _broadcastResults(chainId, wTime, pendlePerSec);
     }
 
@@ -205,11 +156,15 @@ contract PendleVotingControllerUpg is
      * @dev pre-condition: pool must not have been added before
      * @dev assumption: chainId is valid, pool does exist on the chain (guaranteed by gov)
      * @dev state changes expected:
-        - add to allPools & chainPools
-        - set params in poolInfo
+        - add to allActivePools & chainPools
+        - set params in poolData
+     * @dev NOTE TO GOV: previous week's results should have been broadcasted prior to calling
+      this function
      */
     function addPool(uint64 chainId, address pool) external onlyGovernance {
-        require(!_isPoolVotable(pool), "pool already added");
+        require(!_isPoolActive(pool), "pool already added");
+        require(!allRemovedPools.contains(pool), "not allowed to add a removed pool");
+
         _addPool(chainId, pool);
         emit AddPool(chainId, pool);
     }
@@ -219,12 +174,15 @@ contract PendleVotingControllerUpg is
      * @dev pre-condition: pool must have been added before
      * @dev state changes expected:
         - update weekData (if any)
-        - remove from allPools & chainPools
-        - clear info in poolInfo
+        - remove from allActivePools & chainPools
+        - clear data in poolData
+     * @dev NOTE TO GOV: previous week's results should have been broadcasted prior to calling
+      this function
      */
     function removePool(address pool) external onlyGovernance {
-        require(_isPoolVotable(pool), "invalid pool");
-        uint64 chainId = poolInfo[pool].chainId;
+        require(_isPoolActive(pool), "invalid pool");
+
+        uint64 chainId = poolData[pool].chainId;
 
         applyPoolSlopeChanges(pool);
         _removePool(pool);
@@ -252,6 +210,8 @@ contract PendleVotingControllerUpg is
      * @notice set new pendlePerSec
      * @dev no zero checks because gov may want to stop liquidity mining
      * @dev state changes expected: pendlePerSec is updated
+     * @dev NOTE TO GOV: This should be done mid-week, well before the next broadcast to avoid
+        race condition
      */
     function setPendlePerSec(uint128 newPendlePerSec) external onlyGovernance {
         pendlePerSec = newPendlePerSec;
@@ -284,12 +244,12 @@ contract PendleVotingControllerUpg is
 
         for (uint256 i = 0; i < length; ++i) {
             uint256 poolVotes = weekData[wTime].poolVotes[pools[i]];
-            uint256 pendlePerSec = (uint256(totalPendlePerSec) * poolVotes) / totalVotes;
+            uint256 pendlePerSec = (totalPendlePerSec * poolVotes) / totalVotes;
             totalPendleAmounts[i] = pendlePerSec * WEEK;
         }
 
         if (chainId == block.chainid) {
-            address gaugeController = sidechainContracts.get(uint256(chainId));
+            address gaugeController = sidechainContracts.get(chainId);
             IPGaugeControllerMainchain(gaugeController).updateVotingResults(
                 wTime,
                 pools,
@@ -302,76 +262,19 @@ contract PendleVotingControllerUpg is
         emit BroadcastResults(chainId, wTime, totalPendlePerSec);
     }
 
-    /**
-     * @notice remove the vote from the current pool
-     * @dev state changes expected:
-        - vote in poolInfo is cleared if the vote is still valid
-        - update UserData to remove the vote weight
-        - add a check-point if required
-     */
-    function _unvote(
-        address user,
-        address pool,
-        bool doCreateCheckpoint
-    ) internal {
-        VeBalance memory oldUVote = userData[user].voteForPools[pool].vote;
-        if (_isPoolVotable(pool) && _isVoteActive(oldUVote)) {
-            _subtractVotePoolInfo(pool, oldUVote);
-        }
-        _unsetVoteUserData(user, pool);
-
-        if (doCreateCheckpoint) {
-            _addUserPoolCheckpoint(user, pool, VeBalance(0, 0));
-        }
-        emit Unvote(user, pool, oldUVote);
-    }
-
-    /**
-     * @notice remove the vote from the current pool
-     * @dev there must not be any current vote on this pool by the user
-     * @dev state changes expected:
-        - vote in poolInfo is added
-        - update UserData to set the new vote weight
-        - add a check-point
-     */
-    function _vote(
-        address user,
-        address pool,
-        uint64 weight
-    ) internal {
-        VeBalance memory votingPower = _getVotingPowerByWeight(user, weight);
-        _addVotePoolInfo(pool, votingPower);
-        _setVoteUserData(user, pool, weight, votingPower);
-        _addUserPoolCheckpoint(user, pool, votingPower);
-
-        emit Vote(user, pool, weight, votingPower);
-    }
-
-    /**
-     * @notice return the corresponding voting power of an user given the weight. Basically his voting power
-        will be vePendle * weight / USER_VOTE_MAX_WEIGHT
-     * @notice governance will always has the vePendle equivalent to 1M PENDLE locked for MAX_LOCK_TIME
-     */
-    function _getVotingPowerByWeight(address user, uint64 weight)
+    function _getUserVePendlePosition(address user)
         internal
         view
-        virtual
-        returns (VeBalance memory res)
+        returns (LockedPosition memory userPosition)
     {
-        uint128 amount;
-        uint128 expiry;
-
         if (user == _governance()) {
-            amount = GOVERNANCE_PENDLE_VOTE;
-            expiry = WeekMath.getWeekStartTimestamp(uint128(block.timestamp) + MAX_LOCK_TIME);
+            (userPosition.amount, userPosition.expiry) = (
+                GOVERNANCE_PENDLE_VOTE,
+                WeekMath.getWeekStartTimestamp(uint128(block.timestamp) + MAX_LOCK_TIME)
+            );
         } else {
-            (amount, expiry) = vePendle.positionData(user);
+            (userPosition.amount, userPosition.expiry) = vePendle.positionData(user);
         }
-
-        (res.bias, res.slope) = VeBalanceLib.convertToVeBalance(
-            uint128((uint256(amount) * weight) / USER_VOTE_MAX_WEIGHT),
-            expiry
-        );
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyGovernance {}

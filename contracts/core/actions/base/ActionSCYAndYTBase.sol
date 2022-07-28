@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../../interfaces/IPMarketFactory.sol";
 import "../../../interfaces/IPMarket.sol";
@@ -17,8 +17,6 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
     using SafeERC20 for ISuperComposableYield;
     using SafeERC20 for IPYieldToken;
     using SCYIndexLib for ISuperComposableYield;
-
-    event SwapYTAndSCY(address indexed user, int256 ytToAccount, int256 scyToAccount);
 
     /**
     * @notice swap exact SCY to YT with the help of flashswaps & YT tokenization / redemption
@@ -41,7 +39,7 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
         (ISuperComposableYield SCY, , IPYieldToken YT) = IPMarket(market).readTokens();
         MarketState memory state = IPMarket(market).readState(false);
 
-        (netYtOut, ) = state.approxSwapExactScyForYt(
+        (netYtOut, , ) = state.approxSwapExactScyForYt(
             SCY.newIndex(),
             exactScyIn,
             block.timestamp,
@@ -60,8 +58,6 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
             netYtOut, // exactPtIn = netYtOut
             _encodeSwapExactScyForYt(receiver, minYtOut)
         );
-
-        emit SwapYTAndSCY(receiver, netYtOut.Int(), exactScyIn.neg());
     }
 
     /**
@@ -96,8 +92,6 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
         ); // ignore return
 
         netScyOut = SCY.balanceOf(receiver) - preScyBalance;
-
-        emit SwapYTAndSCY(receiver, exactYtIn.neg(), netScyOut.Int());
     }
 
     /**
@@ -115,7 +109,9 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
         uint256 exactYtOut,
         uint256 maxScyIn
     ) internal returns (uint256 netScyIn) {
-        (, , IPYieldToken YT) = IPMarket(market).readTokens();
+        (ISuperComposableYield SCY, , IPYieldToken YT) = IPMarket(market).readTokens();
+
+        uint256 preScyBalance = SCY.balanceOf(msg.sender);
 
         IPMarket(market).swapExactPtForScy(
             address(YT),
@@ -123,7 +119,7 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
             _encodeSwapScyForExactYt(msg.sender, receiver, maxScyIn)
         );
 
-        emit SwapYTAndSCY(receiver, exactYtOut.Int(), netScyIn.neg());
+        netScyIn = preScyBalance - SCY.balanceOf(msg.sender);
     }
 
     /**
@@ -147,7 +143,7 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
         MarketState memory state = IPMarket(market).readState(false);
         (ISuperComposableYield SCY, , IPYieldToken YT) = IPMarket(market).readTokens();
 
-        (netYtIn, ) = state.approxSwapYtForExactScy(
+        (netYtIn, , ) = state.approxSwapYtForExactScy(
             SCY.newIndex(),
             exactScyOut,
             block.timestamp,
@@ -165,8 +161,6 @@ abstract contract ActionSCYAndYTBase is ActionSCYAndPYBase, CallbackHelper {
             netYtIn, // exactPtOut = netYtIn
             _encodeSwapYtForScy(receiver, exactScyOut)
         ); // ignore return
-
-        emit SwapYTAndSCY(receiver, netYtIn.neg(), exactScyOut.Int());
     }
 
     /**

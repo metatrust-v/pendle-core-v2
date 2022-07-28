@@ -12,7 +12,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 /* solhint-disable private-vars-leading-underscore, reason-string */
 
@@ -57,11 +57,6 @@ library Math {
         unchecked {
             return aInflated / b;
         }
-    }
-
-    function rawDivUp(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b != 0, "divide by zero");
-        return (a + b - 1) / b;
     }
 
     function abs(int256 x) internal pure returns (uint256) {

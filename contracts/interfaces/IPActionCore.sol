@@ -1,9 +1,96 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../libraries/math/MarketApproxLib.sol";
 
 interface IPActionCore {
+    event AddLiquidity(
+        address indexed caller,
+        address indexed market,
+        address indexed receiver,
+        uint256 scyUsed,
+        uint256 ptUsed,
+        uint256 lpOut
+    );
+
+    event RemoveLiquidity(
+        address indexed caller,
+        address indexed market,
+        address receiver,
+        uint256 lpIn,
+        uint256 amountPTOut,
+        uint256 amountSCYOut
+    );
+
+    event SwapPtAndScy(
+        address indexed caller,
+        address indexed market,
+        address indexed receiver,
+        int256 amountPtToAccount,
+        int256 amountScyToAccount
+    );
+
+    event SwapPtAndRawToken(
+        address indexed caller,
+        address indexed market,
+        address indexed rawToken,
+        address receiver,
+        int256 amountPtToAccount,
+        int256 amountRawTokenToAccount
+    );
+
+    event MintScyFromRawToken(
+        address indexed caller,
+        address indexed receiver,
+        address indexed SCY,
+        address rawTokenIn,
+        uint256 netRawTokenIn,
+        uint256 netScyOut
+    );
+
+    event RedeemScyToRawToken(
+        address indexed caller,
+        address indexed receiver,
+        address indexed SCY,
+        uint256 netScyIn,
+        address rawTokenOut,
+        uint256 netRawTokenOut
+    );
+
+    event MintPyFromScy(
+        address indexed caller,
+        address indexed receiver,
+        address indexed YT,
+        uint256 netScyIn,
+        uint256 netPyOut
+    );
+
+    event RedeemPyToScy(
+        address indexed caller,
+        address indexed receiver,
+        address indexed YT,
+        uint256 netPyIn,
+        uint256 netScyOut
+    );
+
+    event MintPyFromRawToken(
+        address indexed caller,
+        address indexed receiver,
+        address indexed YT,
+        address rawTokenIn,
+        uint256 netRawTokenIn,
+        uint256 netPyOut
+    );
+
+    event RedeemPyToRawToken(
+        address indexed caller,
+        address indexed receiver,
+        address indexed YT,
+        uint256 netPyIn,
+        address rawTokenOut,
+        uint256 netRawTokenOut
+    );
+
     function addLiquidity(
         address receiver,
         address market,
@@ -18,6 +105,31 @@ interface IPActionCore {
             uint256 ptUsed
         );
 
+    function addLiquiditySinglePt(
+        address receiver,
+        address market,
+        uint256 netPtIn,
+        uint256 minLpOut,
+        ApproxParams memory guessPtSwapToScy
+    ) external returns (uint256 netLpOut);
+
+    function addLiquiditySingleScy(
+        address receiver,
+        address market,
+        uint256 netScyIn,
+        uint256 minLpOut,
+        ApproxParams memory guessPtReceivedFromScy
+    ) external returns (uint256 netLpOut);
+
+    function addLiquiditySingleRawToken(
+        address receiver,
+        address market,
+        uint256 netRawTokenIn,
+        uint256 minLpOut,
+        address[] calldata path,
+        ApproxParams memory guessPtReceivedFromScy
+    ) external returns (uint256 netLpOut);
+
     function removeLiquidity(
         address receiver,
         address market,
@@ -25,6 +137,29 @@ interface IPActionCore {
         uint256 scyOutMin,
         uint256 ptOutMin
     ) external returns (uint256 netScyOut, uint256 netPtOut);
+
+    function removeLiquiditySinglePt(
+        address receiver,
+        address market,
+        uint256 lpToRemove,
+        uint256 minPtOut,
+        ApproxParams memory guessPtOut
+    ) external returns (uint256 netPtOut);
+
+    function removeLiquiditySingleScy(
+        address receiver,
+        address market,
+        uint256 lpToRemove,
+        uint256 minScyOut
+    ) external returns (uint256 netScyOut);
+
+    function removeLiquiditySingleRawToken(
+        address receiver,
+        address market,
+        uint256 lpToRemove,
+        uint256 minRawTokenOut,
+        address[] memory path
+    ) external returns (uint256 netRawTokenOut);
 
     function swapExactPtForScy(
         address receiver,
@@ -87,6 +222,20 @@ interface IPActionCore {
         uint256 minRawTokenOut,
         address[] memory path
     ) external returns (uint256 netRawTokenOut);
+
+    function mintPyFromScy(
+        address receiver,
+        address YT,
+        uint256 netScyIn,
+        uint256 minPyOut
+    ) external returns (uint256 netPyOut);
+
+    function redeemPyToScy(
+        address receiver,
+        address YT,
+        uint256 netPyIn,
+        uint256 minScyOut
+    ) external returns (uint256 netScyOut);
 
     function swapExactRawTokenForPt(
         address receiver,

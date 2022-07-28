@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "./ISuperComposableYield.sol";
 import "../libraries/math/MarketMathCore.sol";
@@ -64,7 +64,8 @@ interface IPRouterStatic {
             address pt,
             address scy,
             MarketState memory state,
-            int256 impliedYield
+            int256 impliedYield,
+            uint256 exchangeRate
         );
 
     // ============= USER INFO =============
@@ -104,15 +105,20 @@ interface IPRouterStatic {
         view
         returns (uint256 netScyOut, uint256 netPtOut);
 
-    function swapPtForScyStatic(address market, uint256 exactPtIn)
+    function swapExactPtForScyStatic(address market, uint256 exactPtIn)
         external
         view
         returns (uint256 netScyOut, uint256 netScyFee);
 
-    function swapScyForPtStatic(address market, uint256 exactPtOut)
+    function swapScyForExactPtStatic(address market, uint256 exactPtOut)
         external
         view
         returns (uint256 netScyIn, uint256 netScyFee);
+
+    function swapExactScyForPtStatic(address market, uint256 exactScyIn)
+        external
+        view
+        returns (uint256 netPtOut, uint256 netScyFee);
 
     // ============= OTHER HELPERS =============
 

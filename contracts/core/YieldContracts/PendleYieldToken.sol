@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../interfaces/ISuperComposableYield.sol";
 import "../../interfaces/IPYieldToken.sol";
@@ -33,6 +33,7 @@ contract PendleYieldToken is
 
     struct PostExpiryData {
         uint128 firstScyIndex;
+        uint128 totalScyInterestForTreasury;
         mapping(address => uint256) firstRewardIndex;
         mapping(address => uint256) userRewardOwed;
     }
@@ -94,23 +95,26 @@ contract PendleYieldToken is
     {
         address[] memory receivers = new address[](1);
         uint256[] memory amounts = new uint256[](1);
-        (receivers[0], amounts[0]) = (receiver, type(uint256).max);
+        (receivers[0], amounts[0]) = (receiver, _getAmountPYToRedeem());
 
-        (amountScyOut, ) = _redeemPY(receivers, amounts);
+        uint256[] memory amountScyOuts;
+        amountScyOuts = _redeemPY(receivers, amounts);
+
+        amountScyOut = amountScyOuts[0];
     }
 
     /// @dev this function limit how much each receiver will receive. For example, if the totalOut is 100,
     /// and the max are 50 30 INF, the first receiver will receive 50, the second will receive 30, and the third will receive 20.
     /// @dev intended to mostly be used by Pendle router
-    function redeemPY(address[] calldata receivers, uint256[] calldata maxAmountScyOuts)
+    function redeemPYMulti(address[] calldata receivers, uint256[] calldata amountPYToRedeems)
         external
         nonReentrant
         updateData
-        returns (uint256 totalAmountScyOut)
+        returns (uint256[] memory amountScyOuts)
     {
-        require(receivers.length == maxAmountScyOuts.length, "not same length");
+        require(receivers.length == amountPYToRedeems.length, "not same length");
         require(receivers.length != 0, "empty array");
-        (totalAmountScyOut, ) = _redeemPY(receivers, maxAmountScyOuts);
+        amountScyOuts = _redeemPY(receivers, amountPYToRedeems);
     }
 
     /**
@@ -148,13 +152,15 @@ contract PendleYieldToken is
         }
     }
 
-    function redeemRewardsPostExpiryForTreasury()
+    function redeemInterestAndRewardsPostExpiryForTreasury()
         external
         nonReentrant
         updateData
-        returns (uint256[] memory rewardsOut)
+        returns (uint256 interestOut, uint256[] memory rewardsOut)
     {
         require(isExpired(), "not expired");
+
+        address treasury = IPYieldContractFactory(factory).treasury();
 
         address[] memory tokens = getRewardTokens();
         rewardsOut = new uint256[](tokens.length);
@@ -165,7 +171,11 @@ contract PendleYieldToken is
             rewardsOut[i] = _selfBalance(tokens[i]) - postExpiry.userRewardOwed[tokens[i]];
         }
 
-        _transferOut(tokens, IPYieldContractFactory(factory).treasury(), rewardsOut);
+        _transferOut(tokens, treasury, rewardsOut);
+
+        interestOut = postExpiry.totalScyInterestForTreasury;
+        postExpiry.totalScyInterestForTreasury = 0;
+        _transferOut(SCY, treasury, interestOut);
     }
 
     function rewardIndexesCurrent() external override returns (uint256[] memory) {
@@ -176,6 +186,7 @@ contract PendleYieldToken is
     function scyIndexCurrent() public returns (uint256 currentIndex) {
         currentIndex = Math.max(ISuperComposableYield(SCY).exchangeRate(), _scyIndexStored);
         _scyIndexStored = currentIndex.Uint128();
+        emit NewInterestIndex(currentIndex);
     }
 
     function scyIndexStored() public view returns (uint256) {
@@ -186,24 +197,55 @@ contract PendleYieldToken is
         return MiniHelpers.isCurrentlyExpired(expiry);
     }
 
-    function _redeemPY(address[] memory receivers, uint256[] memory maxAmountScyOuts)
-        internal
-        returns (uint256 totalScyToReceivers, uint256 scyInterestAfterExpiry)
+    function getPostExpiryData()
+        external
+        view
+        returns (
+            uint256 firstScyIndex,
+            uint256 totalScyInterestForTreasury,
+            uint256[] memory firstRewardIndexes,
+            uint256[] memory userRewardOwed
+        )
     {
-        uint256 amountPYToRedeem = _getAmountPYToRedeem();
-        IPPrincipalToken(PT).burnByYT(address(this), amountPYToRedeem);
-        if (!isExpired()) _burn(address(this), amountPYToRedeem);
+        require(postExpiry.firstScyIndex != 0, "PostExpiry data not set");
 
-        (totalScyToReceivers, scyInterestAfterExpiry) = _calcScyRedeemableFromPY(amountPYToRedeem);
+        firstScyIndex = postExpiry.firstScyIndex;
+        totalScyInterestForTreasury = postExpiry.totalScyInterestForTreasury;
 
-        if (scyInterestAfterExpiry != 0) {
-            address treasury = IPYieldContractFactory(factory).treasury();
-            _transferOut(SCY, treasury, scyInterestAfterExpiry);
+        address[] memory tokens = getRewardTokens();
+        firstRewardIndexes = new uint256[](tokens.length);
+        userRewardOwed = new uint256[](tokens.length);
+
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            firstRewardIndexes[i] = postExpiry.firstRewardIndex[tokens[i]];
+            userRewardOwed[i] = postExpiry.userRewardOwed[tokens[i]];
         }
+    }
 
-        // all the leftover SCY will be transferred to the last receiver
-        maxAmountScyOuts[maxAmountScyOuts.length - 1] = type(uint256).max;
-        _transferOutMaxMulti(SCY, totalScyToReceivers, receivers, maxAmountScyOuts);
+    function _redeemPY(address[] memory receivers, uint256[] memory amountPYToRedeems)
+        internal
+        returns (uint256[] memory amountScyOuts)
+    {
+        uint256 totalAmountPYToRedeem = amountPYToRedeems.sum();
+        IPPrincipalToken(PT).burnByYT(address(this), totalAmountPYToRedeem);
+        if (!isExpired()) _burn(address(this), totalAmountPYToRedeem);
+
+        uint256 index = scyIndexCurrent();
+        uint256 totalScyInterestPostExpiry;
+        amountScyOuts = new uint256[](receivers.length);
+
+        for (uint256 i = 0; i < receivers.length; i++) {
+            uint256 scyInterestPostExpiry;
+            (amountScyOuts[i], scyInterestPostExpiry) = _calcScyRedeemableFromPY(
+                amountPYToRedeems[i],
+                index
+            );
+            _transferOut(SCY, receivers[i], amountScyOuts[i]);
+            totalScyInterestPostExpiry += scyInterestPostExpiry;
+        }
+        if (totalScyInterestPostExpiry != 0) {
+            postExpiry.totalScyInterestForTreasury += totalScyInterestPostExpiry.Uint128();
+        }
     }
 
     function _calcPYToMint(uint256 amountScy) internal returns (uint256 amountPY) {
@@ -213,12 +255,20 @@ contract PendleYieldToken is
 
     function _calcScyRedeemableFromPY(uint256 amountPY)
         internal
-        returns (uint256 scyToUser, uint256 scyInterestAfterExpiry)
+        returns (uint256 scyToUser, uint256 scyInterestPostExpiry)
     {
-        scyToUser = SCYUtils.assetToScy(scyIndexCurrent(), amountPY);
+        return _calcScyRedeemableFromPY(amountPY, scyIndexCurrent());
+    }
+
+    function _calcScyRedeemableFromPY(uint256 amountPY, uint256 indexCurrent)
+        internal
+        view
+        returns (uint256 scyToUser, uint256 scyInterestPostExpiry)
+    {
+        scyToUser = SCYUtils.assetToScy(indexCurrent, amountPY);
         if (isExpired()) {
             uint256 totalScyRedeemable = SCYUtils.assetToScy(postExpiry.firstScyIndex, amountPY);
-            scyInterestAfterExpiry = totalScyRedeemable - scyToUser;
+            scyInterestPostExpiry = totalScyRedeemable - scyToUser;
         }
     }
 
@@ -285,20 +335,21 @@ contract PendleYieldToken is
             // hence, we can save users one _redeemExternal here
             for (uint256 i = 0; i < tokens.length; i++)
                 postExpiry.userRewardOwed[tokens[i]] -= userReward[tokens[i]][user].accrued;
-            rewardAmounts = __doTransferOutRewardsLocal(tokens, user, receiver);
+            rewardAmounts = __doTransferOutRewardsLocal(tokens, user, receiver, false);
         } else {
-            _redeemExternalReward();
-            rewardAmounts = __doTransferOutRewardsLocal(tokens, user, receiver);
+            rewardAmounts = __doTransferOutRewardsLocal(tokens, user, receiver, true);
         }
     }
 
     function __doTransferOutRewardsLocal(
         address[] memory tokens,
         address user,
-        address receiver
+        address receiver,
+        bool allowedToRedeemExternalReward
     ) internal returns (uint256[] memory rewardAmounts) {
         address treasury = IPYieldContractFactory(factory).treasury();
         uint256 feeRate = IPYieldContractFactory(factory).rewardFeeRate();
+        bool redeemExternalThisRound;
 
         rewardAmounts = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -307,6 +358,13 @@ contract PendleYieldToken is
 
             uint256 feeAmount = rewardPreFee.mulDown(feeRate);
             rewardAmounts[i] = rewardPreFee - feeAmount;
+
+            if (!redeemExternalThisRound && allowedToRedeemExternalReward) {
+                if (_selfBalance(tokens[i]) < rewardPreFee) {
+                    _redeemExternalReward();
+                    redeemExternalThisRound = true;
+                }
+            }
 
             _transferOut(tokens[i], treasury, feeAmount);
             _transferOut(tokens[i], receiver, rewardAmounts[i]);
@@ -345,6 +403,7 @@ contract PendleYieldToken is
         address to,
         uint256
     ) internal override {
+        if (isExpired()) _setPostExpiryData();
         _updateAndDistributeRewardsForTwo(from, to);
         _distributeInterestForTwo(from, to);
     }

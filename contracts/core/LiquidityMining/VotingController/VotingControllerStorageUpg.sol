@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../../interfaces/IPVeToken.sol";
 import "../../../libraries/VeBalanceLib.sol";
@@ -14,59 +14,59 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 /// - it inherits only upgradable contract
 abstract contract VotingControllerStorageUpg {
     using VeBalanceLib for VeBalance;
+    using VeBalanceLib for LockedPosition;
     using EnumerableSet for EnumerableSet.AddressSet;
     using Checkpoints for Checkpoints.History;
 
-    struct PoolInfo {
+    struct PoolData {
         uint64 chainId;
         uint128 lastSlopeChangeAppliedAt;
-        VeBalance vote;
+        VeBalance totalVote;
         // wTime => slopeChange value
         mapping(uint128 => uint128) slopeChanges;
     }
 
-    struct UserPoolInfo {
+    struct UserPoolData {
         uint64 weight;
         VeBalance vote;
     }
 
     struct UserData {
         uint64 totalVotedWeight;
-        mapping(address => UserPoolInfo) voteForPools;
+        mapping(address => UserPoolData) voteForPools;
     }
 
     struct WeekData {
+        bool isEpochFinalized;
         uint128 totalVotes;
         mapping(address => uint128) poolVotes;
     }
 
     uint128 public constant MAX_LOCK_TIME = 104 weeks;
-    uint64 public constant USER_VOTE_MAX_WEIGHT = 10**18;
     uint128 public constant WEEK = 1 weeks;
     uint128 public constant GOVERNANCE_PENDLE_VOTE = 10**24;
 
     IPVeToken public immutable vePendle;
 
+    uint128 public immutable deployedWTime;
+
     uint128 public pendlePerSec;
 
-    uint128 public immutable deployedWTime; // divisible by WEEK
+    EnumerableSet.AddressSet internal allActivePools;
 
-    EnumerableSet.AddressSet internal allPools;
+    EnumerableSet.AddressSet internal allRemovedPools;
 
     // [chainId] => [pool]
     mapping(uint64 => EnumerableSet.AddressSet) internal chainPools;
 
-    // [poolAddress] -> PoolInfo
-    mapping(address => PoolInfo) public poolInfo;
+    // [poolAddress] -> PoolData
+    mapping(address => PoolData) public poolData;
 
     // [wTime] => WeekData
     mapping(uint128 => WeekData) public weekData;
 
-    // user voting info
+    // user voting data
     mapping(address => UserData) public userData;
-
-    // wTime => bool
-    mapping(uint128 => bool) public isEpochFinalized;
 
     // [user][pool] => checkpoint
     mapping(address => mapping(address => Checkpoints.History)) internal userPoolHistory;
@@ -83,8 +83,19 @@ abstract contract VotingControllerStorageUpg {
     //////////////////////////////////////////////////////////////*/
 
     /// @dev trivial view function
-    function getAllPools() external view returns (address[] memory) {
-        return allPools.values();
+    function getAllAcitvePools() external view returns (address[] memory) {
+        return allActivePools.values();
+    }
+
+    /// @dev trivial view function
+    function getAllRemovedPools(uint256 start, uint256 end)
+        external
+        view
+        returns (uint256 lengthOfRemovedPools, address[] memory arr)
+    {
+        arr = new address[](end - start + 1);
+        for (uint256 i = start; i <= end; i++) arr[i] = allRemovedPools.at(i);
+        lengthOfRemovedPools = allRemovedPools.length();
     }
 
     /// @dev trivial view function
@@ -96,7 +107,7 @@ abstract contract VotingControllerStorageUpg {
     function getUserPoolVote(address user, address pool)
         external
         view
-        returns (UserPoolInfo memory)
+        returns (UserPoolData memory)
     {
         return userData[user].voteForPools[pool];
     }
@@ -119,26 +130,30 @@ abstract contract VotingControllerStorageUpg {
 
     /**
     * @dev expected behavior:
-        - add to allPools, chainPools
-        - set params in poolInfo
+        - add to allActivePools, chainPools
+        - set params in poolData
      */
     function _addPool(uint64 chainId, address pool) internal {
-        poolInfo[pool].chainId = chainId;
-        poolInfo[pool].lastSlopeChangeAppliedAt = WeekMath.getCurrentWeekStart();
-        require(chainPools[chainId].add(pool), "IE: chainPools duplicated");
-        require(allPools.add(pool), "IE: allPools duplicated");
+        require(chainPools[chainId].add(pool), "IE");
+        require(allActivePools.add(pool), "IE");
+
+        poolData[pool].chainId = chainId;
+        poolData[pool].lastSlopeChangeAppliedAt = WeekMath.getCurrentWeekStart();
     }
 
     /**
     * @dev expected behavior:
-        - remove from allPools, chainPools
-        - clear all params in poolInfo
+        - remove from allActivePool, chainPools
+        - add to allRemovedPools
+        - clear all params in poolData
      */
     function _removePool(address pool) internal {
-        uint64 chainId = poolInfo[pool].chainId;
-        require(chainPools[chainId].remove(pool), "IE: chainPools removal failed");
-        require(allPools.remove(pool), "IE: allPools removal failed");
-        delete poolInfo[pool];
+        uint64 chainId = poolData[pool].chainId;
+        require(chainPools[chainId].remove(pool), "IE");
+        require(allActivePools.remove(pool), "IE");
+        require(allRemovedPools.add(pool), "IE");
+
+        delete poolData[pool];
     }
 
     /**
@@ -154,70 +169,66 @@ abstract contract VotingControllerStorageUpg {
         weekData[wTime].poolVotes[pool] = vote;
     }
 
-    function _setNewVotePoolInfo(
+    function _setNewVotePoolData(
         address pool,
         VeBalance memory vote,
         uint128 wTime
     ) internal {
-        poolInfo[pool].vote = vote;
-        poolInfo[pool].lastSlopeChangeAppliedAt = wTime;
+        poolData[pool].totalVote = vote;
+        poolData[pool].lastSlopeChangeAppliedAt = wTime;
     }
 
-    /// @dev only applicable for current pool, hence no changes for weekData
-    function _subtractVotePoolInfo(address pool, VeBalance memory vote) internal {
-        PoolInfo storage pInfo = poolInfo[pool];
-        pInfo.vote = poolInfo[pool].vote.sub(vote);
-        pInfo.slopeChanges[vote.getExpiry()] -= vote.slope;
-    }
-
-    /// @dev only applicable for current pool, hence no changes for weekData
-    function _addVotePoolInfo(address pool, VeBalance memory vote) internal {
-        PoolInfo storage pInfo = poolInfo[pool];
-        pInfo.vote = poolInfo[pool].vote.add(vote);
-        pInfo.slopeChanges[vote.getExpiry()] += vote.slope;
-    }
-
-    function _unsetVoteUserData(address user, address pool) internal {
-        UserData storage uData = userData[user];
-        uData.totalVotedWeight -= uData.voteForPools[pool].weight;
-        delete uData.voteForPools[pool];
-    }
-
-    /// @dev assumption: uData.voteForPools[pool] hasn't been set before
-    /// @dev post-condition: totalVotedWeight <= USER_VOTE_MAX_WEIGHT
-    function _setVoteUserData(
+    function _modifyVoteWeight(
         address user,
         address pool,
-        uint64 weight,
-        VeBalance memory vote
-    ) internal {
+        LockedPosition memory userPosition,
+        uint64 weight
+    ) internal returns (VeBalance memory newVote) {
         UserData storage uData = userData[user];
-        uData.totalVotedWeight += weight;
-        require(uData.totalVotedWeight <= USER_VOTE_MAX_WEIGHT, "exceeded max weight");
+        PoolData storage pData = poolData[pool];
 
-        uData.voteForPools[pool] = UserPoolInfo({ weight: weight, vote: vote });
-    }
+        VeBalance memory oldVote = uData.voteForPools[pool].vote;
 
-    /// @dev post-condition: timestamp is in increasing order (for binary search)
-    function _addUserPoolCheckpoint(
-        address user,
-        address pool,
-        VeBalance memory vote
-    ) internal {
-        userPoolHistory[user][pool].push(vote);
+        // REMOVE OLD VOTE
+        if (oldVote.bias != 0) {
+            if (_isPoolActive(pool) && _isVoteActive(oldVote)) {
+                pData.totalVote = pData.totalVote.sub(oldVote);
+                pData.slopeChanges[oldVote.getExpiry()] -= oldVote.slope;
+            }
+            uData.totalVotedWeight -= uData.voteForPools[pool].weight;
+            delete uData.voteForPools[pool];
+        }
+
+        // ADD NEW VOTE
+        if (weight != 0) {
+            require(_isPoolActive(pool), "pool not active");
+
+            newVote = userPosition.convertToVeBalance(weight);
+
+            pData.totalVote = pData.totalVote.add(newVote);
+            pData.slopeChanges[newVote.getExpiry()] += newVote.slope;
+
+            uData.voteForPools[pool] = UserPoolData(weight, newVote);
+            uData.totalVotedWeight += weight;
+            require(
+                uData.totalVotedWeight <= VeBalanceLib.USER_VOTE_MAX_WEIGHT,
+                "exceeded max weight"
+            );
+        }
+
+        userPoolHistory[user][pool].push(newVote);
     }
 
     function _setAllPastEpochsAsFinalized() internal {
         uint128 wTime = WeekMath.getCurrentWeekStart();
-        while (wTime >= deployedWTime && isEpochFinalized[wTime] == false) {
-            isEpochFinalized[wTime] = true;
+        while (wTime > deployedWTime && weekData[wTime].isEpochFinalized == false) {
+            weekData[wTime].isEpochFinalized = true;
             wTime -= WEEK;
         }
     }
 
-    /// @notice check if a pool is votable on by checking the lastSlopeChangeAppliedAt time
-    function _isPoolVotable(address pool) internal view returns (bool) {
-        return poolInfo[pool].lastSlopeChangeAppliedAt != 0;
+    function _isPoolActive(address pool) internal view returns (bool) {
+        return allActivePools.contains(pool);
     }
 
     /// @notice check if a vote still counts by checking if the vote is not (x,0) (in case the

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../base-implementations/SCYBaseWithRewards.sol";
 import "../../../interfaces/IQiErc20.sol";
@@ -20,6 +20,7 @@ contract PendleQiTokenSCY is SCYBaseWithRewards, PendleQiTokenHelper {
         string memory _name,
         string memory _symbol,
         address _qiToken,
+        bool isUnderlyingNative,
         address _WAVAX,
         uint256 _initialExchangeRateMantissa
     )
@@ -30,7 +31,7 @@ contract PendleQiTokenSCY is SCYBaseWithRewards, PendleQiTokenHelper {
 
         qiToken = _qiToken;
 
-        underlying = _getUnderlyingOfQiToken();
+        underlying = isUnderlyingNative ? NATIVE : IQiErc20(qiToken).underlying();
         comptroller = IQiToken(qiToken).comptroller();
 
         QI = IBenQiComptroller(comptroller).qiAddress();
@@ -38,14 +39,6 @@ contract PendleQiTokenSCY is SCYBaseWithRewards, PendleQiTokenHelper {
 
         if (underlying != NATIVE) {
             _safeApprove(underlying, qiToken, type(uint256).max);
-        }
-    }
-
-    function _getUnderlyingOfQiToken() internal view returns (address) {
-        try IQiErc20(qiToken).underlying() returns (address res) {
-            return res;
-        } catch {
-            return NATIVE;
         }
     }
 
@@ -153,20 +146,44 @@ contract PendleQiTokenSCY is SCYBaseWithRewards, PendleQiTokenHelper {
                     MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @dev See {ISuperComposableYield-getBaseTokens}
-     */
-    function getBaseTokens() public view override returns (address[] memory res) {
+    function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
+        internal
+        view
+        override
+        returns (uint256 amountSharesOut)
+    {
+        if (tokenIn == qiToken) amountSharesOut = amountTokenToDeposit;
+        else amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
+    }
+
+    function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
+        internal
+        view
+        override
+        returns (uint256 amountTokenOut)
+    {
+        if (tokenOut == qiToken) amountTokenOut = amountSharesToRedeem;
+        else amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+    }
+
+    function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = qiToken;
         res[1] = underlying;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-isValidBaseToken}
-     */
-    function isValidBaseToken(address token) public view override returns (bool res) {
-        res = (token == underlying || token == qiToken);
+    function getTokensOut() public view virtual override returns (address[] memory res) {
+        res = new address[](2);
+        res[0] = qiToken;
+        res[1] = underlying;
+    }
+
+    function isValidTokenIn(address token) public view virtual override returns (bool) {
+        return token == qiToken || token == underlying;
+    }
+
+    function isValidTokenOut(address token) public view virtual override returns (bool) {
+        return token == qiToken || token == underlying;
     }
 
     function assetInfo()

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "./base/ActionSCYAndPTBase.sol";
 import "./base/ActionSCYAndPYBase.sol";
@@ -32,7 +32,46 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
             uint256 ptUsed
         )
     {
-        return _addLiquidity(receiver, market, scyDesired, ptDesired, minLpOut, true);
+        (netLpOut, scyUsed, ptUsed) = _addLiquidity(
+            receiver,
+            market,
+            scyDesired,
+            ptDesired,
+            minLpOut,
+            true
+        );
+        emit AddLiquidity(msg.sender, market, receiver, scyUsed, ptUsed, netLpOut);
+    }
+
+    function addLiquiditySinglePt(
+        address receiver,
+        address market,
+        uint256 netPtIn,
+        uint256 minLpOut,
+        ApproxParams memory guessPtSwapToScy
+    ) external returns (uint256 netLpOut) {
+        require(false, "NOT IMPLEMENTED");
+    }
+
+    function addLiquiditySingleScy(
+        address receiver,
+        address market,
+        uint256 netScyIn,
+        uint256 minLpOut,
+        ApproxParams memory guessPtReceivedFromScy
+    ) external returns (uint256 netLpOut) {
+        require(false, "NOT IMPLEMENTED");
+    }
+
+    function addLiquiditySingleRawToken(
+        address receiver,
+        address market,
+        uint256 netRawTokenIn,
+        uint256 minLpOut,
+        address[] calldata path,
+        ApproxParams memory guessPtReceivedFromScy
+    ) external returns (uint256 netLpOut) {
+        require(false, "NOT IMPLEMENTED");
     }
 
     /// @dev refer to the internal function
@@ -43,7 +82,44 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
         uint256 scyOutMin,
         uint256 ptOutMin
     ) external returns (uint256 netScyOut, uint256 netPtOut) {
-        return _removeLiquidity(receiver, market, lpToRemove, scyOutMin, ptOutMin, true);
+        (netScyOut, netPtOut) = _removeLiquidity(
+            receiver,
+            market,
+            lpToRemove,
+            scyOutMin,
+            ptOutMin,
+            true
+        );
+        emit RemoveLiquidity(msg.sender, market, receiver, lpToRemove, netPtOut, netScyOut);
+    }
+
+    function removeLiquiditySinglePt(
+        address receiver,
+        address market,
+        uint256 lpToRemove,
+        uint256 minPtOut,
+        ApproxParams memory guessPtOut
+    ) external returns (uint256 netPtOut) {
+        require(false, "NOT IMPLEMENTED");
+    }
+
+    function removeLiquiditySingleScy(
+        address receiver,
+        address market,
+        uint256 lpToRemove,
+        uint256 minScyOut
+    ) external returns (uint256 netScyOut) {
+        require(false, "NOT IMPLEMENTED");
+    }
+
+    function removeLiquiditySingleRawToken(
+        address receiver,
+        address market,
+        uint256 lpToRemove,
+        uint256 minRawTokenOut,
+        address[] memory path
+    ) external returns (uint256 netRawTokenOut) {
+        require(false, "NOT IMPLEMENTED");
     }
 
     /// @dev refer to the internal function
@@ -53,7 +129,8 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
         uint256 exactPtIn,
         uint256 minScyOut
     ) external returns (uint256 netScyOut) {
-        return _swapExactPtForScy(receiver, market, exactPtIn, minScyOut, true);
+        netScyOut = _swapExactPtForScy(receiver, market, exactPtIn, minScyOut, true);
+        emit SwapPtAndScy(msg.sender, market, receiver, exactPtIn.neg(), netScyOut.Int());
     }
 
     /// @dev refer to the internal function
@@ -64,7 +141,8 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
         uint256 maxPtIn,
         ApproxParams memory guessPtIn
     ) external returns (uint256 netPtIn) {
-        return _swapPtForExactScy(receiver, market, exactScyOut, maxPtIn, guessPtIn, true);
+        netPtIn = _swapPtForExactScy(receiver, market, exactScyOut, maxPtIn, guessPtIn, true);
+        emit SwapPtAndScy(msg.sender, market, receiver, netPtIn.neg(), exactScyOut.Int());
     }
 
     /// @dev refer to the internal function
@@ -74,7 +152,8 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
         uint256 exactPtOut,
         uint256 maxScyIn
     ) external returns (uint256 netScyIn) {
-        return _swapScyForExactPt(receiver, market, exactPtOut, maxScyIn, true);
+        netScyIn = _swapScyForExactPt(receiver, market, exactPtOut, maxScyIn, true);
+        emit SwapPtAndScy(msg.sender, market, receiver, exactPtOut.Int(), netScyIn.neg());
     }
 
     /// @dev refer to the internal function
@@ -85,7 +164,8 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
         uint256 minPtOut,
         ApproxParams memory guessPtOut
     ) external returns (uint256 netPtOut) {
-        return _swapExactScyForPt(receiver, market, exactScyIn, minPtOut, guessPtOut, true);
+        netPtOut = _swapExactScyForPt(receiver, market, exactScyIn, minPtOut, guessPtOut, true);
+        emit SwapPtAndScy(msg.sender, market, receiver, netPtOut.Int(), exactScyIn.neg());
     }
 
     /// @dev refer to the internal function
@@ -107,7 +187,15 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
         uint256 minRawTokenOut,
         address[] memory path
     ) external returns (uint256 netRawTokenOut) {
-        return _redeemScyToRawToken(receiver, SCY, netScyIn, minRawTokenOut, path, true);
+        netRawTokenOut = _redeemScyToRawToken(receiver, SCY, netScyIn, minRawTokenOut, path, true);
+        emit RedeemScyToRawToken(
+            msg.sender,
+            receiver,
+            SCY,
+            netScyIn,
+            path[path.length - 1],
+            netRawTokenOut
+        );
     }
 
     /// @dev refer to the internal function
@@ -118,7 +206,8 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
         uint256 minPyOut,
         address[] calldata path
     ) external returns (uint256 netPyOut) {
-        return _mintPyFromRawToken(receiver, YT, netRawTokenIn, minPyOut, path, true);
+        netPyOut = _mintPyFromRawToken(receiver, YT, netRawTokenIn, minPyOut, path, true);
+        emit MintPyFromRawToken(msg.sender, receiver, YT, path[0], netRawTokenIn, netPyOut);
     }
 
     /// @dev refer to the internal function
@@ -129,7 +218,35 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
         uint256 minRawTokenOut,
         address[] memory path
     ) external returns (uint256 netRawTokenOut) {
-        return _redeemPyToRawToken(receiver, YT, netPyIn, minRawTokenOut, path, true);
+        netRawTokenOut = _redeemPyToRawToken(receiver, YT, netPyIn, minRawTokenOut, path, true);
+        emit RedeemPyToRawToken(
+            msg.sender,
+            receiver,
+            YT,
+            netPyIn,
+            path[path.length - 1],
+            netRawTokenOut
+        );
+    }
+
+    function mintPyFromScy(
+        address receiver,
+        address YT,
+        uint256 netScyIn,
+        uint256 minPyOut
+    ) external returns (uint256 netPyOut) {
+        netPyOut = _mintPyFromScy(receiver, YT, netScyIn, minPyOut, true);
+        emit MintPyFromScy(msg.sender, receiver, YT, netScyIn, netPyOut);
+    }
+
+    function redeemPyToScy(
+        address receiver,
+        address YT,
+        uint256 netPyIn,
+        uint256 minScyOut
+    ) external returns (uint256 netScyOut) {
+        netScyOut = _redeemPyToScy(receiver, YT, netPyIn, minScyOut, true);
+        emit RedeemPyToScy(msg.sender, receiver, YT, netPyIn, netScyOut);
     }
 
     /// @dev refer to the internal function
@@ -141,16 +258,24 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
         address[] calldata path,
         ApproxParams memory guessPtOut
     ) external returns (uint256 netPtOut) {
-        return
-            _swapExactRawTokenForPt(
-                receiver,
-                market,
-                exactRawTokenIn,
-                minPtOut,
-                path,
-                guessPtOut,
-                true
-            );
+        netPtOut = _swapExactRawTokenForPt(
+            receiver,
+            market,
+            exactRawTokenIn,
+            minPtOut,
+            path,
+            guessPtOut,
+            true
+        );
+
+        emit SwapPtAndRawToken(
+            msg.sender,
+            market,
+            path[0],
+            receiver,
+            netPtOut.Int(),
+            exactRawTokenIn.neg()
+        );
     }
 
     /// @dev refer to the internal function
@@ -161,7 +286,22 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
         uint256 minRawTokenOut,
         address[] calldata path
     ) external returns (uint256 netRawTokenOut) {
-        return _swapExactPtForRawToken(receiver, market, exactPtIn, minRawTokenOut, path, true);
+        netRawTokenOut = _swapExactPtForRawToken(
+            receiver,
+            market,
+            exactPtIn,
+            minRawTokenOut,
+            path,
+            true
+        );
+        emit SwapPtAndRawToken(
+            msg.sender,
+            market,
+            path[path.length - 1],
+            receiver,
+            exactPtIn.neg(),
+            netRawTokenOut.Int()
+        );
     }
 
     function redeemDueInterestAndRewards(
