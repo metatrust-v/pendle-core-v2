@@ -9,8 +9,6 @@ import "../../../interfaces/ISAvax.sol";
 // Exchange rate of sAVAX -> AVAX increases over time, no additional rewards but has a 15day lock-up period with 2 day redemption period.
 // Yield Token -> sAVAX (Interest Bearing)
 
-// Additional step if want sAVAX -> deposit into Benqi -> earn more qi Token? (If collateral tokens -> will have additional interest on SAVAX as well - double level of interest) Check with Long/Greg
-
 contract PendleSAvaxSCY is SCYBase {
     address public immutable SAVAX;
 

@@ -5,7 +5,7 @@ import "../../base-implementations/SCYBaseWithRewards.sol";
 import "../../../interfaces/IQiErc20.sol";
 import "../../../interfaces/IQiAvax.sol";
 import "../../../interfaces/IBenQiComptroller.sol";
-import "../../../interfaces/IWETH.sol";
+import "../../../interfaces/IWAvax.sol";
 import "../../../interfaces/ISAvax.sol";
 
 import "./PendleQiTokenHelper.sol";
@@ -52,20 +52,38 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
      * The underlying yield token is qiToken (qiSAvax). If the base token deposited is underlying asset, the function
      * first convert those deposited SAvax into qiSAvax. Then the corresponding amount of shares is returned.
      *
+     * If the base token is AVAX, it will swap to SAvax which will then be deposited to QiSAvax.
+     *
+     * If the base token is WAVAX, it will unwrap to AVAX, then swap to SAvax which will be deposited to mint QiSAvax.
+     *
      * The exchange rate of qiToken (qiSAvax) to shares is 1:1
      */
-    function _deposit(address tokenIn, uint256 amount)
+    function _deposit(address tokenIn, uint256 amountDeposited)
         internal
         override
         returns (uint256 amountSharesOut)
     {
         if (tokenIn == QI_SAVAX) {
-            amountSharesOut = amount;
+            amountSharesOut = amountDeposited;
         } else {
+            uint256 qiMintAmount = amountDeposited;
+
+            if (tokenIn != SAVAX) {
+                if (tokenIn == WAVAX) {
+                    // Unwrap WAVAX into Native Avax token first
+                    uint256 preBalanceAvax = _selfBalance(NATIVE);
+                    IWAvax(WAVAX).withdraw(amountDeposited);
+                    qiMintAmount = _selfBalance(NATIVE) - preBalanceAvax;
+                }
+
+                // Using the accurate AVAX to be swapped for SAVAX (regardless from AVAX directly or unwrapped from WAVAX)
+                qiMintAmount = ISAvax(tokenIn).submit{ value: amountDeposited }();
+            }
+
             // tokenIn is underlying sAvax -> convert it into qiSAvax first
             uint256 preBalanceQiSAvax = _selfBalance(QI_SAVAX);
 
-            uint256 errCode = IQiErc20(QI_SAVAX).mint(amount);
+            uint256 errCode = IQiErc20(QI_SAVAX).mint(qiMintAmount);
             require(errCode == 0, "mint failed");
 
             amountSharesOut = _selfBalance(QI_SAVAX) - preBalanceQiSAvax;
@@ -75,7 +93,10 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
     /**
      * @dev See {SCYBase-_redeem}
      *
-     * The shares are redeemed into the same amount of qiTokens (qiSAvax). If `tokenOut` is the underlying asset sAvax,
+     * The shares are redeemed into the same amount of qiTokens (qiSAvax). If `tokenOut` is the underlying asset sAvax.
+     *
+     * Only SAvax or QiSAvax can be withdrawn.
+     *
      * the function also redeems said asset from the corresponding amount of qiToken (qiSAvax).
      */
     function _redeem(address tokenOut, uint256 amountSharesToRedeem)
@@ -131,7 +152,7 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
         IBenQiComptroller(comptroller).claimReward(0, holders, qiTokens, false, true);
         IBenQiComptroller(comptroller).claimReward(1, holders, qiTokens, false, true);
 
-        if (address(this).balance != 0) IWETH(WAVAX).deposit{ value: address(this).balance };
+        if (address(this).balance != 0) IWAvax(WAVAX).deposit{ value: address(this).balance };
     }
 
     /*///////////////////////////////////////////////////////////////
