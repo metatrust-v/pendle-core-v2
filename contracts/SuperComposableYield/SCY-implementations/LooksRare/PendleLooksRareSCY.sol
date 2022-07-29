@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../base-implementations/SCYBaseWithRewards.sol";
 import "../../../interfaces/LooksRare/ILooksRareToken.sol";
@@ -47,7 +47,7 @@ LooksrareToken -> ERC-20 Contract
 */
 
 abstract contract PendleLooksRareSCY is SCYBaseWithRewards {
-    address public immutable LOOKSRARE;
+    address public immutable LOOKS;
     address public immutable FEE_SHARING_SYSTEM;
     address public immutable WETH;
 
@@ -62,19 +62,19 @@ abstract contract PendleLooksRareSCY is SCYBaseWithRewards {
 
         FEE_SHARING_SYSTEM = _feeSharingSystem;
 
-        (LOOKSRARE, WETH) = _getUnderlyingAndRewardToken();
+        (LOOKS, WETH) = _getUnderlyingAndRewardToken();
 
-        _safeApprove(LOOKSRARE, FEE_SHARING_SYSTEM, type(uint256).max);
+        _safeApprove(LOOKS, FEE_SHARING_SYSTEM, type(uint256).max);
     }
 
     function _getUnderlyingAndRewardToken()
         internal
         view
-        returns (address looksrare, address weth)
+        returns (address looksToken, address weth)
     {
         IFeeSharingSystem FeeSharingSystem = IFeeSharingSystem(FEE_SHARING_SYSTEM);
 
-        looksrare = FeeSharingSystem.looksRareToken();
+        looksToken = FeeSharingSystem.looksRareToken();
         weth = FeeSharingSystem.rewardToken();
     }
 
@@ -85,7 +85,7 @@ abstract contract PendleLooksRareSCY is SCYBaseWithRewards {
     /**
      * @dev See {SCYBase-_deposit}
      *
-     * The underlying yield token is shares of LooksRare staking. Deposit should only accept LOOKS token and will based on the corresponding amount of shares topped up, shares to SCY will be 1:1.
+     * The underlying yield token is shares of LOOKS staking. Deposit should only accept LOOKS token and will based on the corresponding amount of shares topped up, shares to SCY will be 1:1.
      */
     function _deposit(address, uint256 amount)
         internal
@@ -176,19 +176,22 @@ abstract contract PendleLooksRareSCY is SCYBaseWithRewards {
         amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-getBaseTokens}
-     */
-    function getBaseTokens() public view override returns (address[] memory res) {
+    function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](1);
-        res[0] = LOOKSRARE;
+        res[0] = LOOKS;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-isValidBaseToken}
-     */
-    function isValidBaseToken(address token) public view override returns (bool res) {
-        res = (token == LOOKSRARE);
+    function getTokensOut() public view virtual override returns (address[] memory res) {
+        res = new address[](1);
+        res[0] = LOOKS;
+    }
+
+    function isValidTokenIn(address token) public view virtual override returns (bool) {
+        return token == LOOKS;
+    }
+
+    function isValidTokenOut(address token) public view virtual override returns (bool) {
+        return token == LOOKS;
     }
 
     function assetInfo()
@@ -200,6 +203,6 @@ abstract contract PendleLooksRareSCY is SCYBaseWithRewards {
             uint8 assetDecimals
         )
     {
-        return (AssetType.TOKEN, LOOKSRARE, IERC20Metadata(LOOKSRARE).decimals());
+        return (AssetType.TOKEN, LOOKS, IERC20Metadata(LOOKS).decimals());
     }
 }
