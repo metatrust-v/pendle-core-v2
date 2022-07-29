@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../../base-implementations/SCYBaseWithDynamicRewards.sol";
 import "../../../../interfaces/ConvexCurve/IBooster.sol";
@@ -194,26 +194,6 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         amountTokenOut = amountSharesToRedeem;
     }
 
-    function _previewDeposit(address, uint256 amountTokenToDeposit)
-        internal
-        view
-        virtual
-        override
-        returns (uint256 amountSharesOut)
-    {
-        amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
-    }
-
-    function _previewRedeem(address, uint256 amountSharesToRedeem)
-        internal
-        view
-        virtual
-        override
-        returns (uint256 amountTokenOut)
-    {
-        amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
-    }
-
     /*///////////////////////////////////////////////////////////////
                                EXCHANGE-RATE
     //////////////////////////////////////////////////////////////*/
@@ -250,20 +230,44 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
                     MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @dev See {ISuperComposableYield-getBaseTokens}
-     */
-    function getBaseTokens() public view virtual override returns (address[] memory res) {
+    function _previewDeposit(address, uint256 amountTokenToDeposit)
+        internal
+        view
+        virtual
+        override
+        returns (uint256 amountSharesOut)
+    {
+        amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
+    }
+
+    function _previewRedeem(address, uint256 amountSharesToRedeem)
+        internal
+        view
+        virtual
+        override
+        returns (uint256 amountTokenOut)
+    {
+        amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+    }
+
+    function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = CRV_LP_TOKEN;
         res[1] = W_CRV_LP_TOKEN;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-isValidBaseToken}
-     */
-    function isValidBaseToken(address token) public view virtual override returns (bool res) {
-        res = (token == CRV_LP_TOKEN || token == W_CRV_LP_TOKEN);
+    function getTokensOut() public view virtual override returns (address[] memory res) {
+        res = new address[](2);
+        res[0] = CRV_LP_TOKEN;
+        res[1] = W_CRV_LP_TOKEN;
+    }
+
+    function isValidTokenIn(address token) public view virtual override returns (bool) {
+        return token == CRV_LP_TOKEN || token == W_CRV_LP_TOKEN;
+    }
+
+    function isValidTokenOut(address token) public view virtual override returns (bool) {
+        return token == CRV_LP_TOKEN || token == W_CRV_LP_TOKEN;
     }
 
     function assetInfo()
@@ -275,10 +279,6 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
             uint8 assetDecimals
         )
     {
-        // Curve's pool can vary from 2 - 4 assets -> can create 3 different contracts for gas optimisation.
-        // Ask greg long and vu -> support base token of a-usdc ... and a-dai
-        // Should be liquidity instead of token:
-        // Tri-Curve LP -> Base Token can contain USDC, USDT and DAI -> if user used router and how does user use the router to get to SCY - use router -> HOW TO get pendle (To GET TO SCY) to swap into some stable tokens -> no way to convert a-USDC into SCY -> should support USDC DAI to get into SCY.
         return (AssetType.LIQUIDITY, CRV_LP_TOKEN, IERC20Metadata(CRV_LP_TOKEN).decimals());
     }
 }

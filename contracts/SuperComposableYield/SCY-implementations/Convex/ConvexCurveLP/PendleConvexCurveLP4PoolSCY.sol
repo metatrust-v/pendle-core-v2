@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "./PendleConvexCurveLPSCY.sol";
 
@@ -131,6 +131,7 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
             // Using expected amount of LP tokens to receive, calculated amount of shares (SCY) base on exchange rate
             amountSharesOut = (expectedAmount * 1e18) / exchangeRate();
         } else {
+            // CRV or CVX_CRV token will result in a 1:1 exchangeRate with SCY
             amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
         }
     }
@@ -150,6 +151,7 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
                 index
             );
         } else {
+            // CRV or CVX_CRV token will result in a 1:1 exchangeRate with SCY
             amountTokenOut = amountLpTokenToReceive;
         }
     }
@@ -172,7 +174,7 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
         }
     }
 
-    function getBaseTokens() public view override returns (address[] memory res) {
+    function getTokensIn() public view override returns (address[] memory res) {
         res = new address[](6);
         res[0] = CRV_LP_TOKEN;
         res[1] = W_CRV_LP_TOKEN;
@@ -182,7 +184,26 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
         res[5] = BASEPOOL_TOKEN_4;
     }
 
-    function isValidBaseToken(address token) public view override returns (bool res) {
+    function getTokensOut() public view override returns (address[] memory res) {
+        res = new address[](6);
+        res[0] = CRV_LP_TOKEN;
+        res[1] = W_CRV_LP_TOKEN;
+        res[2] = BASEPOOL_TOKEN_1;
+        res[3] = BASEPOOL_TOKEN_2;
+        res[4] = BASEPOOL_TOKEN_3;
+        res[5] = BASEPOOL_TOKEN_4;
+    }
+
+    function isValidTokenIn(address token) public view override returns (bool res) {
+        res = (token == CRV_LP_TOKEN ||
+            token == W_CRV_LP_TOKEN ||
+            token == BASEPOOL_TOKEN_1 ||
+            token == BASEPOOL_TOKEN_2 ||
+            token == BASEPOOL_TOKEN_3 ||
+            token == BASEPOOL_TOKEN_4);
+    }
+
+    function isValidTokenOut(address token) public view override returns (bool res) {
         res = (token == CRV_LP_TOKEN ||
             token == W_CRV_LP_TOKEN ||
             token == BASEPOOL_TOKEN_1 ||

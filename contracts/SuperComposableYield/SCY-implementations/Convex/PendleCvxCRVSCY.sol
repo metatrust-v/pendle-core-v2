@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../base-implementations/SCYBaseWithDynamicRewards.sol";
 import "../../../interfaces/ConvexCurve/ICrvDepositor.sol";
@@ -88,8 +88,6 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
     address public immutable CVX;
     address public immutable CVX_CRV;
 
-    
-
     constructor(
         string memory _name,
         string memory _symbol,
@@ -159,24 +157,6 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
         amountTokenOut = amountSharesToRedeem;
     }
 
-    function _previewDeposit(address, uint256 amountTokenToDeposit)
-        internal
-        pure
-        override
-        returns (uint256 amountSharesOut)
-    {
-        amountSharesOut = (amountTokenToDeposit * exchangeRate()) / 1e18;
-    }
-
-    function _previewRedeem(address, uint256 amountSharesToRedeem)
-        internal
-        pure
-        override
-        returns (uint256 amountTokenOut)
-    {
-        amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
-    }
-
     /*///////////////////////////////////////////////////////////////
                                EXCHANGE-RATE
     //////////////////////////////////////////////////////////////*/
@@ -212,20 +192,41 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
                     MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @dev See {ISuperComposableYield-getBaseTokens}
-     */
-    function getBaseTokens() public view override returns (address[] memory res) {
+    function _previewDeposit(address, uint256 amountTokenToDeposit)
+        internal
+        pure
+        override
+        returns (uint256 amountSharesOut)
+    {
+        amountSharesOut = (amountTokenToDeposit * exchangeRate()) / 1e18;
+    }
+
+    function _previewRedeem(address, uint256 amountSharesToRedeem)
+        internal
+        pure
+        override
+        returns (uint256 amountTokenOut)
+    {
+        amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+    }
+
+    function getTokensIn() public view override returns (address[] memory res) {
         res = new address[](2);
         res[0] = CRV;
         res[1] = CVX_CRV;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-isValidBaseToken}
-     */
-    function isValidBaseToken(address token) public view override returns (bool res) {
+    function getTokensOut() public view override returns (address[] memory res) {
+        res = new address[](1);
+        res[0] = CVX_CRV;
+    }
+
+    function isValidTokenIn(address token) public view override returns (bool res) {
         res = (token == CRV || token == CVX_CRV);
+    }
+
+    function isValidTokenOut(address token) public view override returns (bool res) {
+        res = (token == CVX_CRV);
     }
 
     function assetInfo()
