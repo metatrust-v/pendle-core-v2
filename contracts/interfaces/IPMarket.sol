@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "./IPPrincipalToken.sol";
@@ -7,17 +7,12 @@ import "./IPYieldToken.sol";
 import "../libraries/math/MarketMathCore.sol";
 
 interface IPMarket is IERC20Metadata {
-    event AddLiquidity(
-        address indexed receiver,
-        uint256 lpToAccount,
-        uint256 scyUsed,
-        uint256 ptUsed
-    );
+    event Mint(address indexed receiver, uint256 lpMinted, uint256 scyUsed, uint256 ptUsed);
 
-    event RemoveLiquidity(
+    event Burn(
         address indexed receiverScy,
         address indexed receiverPt,
-        uint256 lpRemoved,
+        uint256 lpBurned,
         uint256 scyToAccount,
         uint256 ptToAccount
     );

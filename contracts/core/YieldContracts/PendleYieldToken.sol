@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../interfaces/ISuperComposableYield.sol";
 import "../../interfaces/IPYieldToken.sol";
@@ -186,6 +186,7 @@ contract PendleYieldToken is
     function scyIndexCurrent() public returns (uint256 currentIndex) {
         currentIndex = Math.max(ISuperComposableYield(SCY).exchangeRate(), _scyIndexStored);
         _scyIndexStored = currentIndex.Uint128();
+        emit NewInterestIndex(currentIndex);
     }
 
     function scyIndexStored() public view returns (uint256) {
@@ -402,7 +403,7 @@ contract PendleYieldToken is
         address to,
         uint256
     ) internal override {
-        _setPostExpiryData();
+        if (isExpired()) _setPostExpiryData();
         _updateAndDistributeRewardsForTwo(from, to);
         _distributeInterestForTwo(from, to);
     }

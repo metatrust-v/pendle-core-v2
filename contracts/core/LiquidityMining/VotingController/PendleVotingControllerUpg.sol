@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "./VotingControllerStorageUpg.sol";
 import "../CelerAbstracts/CelerSenderUpg.sol";
@@ -73,6 +73,7 @@ contract PendleVotingControllerUpg is
         require(vePendle.balanceOf(user) > 0, "zero vependle balance");
 
         UserData storage uData = userData[user];
+        LockedPosition memory userPosition = _getUserVePendlePosition(user);
 
         for (uint256 i = 0; i < pools.length; ++i) {
             if (_isPoolActive(pools[i])) applyPoolSlopeChanges(pools[i]);
@@ -80,12 +81,12 @@ contract PendleVotingControllerUpg is
 
         for (uint256 i = 0; i < pools.length; ++i) {
             if (uData.voteForPools[pools[i]].weight <= weights[i])
-                _modifyVoteWeight(user, pools[i], weights[i]);
+                _modifyVoteWeight(user, pools[i], userPosition, weights[i]);
         }
 
         for (uint256 i = 0; i < pools.length; ++i) {
             if (uData.voteForPools[pools[i]].weight > weights[i])
-                _modifyVoteWeight(user, pools[i], weights[i]);
+                _modifyVoteWeight(user, pools[i], userPosition, weights[i]);
         }
     }
 
@@ -157,6 +158,8 @@ contract PendleVotingControllerUpg is
      * @dev state changes expected:
         - add to allActivePools & chainPools
         - set params in poolData
+     * @dev NOTE TO GOV: previous week's results should have been broadcasted prior to calling
+      this function
      */
     function addPool(uint64 chainId, address pool) external onlyGovernance {
         require(!_isPoolActive(pool), "pool already added");
@@ -173,6 +176,8 @@ contract PendleVotingControllerUpg is
         - update weekData (if any)
         - remove from allActivePools & chainPools
         - clear data in poolData
+     * @dev NOTE TO GOV: previous week's results should have been broadcasted prior to calling
+      this function
      */
     function removePool(address pool) external onlyGovernance {
         require(_isPoolActive(pool), "invalid pool");
@@ -205,6 +210,8 @@ contract PendleVotingControllerUpg is
      * @notice set new pendlePerSec
      * @dev no zero checks because gov may want to stop liquidity mining
      * @dev state changes expected: pendlePerSec is updated
+     * @dev NOTE TO GOV: This should be done mid-week, well before the next broadcast to avoid
+        race condition
      */
     function setPendlePerSec(uint128 newPendlePerSec) external onlyGovernance {
         pendlePerSec = newPendlePerSec;
@@ -237,12 +244,12 @@ contract PendleVotingControllerUpg is
 
         for (uint256 i = 0; i < length; ++i) {
             uint256 poolVotes = weekData[wTime].poolVotes[pools[i]];
-            uint256 pendlePerSec = (uint256(totalPendlePerSec) * poolVotes) / totalVotes;
+            uint256 pendlePerSec = (totalPendlePerSec * poolVotes) / totalVotes;
             totalPendleAmounts[i] = pendlePerSec * WEEK;
         }
 
         if (chainId == block.chainid) {
-            address gaugeController = sidechainContracts.get(uint256(chainId));
+            address gaugeController = sidechainContracts.get(chainId);
             IPGaugeControllerMainchain(gaugeController).updateVotingResults(
                 wTime,
                 pools,
@@ -255,32 +262,19 @@ contract PendleVotingControllerUpg is
         emit BroadcastResults(chainId, wTime, totalPendlePerSec);
     }
 
-    /**
-     * @notice return the corresponding voting power of an user given the weight. Basically his voting power
-        will be vePendle * weight / USER_VOTE_MAX_WEIGHT
-     * @notice governance will always has the vePendle equivalent to 1M PENDLE locked for MAX_LOCK_TIME
-     */
-    function _getVotingPowerByWeight(address user, uint64 weight)
+    function _getUserVePendlePosition(address user)
         internal
         view
-        virtual
-        override
-        returns (VeBalance memory res)
+        returns (LockedPosition memory userPosition)
     {
-        uint128 amount;
-        uint128 expiry;
-
         if (user == _governance()) {
-            amount = GOVERNANCE_PENDLE_VOTE;
-            expiry = WeekMath.getWeekStartTimestamp(uint128(block.timestamp) + MAX_LOCK_TIME);
+            (userPosition.amount, userPosition.expiry) = (
+                GOVERNANCE_PENDLE_VOTE,
+                WeekMath.getWeekStartTimestamp(uint128(block.timestamp) + MAX_LOCK_TIME)
+            );
         } else {
-            (amount, expiry) = vePendle.positionData(user);
+            (userPosition.amount, userPosition.expiry) = vePendle.positionData(user);
         }
-
-        (res.bias, res.slope) = VeBalanceLib.convertToVeBalance(
-            uint128((uint256(amount) * weight) / USER_VOTE_MAX_WEIGHT),
-            expiry
-        );
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyGovernance {}

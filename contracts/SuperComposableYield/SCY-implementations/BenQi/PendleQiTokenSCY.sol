@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../base-implementations/SCYBaseWithRewards.sol";
 import "../../../interfaces/IQiErc20.sol";
@@ -166,20 +166,24 @@ contract PendleQiTokenSCY is SCYBaseWithRewards, PendleQiTokenHelper {
         else amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-getBaseTokens}
-     */
-    function getBaseTokens() public view override returns (address[] memory res) {
+    function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = qiToken;
         res[1] = underlying;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-isValidBaseToken}
-     */
-    function isValidBaseToken(address token) public view override returns (bool res) {
-        res = (token == underlying || token == qiToken);
+    function getTokensOut() public view virtual override returns (address[] memory res) {
+        res = new address[](2);
+        res[0] = qiToken;
+        res[1] = underlying;
+    }
+
+    function isValidTokenIn(address token) public view virtual override returns (bool) {
+        return token == qiToken || token == underlying;
+    }
+
+    function isValidTokenOut(address token) public view virtual override returns (bool) {
+        return token == qiToken || token == underlying;
     }
 
     function assetInfo()

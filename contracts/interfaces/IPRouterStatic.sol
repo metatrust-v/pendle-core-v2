@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "./ISuperComposableYield.sol";
 import "../libraries/math/MarketMathCore.sol";
@@ -64,7 +64,8 @@ interface IPRouterStatic {
             address pt,
             address scy,
             MarketState memory state,
-            int256 impliedYield
+            int256 impliedYield,
+            uint256 exchangeRate
         );
 
     // ============= USER INFO =============

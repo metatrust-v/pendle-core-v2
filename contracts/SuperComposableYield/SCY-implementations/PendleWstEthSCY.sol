@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 import "../base-implementations/SCYBase.sol";
 import "../../interfaces/IWstETH.sol";
 
@@ -97,19 +97,23 @@ contract PendleWstEthSCY is SCYBase {
         else amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-getBaseTokens}
-     */
-    function getBaseTokens() public view virtual override returns (address[] memory res) {
+    function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = stETH;
         res[1] = wstETH;
     }
 
-    /**
-     * @dev See {ISuperComposableYield-isValidBaseToken}
-     */
-    function isValidBaseToken(address token) public view virtual override returns (bool) {
+    function getTokensOut() public view virtual override returns (address[] memory res) {
+        res = new address[](2);
+        res[0] = stETH;
+        res[1] = wstETH;
+    }
+
+    function isValidTokenIn(address token) public view virtual override returns (bool) {
+        return token == stETH || token == wstETH;
+    }
+
+    function isValidTokenOut(address token) public view virtual override returns (bool) {
         return token == stETH || token == wstETH;
     }
 

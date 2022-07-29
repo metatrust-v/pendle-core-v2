@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../../interfaces/IPGaugeController.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -101,7 +101,7 @@ abstract contract PendleGaugeControllerBaseUpg is IPGaugeController, Permissions
         epochRewardReceived[wTime] = true;
 
         for (uint256 i = 0; i < markets.length; ++i) {
-            _addRewardsToMarket(markets[i], uint128(pendleAmounts[i]));
+            _addRewardsToMarket(markets[i], pendleAmounts[i].Uint128());
         }
 
         emit ReceiveVotingResults(wTime, markets, pendleAmounts);

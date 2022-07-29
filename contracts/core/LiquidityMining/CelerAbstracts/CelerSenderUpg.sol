@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.13;
+pragma solidity 0.8.15;
 
 import "../../../interfaces/ICelerMessageBus.sol";
 import "../../../periphery/PermissionsV2Upg.sol";
@@ -29,6 +29,7 @@ abstract contract CelerSenderUpg is PermissionsV2Upg {
         assert(sidechainContracts.contains(chainId));
         address toAddr = sidechainContracts.get(chainId);
         uint256 fee = celerMessageBus.calcFee(message);
+        require(msg.value >= fee, "Insufficient celer fee");
         celerMessageBus.sendMessage{ value: fee }(toAddr, chainId, message);
     }
 
