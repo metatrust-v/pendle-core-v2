@@ -35,6 +35,19 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
         BASEPOOL_TOKEN_3 = _basePoolTokens[2];
     }
 
+    /**
+     * @dev See {SCYBase-_deposit}
+     *
+     * The underlying yield token is CRV_LP_TOKEN.
+     *
+     * Tokens accepted for deposit are CRV_LP_TOKEN, W_CRV_LP_TOKEN, or any of the base tokens of the curve pool.
+     *
+     * If any of the base pool tokens are deposited, it will first add liquidity to the curve pool and mint CRV_LP_TOKEN, which will then be deposited into convexCurveLP Pool which will automatically swap for W_CRV_LP_TOKEN and stake.
+     *
+     *Apart from accepting CRV_LP_TOKEN, Wrapped CRV_LP_TOKEN for staking in baseRewardsPool contract can be accepted also. Then the corresponding amount of shares is returned.
+     *
+     * The exchange rate of CRV_LP_TOKEN (or wrapped CRV_LP_TOKEN) to SCY is based on existing liquidity
+     */
     function _deposit(address tokenIn, uint256 amount)
         internal
         override
@@ -68,6 +81,17 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
         amountSharesOut = amount;
     }
 
+    /**
+     * @dev See {SCYBase-_redeem}
+     *
+     * The shares are redeemed into the same amount of CRV_LP_TOKEN or W_CRV_LP_TOKEN .
+     *
+     * Tokens eligible for withdrawal are CRV_LP_TOKEN, W_CRV_LP_TOKEN or any of the curve pool base tokens.
+     *
+     *If CRV_LP_TOKEN or W_CRV_LP_TOKEN is specified as the withdrawal token, amountSharesToRedeem will always correspond amountTokenOut.
+     *
+     * If any of the base curve pool tokens is specified as 'tokenOut', it will redeem the corresponding liquidity the LP token represents via the prevailing exchange rate.
+     */
     function _redeem(address tokenOut, uint256 amountSharesToRedeem)
         internal
         override
@@ -132,6 +156,17 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
         }
     }
 
+    /**
+     * @dev See {SCYBase-_redeem}
+     *
+     * The shares are redeemed into the same amount of CRV_LP_TOKEN or W_CRV_LP_TOKEN .
+     *
+     * Tokens eligible for withdrawal are CRV_LP_TOKEN, W_CRV_LP_TOKEN or any of the curve pool base tokens.
+     *
+     *If CRV_LP_TOKEN or W_CRV_LP_TOKEN is specified as the withdrawal token, amountSharesToRedeem will always correspond amountTokenOut.
+     *
+     * If any of the base curve pool tokens is specified as 'tokenOut', it will redeem the corresponding liquidity the LP token represents via the prevailing exchange rate.
+     */
     function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
         internal
         view
@@ -152,6 +187,9 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
         }
     }
 
+    /**
+     * @dev Check if the token address belongs to one of the base token of the curve pool, if so return the 'index' that corresponds with the curvePool contract.
+     */
     function checkIsCrvBasePoolToken(address token)
         internal
         view

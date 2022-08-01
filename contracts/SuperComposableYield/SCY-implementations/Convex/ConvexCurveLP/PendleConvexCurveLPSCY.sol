@@ -215,14 +215,14 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
 
     /**
      * @dev See {ISuperComposableYield-getRewardTokens}
-     *Most pools have a default CVX reward minted directly from the BOOSTER contract upon claiming rewards, however, some BaseReward Pools like CrvcvxETH have 'extraRewards' in CVX also -> Need to ensure there is NO DUPLICATED CVX Address inside.
+     *Refer to currentExtraRewards array of reward tokens specific to the curve pool.
      **/
     function _getRewardTokens() internal view override returns (address[] memory res) {
         return currentExtraRewards;
     }
 
     function _redeemExternalReward() internal override {
-        // Need to interact with the BaseRewardsPool Contract:
+        // Redeem all extra rewards from the curve pool
         IRewards(BASE_REWARDS).getReward();
     }
 
@@ -230,6 +230,9 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
                     MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @dev To be overriden by the pool type variation contract
+     */
     function _previewDeposit(address, uint256 amountTokenToDeposit)
         internal
         view
@@ -240,6 +243,9 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
     }
 
+    /**
+     * @dev To be overriden by the pool type variation contract
+     */
     function _previewRedeem(address, uint256 amountSharesToRedeem)
         internal
         view
@@ -250,22 +256,34 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
     }
 
+    /**
+     * @dev To be overriden by the pool type variation contract and include base tokens of the curve pool
+     */
     function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = CRV_LP_TOKEN;
         res[1] = W_CRV_LP_TOKEN;
     }
 
+    /**
+     * @dev To be overriden by the pool type variation contract and include base tokens of the curve pool
+     */
     function getTokensOut() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = CRV_LP_TOKEN;
         res[1] = W_CRV_LP_TOKEN;
     }
 
+    /**
+     * @dev To be overriden by the pool type variation contract and include base tokens of the curve pool
+     */
     function isValidTokenIn(address token) public view virtual override returns (bool) {
         return token == CRV_LP_TOKEN || token == W_CRV_LP_TOKEN;
     }
 
+    /**
+     * @dev To be overriden by the pool type variation contract and include base tokens of the curve pool
+     */
     function isValidTokenOut(address token) public view virtual override returns (bool) {
         return token == CRV_LP_TOKEN || token == W_CRV_LP_TOKEN;
     }
