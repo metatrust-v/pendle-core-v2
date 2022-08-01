@@ -67,7 +67,7 @@ contract PendleSAvaxSCY is SCYBase {
      *
      * The shares are redeemed into the same amount of sAVAX. `tokenOut` will only be in sAVAX where exchange rate will be 1:1 to SCY.
      */
-    function _redeem(address tokenOut, uint256 amountSharesToRedeem)
+    function _redeem(address, uint256 amountSharesToRedeem)
         internal
         virtual
         override
@@ -102,7 +102,7 @@ contract PendleSAvaxSCY is SCYBase {
         else amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
     }
 
-    function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
+    function _previewRedeem(address, uint256 amountSharesToRedeem)
         internal
         view
         override

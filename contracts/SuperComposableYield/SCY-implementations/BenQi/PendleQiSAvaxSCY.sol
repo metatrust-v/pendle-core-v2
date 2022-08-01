@@ -66,7 +66,7 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
     {
         if (tokenIn == QI_SAVAX) {
             amountSharesOut = amountDeposited;
-        } else if (tokenIn != SAVAX) {
+        } else if (tokenIn == WAVAX || tokenIn == NATIVE) {
             // If 'tokenIn' is WAVAX or NATIVE
             if (tokenIn == WAVAX) {
                 // Unwrap WAVAX into Native Avax token first
@@ -76,12 +76,29 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
             // Swap AVAX for SAVAX (regardless from AVAX directly or unwrapped from WAVAX), note since exchange rate of AVAX to SAVAX is NOT 1:1, retrieve amount of SAvax received after depositing NATIVE.
             uint256 sAvaxToMintQiSAvaxAmount = ISAvax(tokenIn).submit{ value: amountDeposited }();
 
-            // Deposit converted sAvax into BenQi.
-            amountSharesOut = _depositQiTokenIntoBenQi(sAvaxToMintQiSAvaxAmount, QI_SAVAX);
+            // Deposit (WAVAX or NATIVE) converted sAvax into BenQi.
+            amountSharesOut = _depositUnderlyingIntoBenQi(sAvaxToMintQiSAvaxAmount);
         } else {
             // If token deposited is sAvax, it will directly mint qiSAvax from BenQi using amountDeposited
-            amountSharesOut = _depositQiTokenIntoBenQi(amountDeposited, QI_SAVAX);
+            amountSharesOut = _depositUnderlyingIntoBenQi(amountDeposited);
         }
+    }
+
+    /**
+     * @dev Deposits underlying token (sAvax) into BenQi and returns the amount of qiSAvax or shares (since qiSAvax : shares == 1:1).
+     */
+    function _depositUnderlyingIntoBenQi(uint256 amountDeposited)
+        internal
+        returns (uint256 amountSharesDeposited)
+    {
+        IQiErc20 QiSAvax = IQiErc20(QI_SAVAX);
+
+        uint256 preBalanceQiSAvax = QiSAvax.balanceOf(address(this));
+
+        uint256 errCode = QiSAvax.mint(amountDeposited);
+        require(errCode == 0, "mint failed");
+
+        amountSharesDeposited = QiSAvax.balanceOf(address(this)) - preBalanceQiSAvax;
     }
 
     /**
@@ -181,10 +198,12 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
         override
         returns (uint256 amountTokenOut)
     {
-        if (tokenOut == QI_SAVAX)
+        if (tokenOut == QI_SAVAX) {
             amountTokenOut = amountSharesToRedeem;
-            // if 'tokenOut' is SAVAX
-        else amountTokenOut = (amountSharesToRedeem * _exchangeRateCurrentView()) / 1e18;
+        } else {
+            // if 'tokenOut' == SAVAX
+            amountTokenOut = (amountSharesToRedeem * _exchangeRateCurrentView()) / 1e18;
+        }
     }
 
     function getTokensIn() public view virtual override returns (address[] memory res) {
