@@ -198,7 +198,7 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
         override
         returns (uint256 amountSharesOut)
     {
-        amountSharesOut = (amountTokenToDeposit * exchangeRate()) / 1e18;
+        amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
     }
 
     function _previewRedeem(address, uint256 amountSharesToRedeem)
