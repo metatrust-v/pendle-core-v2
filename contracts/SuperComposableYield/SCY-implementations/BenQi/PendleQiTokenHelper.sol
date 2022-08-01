@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.15;
 
-import "../../../interfaces/IQiToken.sol";
+import "../../../interfaces/IQiErc20.sol";
 
 contract PendleQiTokenHelper {
     IQiToken private immutable qiToken;
@@ -70,5 +70,19 @@ contract PendleQiTokenHelper {
 
             return exchangeRate;
         }
+    }
+
+    function _depositQiTokenIntoBenQi(uint256 amountDeposited, address qiToken)
+        internal
+        returns (uint256 amountSharesDeposited)
+    {
+        IQiErc20 QiErc20 = IQiErc20(qiToken);
+
+        uint256 preBalanceQiToken = QiErc20.balanceOf(address(this));
+
+        uint256 errCode = QiErc20.mint(amountDeposited);
+        require(errCode == 0, "mint failed");
+
+        amountSharesDeposited = QiErc20.balanceOf(address(this)) - preBalanceQiToken;
     }
 }

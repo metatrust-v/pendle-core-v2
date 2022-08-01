@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import "../../base-implementations/SCYBase.sol";
 import "../../../interfaces/ISAvax.sol";
+import "../../../interfaces/IWAvax.sol";
 
 // BENQI Stake AVAX (sAVAX) -> 0x2b2C81e08f1Af8835a78Bb2A90AE924ACE0eA4bE
 
@@ -11,16 +12,20 @@ import "../../../interfaces/ISAvax.sol";
 
 contract PendleSAvaxSCY is SCYBase {
     address public immutable SAVAX;
+    address public immutable WAVAX;
 
     uint256 private constant BASE = 1e18;
 
     constructor(
         string memory _name,
         string memory _symbol,
-        address _sAvax
+        address _sAvax,
+        address _wAvax
     ) SCYBase(_name, _symbol, _sAvax) {
         require(_sAvax != address(0), "zero address");
+        require(_wAvax != address(0), "zero address");
         SAVAX = _sAvax;
+        WAVAX = _wAvax;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -30,8 +35,11 @@ contract PendleSAvaxSCY is SCYBase {
     /**
      * @dev See {SCYBase-_deposit}
      *
-     * The underlying yield token is sAvax. If the base token deposited is native AVAX, the function converts
-     * it into sAVAX first. Then the corresponding amount of shares is returned.
+     * The underlying yield token is sAvax. Tokens accepted for deposit are NATIVE, WVAX, and sAVAX.
+     *
+     *If the base token deposited is native AVAX, the function converts it into sAVAX first. Then the corresponding amount of shares is returned.
+     *
+     * If WAVAX is deposited, it will first unwrap to native AVAX and then convert into sAVAX.
      *
      * The exchange rate of sAVAX to shares is 1:1
      */
@@ -45,6 +53,11 @@ contract PendleSAvaxSCY is SCYBase {
         if (tokenIn == SAVAX) {
             amountSharesOut = amountDeposited;
         } else {
+            // Handle WAVAX or NATIVE Avax - If WAVAX need to unwrap to NATIVE Avax first then deposit.
+            if (tokenIn == WAVAX) {
+                IWAvax(WAVAX).withdraw(amountDeposited);
+            }
+
             amountSharesOut = ISAvax(tokenIn).submit{ value: amountDeposited }();
         }
     }
@@ -60,8 +73,6 @@ contract PendleSAvaxSCY is SCYBase {
         override
         returns (uint256 amountTokenOut)
     {
-        require(tokenOut == SAVAX, "only SAVAX allowed.");
-
         amountTokenOut = amountSharesToRedeem;
     }
 
@@ -102,9 +113,10 @@ contract PendleSAvaxSCY is SCYBase {
     }
 
     function getTokensIn() public view virtual override returns (address[] memory res) {
-        res = new address[](2);
+        res = new address[](3);
         res[0] = NATIVE;
         res[1] = SAVAX;
+        res[2] = WAVAX;
     }
 
     function getTokensOut() public view virtual override returns (address[] memory res) {
@@ -113,7 +125,7 @@ contract PendleSAvaxSCY is SCYBase {
     }
 
     function isValidTokenIn(address token) public view virtual override returns (bool) {
-        return token == NATIVE || token == SAVAX;
+        return (token == NATIVE || token == SAVAX || token == WAVAX);
     }
 
     function isValidTokenOut(address token) public view virtual override returns (bool) {

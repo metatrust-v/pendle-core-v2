@@ -49,8 +49,9 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
     /**
      * @dev See {SCYBase-_deposit}
      *
-     * The underlying yield token is qiToken (qiSAvax). If the base token deposited is underlying asset, the function
-     * first convert those deposited SAvax into qiSAvax. Then the corresponding amount of shares is returned.
+     * The underlying yield token is qiToken (qiSAvax). Tokens allowed for deposit are sAvax, qiSAvax, AVAX, WAVAX.
+     *
+     *If  the base token deposited is underlying asset, the function first convert those deposited SAvax into qiSAvax. Then the corresponding amount of shares is returned.
      *
      * If the base token is AVAX, it will swap to SAvax which will then be deposited to QiSAvax.
      *
@@ -65,28 +66,21 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
     {
         if (tokenIn == QI_SAVAX) {
             amountSharesOut = amountDeposited;
-        } else {
-            uint256 qiMintAmount = amountDeposited;
-
-            if (tokenIn != SAVAX) {
-                if (tokenIn == WAVAX) {
-                    // Unwrap WAVAX into Native Avax token first
-                    uint256 preBalanceAvax = _selfBalance(NATIVE);
-                    IWAvax(WAVAX).withdraw(amountDeposited);
-                    qiMintAmount = _selfBalance(NATIVE) - preBalanceAvax;
-                }
-
-                // Using the accurate AVAX to be swapped for SAVAX (regardless from AVAX directly or unwrapped from WAVAX)
-                qiMintAmount = ISAvax(tokenIn).submit{ value: amountDeposited }();
+        } else if (tokenIn != SAVAX) {
+            // If 'tokenIn' is WAVAX or NATIVE
+            if (tokenIn == WAVAX) {
+                // Unwrap WAVAX into Native Avax token first
+                IWAvax(WAVAX).withdraw(amountDeposited);
             }
 
-            // tokenIn is underlying sAvax -> convert it into qiSAvax first
-            uint256 preBalanceQiSAvax = _selfBalance(QI_SAVAX);
+            // Swap AVAX for SAVAX (regardless from AVAX directly or unwrapped from WAVAX), note since exchange rate of AVAX to SAVAX is NOT 1:1, retrieve amount of SAvax received after depositing NATIVE.
+            uint256 sAvaxToMintQiSAvaxAmount = ISAvax(tokenIn).submit{ value: amountDeposited }();
 
-            uint256 errCode = IQiErc20(QI_SAVAX).mint(qiMintAmount);
-            require(errCode == 0, "mint failed");
-
-            amountSharesOut = _selfBalance(QI_SAVAX) - preBalanceQiSAvax;
+            // Deposit converted sAvax into BenQi.
+            amountSharesOut = _depositQiTokenIntoBenQi(sAvaxToMintQiSAvaxAmount, QI_SAVAX);
+        } else {
+            // If token deposited is sAvax, it will directly mint qiSAvax from BenQi using amountDeposited
+            amountSharesOut = _depositQiTokenIntoBenQi(amountDeposited, QI_SAVAX);
         }
     }
 
@@ -126,8 +120,8 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
      * @dev It is the exchange rate of qiSAvax to native Avax token, this is calculated from sAvax to QiSAvax Exchange rate and then followed by converting that exchange rate relative to native Avax exchange rate.
      */
     function exchangeRate() public view override returns (uint256) {
-        uint256 sAvaxToQiSAvaxExchangeRate = _exchangeRateCurrentView();
-        return ISAvax(SAVAX).getPooledAvaxByShares(sAvaxToQiSAvaxExchangeRate);
+        uint256 qiSAvaxToSAvaxExchangeRate = _exchangeRateCurrentView();
+        return ISAvax(SAVAX).getPooledAvaxByShares(qiSAvaxToSAvaxExchangeRate);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -159,24 +153,38 @@ contract PendleQiSAvaxSCY is SCYBaseWithRewards, PendleQiTokenHelper {
                     MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
 
+    /*
+     * @dev 'tokenIn' accepted for deposit are NATIVE, WAVAX, SAVAX and QiSAVAX.
+     */
     function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
         internal
         view
         override
         returns (uint256 amountSharesOut)
     {
-        if (tokenIn == QI_SAVAX) amountSharesOut = amountTokenToDeposit;
-        else amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
+        if (tokenIn == QI_SAVAX) {
+            amountSharesOut = amountTokenToDeposit;
+        } else if (tokenIn == SAVAX) {
+            amountSharesOut = (amountTokenToDeposit * 1e18) / _exchangeRateCurrentView();
+        } else {
+            // NATIVE or WAVAX - use exchange rate from qiSAvax to underlying asset.
+            amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
+        }
     }
 
+    /*
+     * @dev 'tokenOut' accepted for deposit are SAVAX and QiSAVAX.
+     */
     function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
         internal
         view
         override
         returns (uint256 amountTokenOut)
     {
-        if (tokenOut == QI_SAVAX) amountTokenOut = amountSharesToRedeem;
-        else amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+        if (tokenOut == QI_SAVAX)
+            amountTokenOut = amountSharesToRedeem;
+            // if 'tokenOut' is SAVAX
+        else amountTokenOut = (amountSharesToRedeem * _exchangeRateCurrentView()) / 1e18;
     }
 
     function getTokensIn() public view virtual override returns (address[] memory res) {
