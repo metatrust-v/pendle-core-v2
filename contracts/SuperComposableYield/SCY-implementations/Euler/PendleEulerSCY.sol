@@ -10,7 +10,7 @@ Euler Finance (Money Markets) - Permissionless Lending/Borrowing Protocol for an
 External Rewards (EUL distribution) are only applicable for borrowers, hence no external rewards for SCY to deal with since only only lending feature is used.
 */
 
-contract PendleWstEthSCY is SCYBase {
+contract PendleEulerSCY is SCYBase {
     address public immutable underlying;
     address public immutable underlyingEToken;
     address public immutable EULER_MARKETS;
