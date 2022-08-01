@@ -117,8 +117,11 @@ contract PendleEulerSCY is SCYBase {
         override
         returns (uint256 amountSharesOut)
     {
-        if (tokenIn == underlyingEToken) amountSharesOut = amountTokenToDeposit;
-        else amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
+        if (tokenIn == underlyingEToken) {
+            amountSharesOut = amountTokenToDeposit;
+        } else {
+            amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
+        }
     }
 
     function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
@@ -127,8 +130,11 @@ contract PendleEulerSCY is SCYBase {
         override
         returns (uint256 amountTokenOut)
     {
-        if (tokenOut == underlyingEToken) amountTokenOut = amountSharesToRedeem;
-        else amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+        if (tokenOut == underlyingEToken) {
+            amountTokenOut = amountSharesToRedeem;
+        } else {
+            amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+        }
     }
 
     function getTokensIn() public view virtual override returns (address[] memory res) {
