@@ -79,6 +79,7 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
         } else if (tokenIn == CRV_LP_TOKEN) {
             IBooster(BOOSTER).deposit(PID, amount, true);
         } else {
+            // tokenIn is W_CRV_TOKEN, directly stake in rewards pool
             IRewards(BASE_REWARDS).stakeFor(address(this), amount);
         }
         amountSharesOut = amount;
@@ -101,8 +102,12 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
         returns (uint256 amountTokenOut)
     {
         (int128 index, bool isCrvBasePoolToken) = checkIsCrvBasePoolToken(tokenOut);
-
-        if (tokenOut != W_CRV_LP_TOKEN) {
+        if (tokenOut == W_CRV_LP_TOKEN) {
+            // Withdraw W_CRV_LP_TOKEN without claiming rewards
+            IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
+            amountTokenOut = amountSharesToRedeem;
+        } else {
+            //'tokenOut' is CRV_LP_TOKEN or one of the Curve Pool Base Tokens
             uint256 lpTokenPreBalance = _selfBalance(CRV_LP_TOKEN);
 
             // Withdraw and unwrap from W_CRV_LP_TOKEN to CRV_LP_TOKEN without claiming rewards
@@ -127,11 +132,7 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
                     msg.sender
                 );
             }
-        } else {
-            // Withdraw W_CRV_LP_TOKEN without claiming rewards
-            IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
         }
-        amountTokenOut = amountSharesToRedeem;
     }
 
     function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)

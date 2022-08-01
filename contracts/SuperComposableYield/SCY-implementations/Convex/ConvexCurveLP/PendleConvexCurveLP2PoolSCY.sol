@@ -96,7 +96,11 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
     {
         (int128 index, bool isCrvBasePoolToken) = checkIsCrvBasePoolToken(tokenOut);
 
-        if (tokenOut != W_CRV_LP_TOKEN) {
+        if (tokenOut == W_CRV_LP_TOKEN) {
+            // Withdraw W_CRV_LP_TOKEN without claiming rewards
+            IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
+            amountTokenOut = amountSharesToRedeem;
+        } else {
             uint256 lpTokenPreBalance = _selfBalance(CRV_LP_TOKEN);
 
             // Withdraw and unwrap from W_CRV_LP_TOKEN to CRV_LP_TOKEN without claiming rewards
@@ -121,11 +125,7 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
                     msg.sender
                 );
             }
-        } else {
-            // Withdraw W_CRV_LP_TOKEN without claiming rewards
-            IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
         }
-        amountTokenOut = amountSharesToRedeem;
     }
 
     function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
