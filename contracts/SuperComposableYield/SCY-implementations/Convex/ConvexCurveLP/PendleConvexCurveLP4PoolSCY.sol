@@ -59,24 +59,29 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
         if (isCrvBasePoolToken) {
             ICrvPool Crv4TokenPool = ICrvPool(BASE_CRV_POOL);
 
+            // Append amounts based on index of base Pool token in the curve Pool
             uint256[] memory amounts = new uint256[](4);
             amounts[0] = index == 0 ? amount : 0;
             amounts[1] = index == 1 ? amount : 0;
             amounts[2] = index == 2 ? amount : 0;
             amounts[3] = index == 3 ? amount : 0;
 
-            uint256 expectedAmount = Crv4TokenPool.calc_token_amount(amounts, true);
+            // Calculate expected LP Token to receive
+            uint256 expectedLpTokenReceive = Crv4TokenPool.calc_token_amount(amounts, true);
 
+            // Add liquidity to curve pool
             uint256 lpAmountReceived = Crv4TokenPool.add_liquidity(
                 amounts,
-                expectedAmount,
+                expectedLpTokenReceive,
                 address(this)
             );
 
+            // Deposit LP Token received into Convex Booster
             IBooster(BOOSTER).deposit(PID, lpAmountReceived, true);
 
             amountSharesOut = lpAmountReceived;
         } else if (tokenIn == CRV_LP_TOKEN) {
+            // Directly deposit LP Token into Convex Booster
             IBooster(BOOSTER).deposit(PID, amount, true);
         } else {
             // tokenIn is W_CRV_TOKEN, directly stake in rewards pool
@@ -151,10 +156,13 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
             amounts[2] = index == 2 ? amountTokenToDeposit : 0;
             amounts[3] = index == 3 ? amountTokenToDeposit : 0;
 
-            uint256 expectedAmount = ICrvPool(BASE_CRV_POOL).calc_token_amount(amounts, true);
+            uint256 expectedLpTokenReceive = ICrvPool(BASE_CRV_POOL).calc_token_amount(
+                amounts,
+                true
+            );
 
             // Using expected amount of LP tokens to receive, calculated amount of shares (SCY) base on exchange rate
-            amountSharesOut = (expectedAmount * 1e18) / exchangeRate();
+            amountSharesOut = (expectedLpTokenReceive * 1e18) / exchangeRate();
         } else {
             // CRV or CVX_CRV token will result in a 1:1 exchangeRate with SCY
             amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
