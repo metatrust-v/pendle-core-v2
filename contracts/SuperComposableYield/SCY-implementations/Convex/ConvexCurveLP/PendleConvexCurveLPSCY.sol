@@ -288,6 +288,37 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         return token == CRV_LP_TOKEN || token == W_CRV_LP_TOKEN;
     }
 
+    /**
+     * @dev To be overriden by the pool type variation contract and return the respective index based on the registered Index of the Curve Base Token.
+     */
+    function _getIndexOfCrvBaseToken(address) internal view virtual returns (uint256 index) {
+        index = 0;
+    }
+
+    /**
+     * @dev To be overriden by the pool type variation contract and return the true of token belongs to one of the registered Curve Base Pool Tokens, else return false.
+     */
+    function isCrvBaseToken(address) public view virtual returns (bool res) {
+        res = true;
+    }
+
+    /**
+     * @dev To be overriden by the pool type variation contract and return an array length that corresponds to the size of the curve pool variation (i.e. length of 2 if base pool size of 2).
+     *
+     * CrvTokenPool Contract requires an array with each respective index representing the registered index of the curveBaseToken inside the CurvePool to calculate the expected Amount of LP Token to receive upon adding liquidity and this is required before calling 'add_liquidity' to the curve Pool.
+     *
+     * Given that only 1 token can only be deposited in '_deposit()' function, this function will be called to assign the 'amount' to deposit to the respective index should the token specified be one of the CurveBasePoolToken.
+     */
+    function _assignDepositAmountToCrvBaseTokenIndex(address crvBaseToken, uint256 amountDeposited)
+        internal
+        view
+        virtual
+        returns (uint256[] memory res)
+    {
+        res = new uint256[](4);
+        res[_getIndexOfCrvBaseToken(crvBaseToken)] = amountDeposited;
+    }
+
     function assetInfo()
         external
         view

@@ -7,6 +7,7 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
     address public immutable BASEPOOL_TOKEN_1;
     address public immutable BASEPOOL_TOKEN_2;
     address public immutable BASEPOOL_TOKEN_3;
+    uint256 public constant BASEPOOL_TOKEN_LENGTH = 3;
 
     constructor(
         string memory _name,
@@ -53,22 +54,25 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
         override
         returns (uint256 amountSharesOut)
     {
-        (int128 index, bool isCrvBasePoolToken) = checkIsCrvBasePoolToken(tokenIn);
-        if (isCrvBasePoolToken) {
+        if (isCrvBaseToken(tokenIn)) {
+            // Check if 'tokenIn' is a CrvBaseToken
             ICrvPool Crv3TokenPool = ICrvPool(BASE_CRV_POOL);
 
             // Append amounts based on index of base Pool token in the curve Pool
-            uint256[] memory amounts = new uint256[](3);
-            amounts[0] = index == 0 ? amount : 0;
-            amounts[1] = index == 1 ? amount : 0;
-            amounts[2] = index == 2 ? amount : 0;
+            uint256[] memory amountsToDeposit = _assignDepositAmountToCrvBaseTokenIndex(
+                tokenIn,
+                amount
+            );
 
             // Calculate expected LP Token to receive
-            uint256 expectedLpTokenReceive = Crv3TokenPool.calc_token_amount(amounts, true);
+            uint256 expectedLpTokenReceive = Crv3TokenPool.calc_token_amount(
+                amountsToDeposit,
+                true
+            );
 
             // Add liquidity to curve pool
             uint256 lpAmountReceived = Crv3TokenPool.add_liquidity(
-                amounts,
+                amountsToDeposit,
                 expectedLpTokenReceive,
                 address(this)
             );
@@ -76,7 +80,7 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
             // Deposit LP Token received into Convex Booster
             IBooster(BOOSTER).deposit(PID, lpAmountReceived, true);
 
-            amountSharesOut = lpAmountReceived;
+            amountSharesOut = (lpAmountReceived * 1e18) / exchangeRate();
         } else if (tokenIn == CRV_LP_TOKEN) {
             // Deposit via Convex Booster contract
             IBooster(BOOSTER).deposit(PID, amount, true);
@@ -84,7 +88,8 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
             // Directly stake in BaseRewards contract
             IRewards(BASE_REWARDS).stakeFor(address(this), amount);
         }
-        amountSharesOut = amount;
+        // If 'tokenIn' is CRV_LP_TOKEN or W_CRV_LP_TOKEN, calculate shares LP token amount is entitled to
+        amountSharesOut = (amount * 1e18) / exchangeRate();
     }
 
     /**
@@ -103,10 +108,8 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
         override
         returns (uint256 amountTokenOut)
     {
-        (int128 index, bool isCrvBasePoolToken) = checkIsCrvBasePoolToken(tokenOut);
-
         if (tokenOut == W_CRV_LP_TOKEN) {
-            // Withdraw W_CRV_LP_TOKEN without claiming rewards
+            // If 'tokenOut' is wrapped CRV_LP_TOKEN, Withdraw W_CRV_LP_TOKEN without claiming rewards
             IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
             amountTokenOut = amountSharesToRedeem;
         } else {
@@ -119,13 +122,13 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
             // Determine the exact amount of LP Token received by finding the amount received after withdrawing
             uint256 lpAmountReceived = _selfBalance(CRV_LP_TOKEN) - lpTokenPreBalance;
 
-            if (isCrvBasePoolToken) {
+            if (isCrvBaseToken(tokenOut)) {
                 ICrvPool Crv3TokenPool = ICrvPool(BASE_CRV_POOL);
 
                 // Calculate expected amount of specified token out from Curve pool
                 uint256 expectedAmountTokenOut = Crv3TokenPool.calc_withdraw_one_coin(
                     lpAmountReceived,
-                    index
+                    Math.Int128(Math.Int(_getIndexOfCrvBaseToken(tokenOut)))
                 );
 
                 amountTokenOut = Crv3TokenPool.remove_liquidity_one_coin(
@@ -134,6 +137,9 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
                     0,
                     msg.sender
                 );
+            } else {
+                // If 'tokenOut' is CRV_LP_TOKEN
+                amountTokenOut = lpAmountReceived;
             }
         }
     }
@@ -144,24 +150,22 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
         override
         returns (uint256 amountSharesOut)
     {
-        (int128 index, bool isCrvBasePoolToken) = checkIsCrvBasePoolToken(tokenIn);
-
-        if (isCrvBasePoolToken) {
+        if (isCrvBaseToken(tokenIn)) {
             // Calculate expected amount of LpToken to receive
-            uint256[] memory amounts = new uint256[](3);
-            amounts[0] = index == 0 ? amountTokenToDeposit : 0;
-            amounts[1] = index == 1 ? amountTokenToDeposit : 0;
-            amounts[2] = index == 2 ? amountTokenToDeposit : 0;
+            uint256[] memory amountsToDeposit = _assignDepositAmountToCrvBaseTokenIndex(
+                tokenIn,
+                amountTokenToDeposit
+            );
 
             uint256 expectedLpTokenReceive = ICrvPool(BASE_CRV_POOL).calc_token_amount(
-                amounts,
+                amountsToDeposit,
                 true
             );
 
             // Using expected amount of LP tokens to receive, calculated amount of shares (SCY) base on exchange rate
             amountSharesOut = (expectedLpTokenReceive * 1e18) / exchangeRate();
         } else {
-            // CRV or CVX_CRV token will result in a 1:1 exchangeRate with SCY
+            // If 'tokenIn' is CRV_LP_TOKEN or W_CRV_LP_TOKEN, calculate shares LP token amount is entitled to
             amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
         }
     }
@@ -183,36 +187,17 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
         override
         returns (uint256 amountTokenOut)
     {
-        (int128 index, bool isCrvBasePoolToken) = checkIsCrvBasePoolToken(tokenOut);
-
         uint256 amountLpTokenToReceive = (amountSharesToRedeem * exchangeRate()) / 1e18;
-        if (isCrvBasePoolToken) {
+
+        if (isCrvBaseToken(tokenOut)) {
+            // If 'tokenOut' is a CrvBaseToken, withdraw liquidity from curvePool to return the base token back to user.
             amountTokenOut = ICrvPool(BASE_CRV_POOL).calc_withdraw_one_coin(
                 amountLpTokenToReceive,
-                index
+                Math.Int128(Math.Int(_getIndexOfCrvBaseToken(tokenOut)))
             );
         } else {
             // CRV or CVX_CRV token will result in a 1:1 exchangeRate with SCY
             amountTokenOut = amountLpTokenToReceive;
-        }
-    }
-
-    /**
-     * @dev Check if the token address belongs to one of the base token of the curve pool, if so return the 'index' that corresponds with the curvePool contract.
-     */
-    function checkIsCrvBasePoolToken(address token)
-        internal
-        view
-        returns (int128 index, bool result)
-    {
-        if (token == BASEPOOL_TOKEN_1) {
-            (index, result) = (0, true);
-        } else if (token == BASEPOOL_TOKEN_2) {
-            (index, result) = (1, true);
-        } else if (token == BASEPOOL_TOKEN_3) {
-            (index, result) = (2, true);
-        } else {
-            (index, result) = (0, false);
         }
     }
 
@@ -248,5 +233,51 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
             token == BASEPOOL_TOKEN_1 ||
             token == BASEPOOL_TOKEN_2 ||
             token == BASEPOOL_TOKEN_3);
+    }
+
+    /**
+     * @dev To be overriden by the pool type variation contract and return the respective index based on the registered Index of the Curve Base Token.
+     *
+     * This function will only be called once the token has been checked that it is one of the Curve Base Pool Tokens.
+     */
+    function _getIndexOfCrvBaseToken(address crvBaseToken)
+        internal
+        view
+        override
+        returns (uint256 index)
+    {
+        if (crvBaseToken == BASEPOOL_TOKEN_1) {
+            index = 0;
+        } else if (crvBaseToken == BASEPOOL_TOKEN_2) {
+            index = 1;
+        } else {
+            index = 2;
+        }
+    }
+
+    /**
+     * @dev To be overriden by the pool type variation contract and return the true of token belongs to one of the registered Curve Base Pool Tokens, else return false.
+     */
+    function isCrvBaseToken(address token) public view override returns (bool res) {
+        return (token == BASEPOOL_TOKEN_1 ||
+            token == BASEPOOL_TOKEN_2 ||
+            token == BASEPOOL_TOKEN_3);
+    }
+
+    /**
+     * @dev To be overriden by the pool type variation contract and return an array length that corresponds to the size of the curve pool variation (i.e. length of 2 if base pool size of 2).
+     *
+     * CrvTokenPool Contract requires an array with each respective index representing the registered index of the curveBaseToken inside the CurvePool to calculate the expected Amount of LP Token to receive upon adding liquidity and this is required before calling 'add_liquidity' to the curve Pool.
+     *
+     * Given that only 1 token can only be deposited in '_deposit()' function, this function will be called to assign the 'amount' to deposit to the respective index should the token specified be one of the CurveBasePoolToken.
+     */
+    function _assignDepositAmountToCrvBaseTokenIndex(address crvBaseToken, uint256 amountDeposited)
+        internal
+        view
+        override
+        returns (uint256[] memory res)
+    {
+        res = new uint256[](BASEPOOL_TOKEN_LENGTH);
+        res[_getIndexOfCrvBaseToken(crvBaseToken)] = amountDeposited;
     }
 }

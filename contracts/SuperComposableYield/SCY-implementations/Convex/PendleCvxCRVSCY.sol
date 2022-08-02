@@ -152,7 +152,6 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
         returns (uint256 amountTokenOut)
     {
         // Just an additional check since CRV will disappear after staking. Can be implemented in external function also.
-        require(tokenOut != CRV, "CRV cannot be withdrawn from Cvx-CRV");
         IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
         amountTokenOut = amountSharesToRedeem;
     }
