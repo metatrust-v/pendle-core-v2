@@ -155,43 +155,109 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     /**
      * @dev See {SCYBase-_deposit}
      *
-     * The underlying yield token is CRV_LP_TOKEN. Apart from accepting CRV_LP_TOKEN, Wrapped CRV_LP_TOKEN for staking in baseRewardsPool contract can be accepted also. Then the corresponding amount of shares is returned.
+     * The underlying yield token is CRV_LP_TOKEN.
+     *
+     * Tokens accepted for deposit are CRV_LP_TOKEN, W_CRV_LP_TOKEN, or any of the base tokens of the curve pool.
+     *
+     * If any of the base pool tokens are deposited, it will first add liquidity to the curve pool and mint CRV_LP_TOKEN, which will then be deposited into convexCurveLP Pool which will automatically swap for W_CRV_LP_TOKEN and stake.
+     *
+     *Apart from accepting CRV_LP_TOKEN, Wrapped CRV_LP_TOKEN for staking in baseRewardsPool contract can be accepted also. Then the corresponding amount of shares is returned.
      *
      * The exchange rate of CRV_LP_TOKEN (or wrapped CRV_LP_TOKEN) to SCY is based on existing liquidity
      */
     function _deposit(address tokenIn, uint256 amount)
         internal
-        virtual
         override
         returns (uint256 amountSharesOut)
     {
-        if (tokenIn == CRV_LP_TOKEN) {
+        if (isCrvBaseToken(tokenIn)) {
+            // Check if 'tokenIn' is a CrvBaseToken
+            ICrvPool CrvTokenPool = ICrvPool(BASE_CRV_POOL);
+
+            // Append amounts based on index of base Pool token in the curve Pool
+            uint256[] memory amountsToDeposit = _assignDepositAmountToCrvBaseTokenIndex(
+                tokenIn,
+                amount
+            );
+
+            // Calculate expected LP Token to receive
+            uint256 expectedLpTokenReceive = CrvTokenPool.calc_token_amount(
+                amountsToDeposit,
+                true
+            );
+
+            // Add liquidity to curve pool
+            uint256 lpAmountReceived = CrvTokenPool.add_liquidity(
+                amountsToDeposit,
+                expectedLpTokenReceive,
+                address(this)
+            );
+
+            // Deposit LP Token received into Convex Booster
+            IBooster(BOOSTER).deposit(PID, lpAmountReceived, true);
+
+            amountSharesOut = (lpAmountReceived * 1e18) / exchangeRate();
+        } else if (tokenIn == CRV_LP_TOKEN) {
+            // Deposit via Convex Booster contract
             IBooster(BOOSTER).deposit(PID, amount, true);
         } else {
+            // Directly stake in BaseRewards contract
             IRewards(BASE_REWARDS).stakeFor(address(this), amount);
         }
-        amountSharesOut = amount;
+        // If 'tokenIn' is CRV_LP_TOKEN or W_CRV_LP_TOKEN, calculate shares LP token amount is entitled to
+        amountSharesOut = (amount * 1e18) / exchangeRate();
     }
 
     /**
      * @dev See {SCYBase-_redeem}
      *
-     * The shares are redeemed into the same amount of CRV_LP_TOKEN or W_CRV_LP_TOKEN . Hence `tokenOut` will only be the underlying asset (wrapped or unwrapped version) in this case. Since there will NOT be any withdrawal fee from Convex Curve LP Staking, amountSharesToRedeem will always correspond amountTokenOut.
+     * The shares are redeemed into the same amount of CRV_LP_TOKEN or W_CRV_LP_TOKEN .
+     *
+     * Tokens eligible for withdrawal are CRV_LP_TOKEN, W_CRV_LP_TOKEN or any of the curve pool base tokens.
+     *
+     *If CRV_LP_TOKEN or W_CRV_LP_TOKEN is specified as the withdrawal token, amountSharesToRedeem will always correspond amountTokenOut.
+     *
+     * If any of the base curve pool tokens is specified as 'tokenOut', it will redeem the corresponding liquidity the LP token represents via the prevailing exchange rate.
      */
     function _redeem(address tokenOut, uint256 amountSharesToRedeem)
         internal
-        virtual
         override
         returns (uint256 amountTokenOut)
     {
-        if (tokenOut == CRV_LP_TOKEN) {
+        if (tokenOut == W_CRV_LP_TOKEN) {
+            // If 'tokenOut' is wrapped CRV_LP_TOKEN, Withdraw W_CRV_LP_TOKEN without claiming rewards
+            IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
+            amountTokenOut = amountSharesToRedeem;
+        } else {
+            //'tokenOut' is CRV_LP_TOKEN or one of the Curve Pool Base Tokens
+            uint256 lpTokenPreBalance = _selfBalance(CRV_LP_TOKEN);
+
             // Withdraw and unwrap from W_CRV_LP_TOKEN to CRV_LP_TOKEN without claiming rewards
             IRewards(BASE_REWARDS).withdrawAndUnwrap(amountSharesToRedeem, false);
-        } else {
-            // Withdraw W_CRV_LP_TOKEN without claiming rewards
-            IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
+
+            // Determine the exact amount of LP Token received by finding the amount received after withdrawing
+            uint256 lpAmountReceived = _selfBalance(CRV_LP_TOKEN) - lpTokenPreBalance;
+
+            if (isCrvBaseToken(tokenOut)) {
+                ICrvPool CrvTokenPool = ICrvPool(BASE_CRV_POOL);
+
+                // Calculate expected amount of specified token out from Curve pool
+                uint256 expectedAmountTokenOut = CrvTokenPool.calc_withdraw_one_coin(
+                    lpAmountReceived,
+                    Math.Int128(Math.Int(_getIndexOfCrvBaseToken(tokenOut)))
+                );
+
+                amountTokenOut = CrvTokenPool.remove_liquidity_one_coin(
+                    lpAmountReceived,
+                    Math.Int128(Math.Int(expectedAmountTokenOut)),
+                    0,
+                    msg.sender
+                );
+            } else {
+                // If 'tokenOut' is CRV_LP_TOKEN
+                amountTokenOut = lpAmountReceived;
+            }
         }
-        amountTokenOut = amountSharesToRedeem;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -233,27 +299,61 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     /**
      * @dev To be overriden by the pool type variation contract
      */
-    function _previewDeposit(address, uint256 amountTokenToDeposit)
+    function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
         internal
         view
-        virtual
         override
         returns (uint256 amountSharesOut)
     {
-        amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
+        if (isCrvBaseToken(tokenIn)) {
+            // Calculate expected amount of LpToken to receive
+            uint256[] memory amountsToDeposit = _assignDepositAmountToCrvBaseTokenIndex(
+                tokenIn,
+                amountTokenToDeposit
+            );
+
+            uint256 expectedLpTokenReceive = ICrvPool(BASE_CRV_POOL).calc_token_amount(
+                amountsToDeposit,
+                true
+            );
+
+            // Using expected amount of LP tokens to receive, calculated amount of shares (SCY) base on exchange rate
+            amountSharesOut = (expectedLpTokenReceive * 1e18) / exchangeRate();
+        } else {
+            // If 'tokenIn' is CRV_LP_TOKEN or W_CRV_LP_TOKEN, calculate shares LP token amount is entitled to
+            amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
+        }
     }
 
     /**
-     * @dev To be overriden by the pool type variation contract
+     * @dev See {SCYBase-_redeem}
+     *
+     * The shares are redeemed into the same amount of CRV_LP_TOKEN or W_CRV_LP_TOKEN .
+     *
+     * Tokens eligible for withdrawal are CRV_LP_TOKEN, W_CRV_LP_TOKEN or any of the curve pool base tokens.
+     *
+     *If CRV_LP_TOKEN or W_CRV_LP_TOKEN is specified as the withdrawal token, amountSharesToRedeem will always correspond amountTokenOut.
+     *
+     * If any of the base curve pool tokens is specified as 'tokenOut', it will redeem the corresponding liquidity the LP token represents via the prevailing exchange rate.
      */
-    function _previewRedeem(address, uint256 amountSharesToRedeem)
+    function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
         internal
         view
-        virtual
         override
         returns (uint256 amountTokenOut)
     {
-        amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+        uint256 amountLpTokenToReceive = (amountSharesToRedeem * exchangeRate()) / 1e18;
+
+        if (isCrvBaseToken(tokenOut)) {
+            // If 'tokenOut' is a CrvBaseToken, withdraw liquidity from curvePool to return the base token back to user.
+            amountTokenOut = ICrvPool(BASE_CRV_POOL).calc_withdraw_one_coin(
+                amountLpTokenToReceive,
+                Math.Int128(Math.Int(_getIndexOfCrvBaseToken(tokenOut)))
+            );
+        } else {
+            // CRV or CVX_CRV token will result in a 1:1 exchangeRate with SCY
+            amountTokenOut = amountLpTokenToReceive;
+        }
     }
 
     /**
