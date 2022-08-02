@@ -92,7 +92,6 @@ interface IPRouterStatic {
         uint256 ptDesired
     )
         external
-        view
         returns (
             uint256 netLpOut,
             uint256 scyUsed,
@@ -106,17 +105,15 @@ interface IPRouterStatic {
 
     function swapPtForScyStatic(address market, uint256 exactPtIn)
         external
-        view
         returns (uint256 netScyOut, uint256 netScyFee);
 
     function swapScyForPtStatic(address market, uint256 exactPtOut)
         external
-        view
         returns (uint256 netScyIn, uint256 netScyFee);
 
     // ============= OTHER HELPERS =============
 
-    function scyIndex(address market) external view returns (SCYIndex index);
+    function pyIndex(address market) external returns (PYIndex index);
 
     function getPY(address py) external view returns (address pt, address yt);
 

@@ -17,6 +17,7 @@ contract RouterStatic is IPRouterStatic, Initializable, UUPSUpgradeable, Ownable
     using Math for uint256;
     using Math for int256;
     using LogExpMath for int256;
+    using PYIndexLib for IPYieldToken;
 
     IPYieldContractFactory public immutable yieldContractFactory;
     IPMarketFactory public immutable marketFactory;
@@ -45,7 +46,7 @@ contract RouterStatic is IPRouterStatic, Initializable, UUPSUpgradeable, Ownable
     {
         (address yt, ) = getPY(py);
         IPYieldToken YT = IPYieldToken(yt);
-        exchangeRate = YT.scyIndexCurrent();
+        exchangeRate = YT.pyIndexCurrent();
         totalSupply = YT.totalSupply();
         address[] memory rewardTokens = YT.getRewardTokens();
         rewardIndexes = new RewardIndex[](rewardTokens.length);
@@ -139,7 +140,6 @@ contract RouterStatic is IPRouterStatic, Initializable, UUPSUpgradeable, Ownable
         uint256 ptDesired
     )
         external
-        view
         returns (
             uint256 netLpOut,
             uint256 scyUsed,
@@ -148,7 +148,7 @@ contract RouterStatic is IPRouterStatic, Initializable, UUPSUpgradeable, Ownable
     {
         MarketState memory state = IPMarket(market).readState(false);
         (, netLpOut, scyUsed, ptUsed) = state.addLiquidity(
-            scyIndex(market),
+            pyIndex(market),
             scyDesired,
             ptDesired,
             block.timestamp
@@ -166,12 +166,11 @@ contract RouterStatic is IPRouterStatic, Initializable, UUPSUpgradeable, Ownable
 
     function swapPtForScyStatic(address market, uint256 exactPtIn)
         external
-        view
         returns (uint256 netScyOut, uint256 netScyFee)
     {
         MarketState memory state = IPMarket(market).readState(false);
         (netScyOut, netScyFee) = state.swapExactPtForScy(
-            scyIndex(market),
+            pyIndex(market),
             exactPtIn,
             block.timestamp
         );
@@ -179,12 +178,11 @@ contract RouterStatic is IPRouterStatic, Initializable, UUPSUpgradeable, Ownable
 
     function swapScyForPtStatic(address market, uint256 exactPtOut)
         external
-        view
         returns (uint256 netScyIn, uint256 netScyFee)
     {
         MarketState memory state = IPMarket(market).readState(false);
         (netScyIn, netScyFee) = state.swapScyForExactPt(
-            scyIndex(market),
+            pyIndex(market),
             exactPtOut,
             block.timestamp
         );
@@ -192,10 +190,10 @@ contract RouterStatic is IPRouterStatic, Initializable, UUPSUpgradeable, Ownable
 
     // ============= OTHER HELPERS =============
 
-    function scyIndex(address market) public view returns (SCYIndex index) {
-        (ISuperComposableYield SCY, , ) = IPMarket(market).readTokens();
+    function pyIndex(address market) public returns (PYIndex index) {
+        (, , IPYieldToken YT) = IPMarket(market).readTokens();
 
-        return SCYIndexLib.newIndex(SCY);
+        return YT.newIndex();
     }
 
     function getPY(address py) public view returns (address pt, address yt) {
