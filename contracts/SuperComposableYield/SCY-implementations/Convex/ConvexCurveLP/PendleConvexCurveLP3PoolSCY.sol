@@ -34,6 +34,10 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
         BASEPOOL_TOKEN_1 = _basePoolTokens[0];
         BASEPOOL_TOKEN_2 = _basePoolTokens[1];
         BASEPOOL_TOKEN_3 = _basePoolTokens[2];
+
+        _safeApprove(BASEPOOL_TOKEN_1, BASE_CRV_POOL, type(uint256).max);
+        _safeApprove(BASEPOOL_TOKEN_2, BASE_CRV_POOL, type(uint256).max);
+        _safeApprove(BASEPOOL_TOKEN_3, BASE_CRV_POOL, type(uint256).max);
     }
 
     function getTokensIn() public view override returns (address[] memory res) {
@@ -70,11 +74,6 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
             token == BASEPOOL_TOKEN_3);
     }
 
-    /**
-     * @dev To be overriden by the pool type variation contract and return the respective index based on the registered Index of the Curve Base Token.
-     *
-     * This function will only be called once the token has been checked that it is one of the Curve Base Pool Tokens.
-     */
     function _getIndexOfCrvBaseToken(address crvBaseToken)
         internal
         view
@@ -96,7 +95,7 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
             token == BASEPOOL_TOKEN_3);
     }
 
-    function _assignDepositAmountToCrvBaseTokenIndex(address crvBaseToken, uint256 amountDeposited)
+    function _assignAmountsToCrvBaseIndex(address crvBaseToken, uint256 amountDeposited)
         internal
         view
         override
