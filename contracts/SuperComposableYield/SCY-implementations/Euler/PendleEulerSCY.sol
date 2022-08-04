@@ -12,24 +12,22 @@ External Rewards (EUL distribution) are only applicable for borrowers, hence no 
 
 contract PendleEulerSCY is SCYBase {
     address public immutable underlying;
-    address public immutable underlyingEToken;
-    address public immutable EULER_MARKETS;
+    address public immutable eToken;
 
     constructor(
         string memory _name,
         string memory _symbol,
-        address _underlyingEToken,
-        address _eulerMarkets
-    ) SCYBase(_name, _symbol, _underlyingEToken) {
-        require(_underlyingEToken != address(0), "zero address");
+        address _eToken,
+        address _eulerMarkets // pass eulerMarkets to double check both eToken & underlying
+    ) SCYBase(_name, _symbol, _eToken) {
+        require(_eToken != address(0), "zero address");
         require(_eulerMarkets != address(0), "zero address");
 
-        underlyingEToken = _underlyingEToken;
-        EULER_MARKETS = _eulerMarkets;
+        eToken = _eToken;
 
-        underlying = IEulerMarkets(EULER_MARKETS).eTokenToUnderlying(underlyingEToken);
+        underlying = IEulerMarkets(_eulerMarkets).eTokenToUnderlying(eToken);
 
-        _safeApprove(underlying, underlyingEToken, type(uint256).max);
+        _safeApprove(underlying, eToken, type(uint256).max);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -53,26 +51,26 @@ contract PendleEulerSCY is SCYBase {
         override
         returns (uint256 amountSharesOut)
     {
-        if (tokenIn == underlyingEToken) {
+        if (tokenIn == eToken) {
             amountSharesOut = amountDeposited;
         } else {
-            uint256 preBalanceEToken = _selfBalance(underlyingEToken);
+            uint256 preBalanceEToken = _selfBalance(eToken);
 
             // Deposit underlying tokens to convert into eTokens
-            IEulerEToken(underlyingEToken).deposit(0, amountDeposited);
+            IEulerEToken(eToken).deposit(0, amountDeposited);
 
             // Since 'deposit' function doesn't return the amount of eTokens minted, calculate change in EToken balance to find the amount of shares out
-            amountSharesOut = _selfBalance(underlyingEToken) - preBalanceEToken;
+            amountSharesOut = _selfBalance(eToken) - preBalanceEToken;
         }
     }
 
     /**
      * @dev See {SCYBase-_redeem}
      *
-     * The shares are redeemed into the same amount of underlying eTokens. 
+     * The shares are redeemed into the same amount of underlying eTokens.
      *
      If `tokenOut` is underlying base Token, the function also swaps back eTokens to underlying base tokens from the lending Pool based on the prevailing exchange rate.
-     * 
+     *
      * The exchange rate of shares to EToken is 1:1
      */
     function _redeem(address tokenOut, uint256 amountSharesToRedeem)
@@ -81,14 +79,14 @@ contract PendleEulerSCY is SCYBase {
         override
         returns (uint256 amountTokenOut)
     {
-        if (tokenOut == underlyingEToken) {
+        if (tokenOut == eToken) {
             amountTokenOut = amountSharesToRedeem;
         } else {
             // 'tokenOut' is underlying base token
             uint256 preBalanceUnderlying = _selfBalance(underlying);
 
             // Swap EToken for underlying base tokens
-            IEulerEToken(underlyingEToken).withdraw(0, amountSharesToRedeem);
+            IEulerEToken(eToken).withdraw(0, amountSharesToRedeem);
 
             // Since 'withdraw' function doesn't return the amount of underlying tokens swapped from eTokens, calculate change in underlying balance to find the amount of shares out
             amountTokenOut = _selfBalance(underlying) - preBalanceUnderlying;
@@ -104,7 +102,7 @@ contract PendleEulerSCY is SCYBase {
      * @dev It is the exchange rate of underlying EToken (since EToken to shares is 1:1) to underlying Base Token.
      */
     function exchangeRate() public view virtual override returns (uint256 currentRate) {
-        return IEulerEToken(underlyingEToken).convertBalanceToUnderlying(1e18);
+        return IEulerEToken(eToken).convertBalanceToUnderlying(1e18);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -117,7 +115,7 @@ contract PendleEulerSCY is SCYBase {
         override
         returns (uint256 amountSharesOut)
     {
-        if (tokenIn == underlyingEToken) {
+        if (tokenIn == eToken) {
             amountSharesOut = amountTokenToDeposit;
         } else {
             amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
@@ -130,7 +128,7 @@ contract PendleEulerSCY is SCYBase {
         override
         returns (uint256 amountTokenOut)
     {
-        if (tokenOut == underlyingEToken) {
+        if (tokenOut == eToken) {
             amountTokenOut = amountSharesToRedeem;
         } else {
             amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
@@ -140,21 +138,21 @@ contract PendleEulerSCY is SCYBase {
     function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = underlying;
-        res[1] = underlyingEToken;
+        res[1] = eToken;
     }
 
     function getTokensOut() public view virtual override returns (address[] memory res) {
         res = new address[](2);
         res[0] = underlying;
-        res[1] = underlyingEToken;
+        res[1] = eToken;
     }
 
     function isValidTokenIn(address token) public view virtual override returns (bool) {
-        return token == underlying || token == underlyingEToken;
+        return token == underlying || token == eToken;
     }
 
     function isValidTokenOut(address token) public view virtual override returns (bool) {
-        return token == underlying || token == underlyingEToken;
+        return token == underlying || token == eToken;
     }
 
     function assetInfo()
