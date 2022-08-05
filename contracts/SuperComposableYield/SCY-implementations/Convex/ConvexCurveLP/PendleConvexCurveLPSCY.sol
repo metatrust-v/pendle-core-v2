@@ -81,7 +81,8 @@ Miscellaneous Notes:
 
 operator -> Convex Finance BOOSTER Contract.
 
-[UNIVERSAL] BOOTER Contract (i.e. Deposit Contract) -> 0xb1Fb0BA0676A1fFA83882c7F4805408bA232C1fA
+[UNIVERSAL] BOOTER Contract (i.e. Deposit Contract) -> 
+0xF403C135812408BFbE8713b5A23a04b3D48AAE31
 
 CRV Token ERC20 Contract -> 0xD533a949740bb3306d119CC777fa900bA034cd52
 
@@ -116,8 +117,6 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         // To Change _yieldToken
         SCYBaseWithDynamicRewards(_name, _symbol, _wrappedLpToken, _currentExtraRewards)
     {
-        require(_convexBooster != address(0), "zero address");
-        require(_wrappedLpToken != address(0), "zero address");
         require(_cvx != address(0), "zero address");
         require(_baseCrvPool != address(0), "zero address");
 
@@ -182,7 +181,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
             // 'tokenIn' is a Curve Base Pool Token
 
             // Append amounts based on index of base Pool token in the curve Pool
-            uint256[] memory amountsToDeposit = _assignAmountsToCrvBaseIndex(tokenIn, amount);
+            uint256[] memory amountsToDeposit = _getBaseTokenAmounts(tokenIn, amount);
 
             // Add liquidity to curve pool
             amountSharesOut = ICrvPool(BASE_CRV_POOL).add_liquidity(
@@ -217,25 +216,19 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
             IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
             amountTokenOut = amountSharesToRedeem;
         } else {
-            //'tokenOut' is CRV_LP_TOKEN or one of the Curve Pool Base Tokens
-            uint256 lpTokenPreBalance = _selfBalance(CRV_LP_TOKEN);
-
             // Withdraw and unwrap from W_CRV_LP_TOKEN to CRV_LP_TOKEN without claiming rewards
             IRewards(BASE_REWARDS).withdrawAndUnwrap(amountSharesToRedeem, false);
 
-            // Determine the exact amount of LP Token received by finding the amount received after withdrawing
-            uint256 lpAmountReceived = _selfBalance(CRV_LP_TOKEN) - lpTokenPreBalance;
-
-            if (isCrvBaseToken(tokenOut)) {
+            if (_isBaseToken(tokenOut)) {
                 amountTokenOut = ICrvPool(BASE_CRV_POOL).remove_liquidity_one_coin(
-                    lpAmountReceived,
-                    Math.Int128(Math.Int(_getIndexOfCrvBaseToken(tokenOut))),
+                    amountSharesToRedeem,
+                    Math.Int128(_getBaseTokenIndex(tokenOut)),
                     0,
                     msg.sender
                 );
             } else {
-                // If 'tokenOut' is CRV_LP_TOKEN
-                amountTokenOut = lpAmountReceived;
+                // 'tokenOut' is CRV_LP_TOKEN
+                amountTokenOut = amountSharesToRedeem;
             }
         }
     }
@@ -287,13 +280,8 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
             amountSharesOut = amountTokenToDeposit;
         } else {
             // Calculate expected amount of LpToken to receive
-            uint256[] memory amountsToDeposit = _assignAmountsToCrvBaseIndex(
-                tokenIn,
-                amountTokenToDeposit
-            );
-
             amountSharesOut = ICrvPool(BASE_CRV_POOL).calc_token_amount(
-                amountsToDeposit,
+                _getBaseTokenAmounts(tokenIn, amountTokenToDeposit),
                 true // To deposit
             );
         }
@@ -314,7 +302,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
             // If 'tokenOut' is a CrvBaseToken, withdraw liquidity from curvePool to return the base token back to user.
             amountTokenOut = ICrvPool(BASE_CRV_POOL).calc_withdraw_one_coin(
                 amountLpTokenToReceive,
-                Math.Int128(Math.Int(_getIndexOfCrvBaseToken(tokenOut)))
+                Math.Int128(_getBaseTokenIndex(tokenOut))
             );
         }
     }
@@ -340,9 +328,14 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     function isValidTokenOut(address token) public view virtual override returns (bool);
 
     /**
+     * @dev To be overriden by the pool type variation contract and return the tokens length of the curve base pool based on the pool variation.
+     */
+    function getBaseTokenPoolLength() public view virtual returns (uint256 length);
+
+    /**
      * @dev To be overriden by the pool type variation contract and return the respective index based on the registered Index of the Curve Base Token.
      */
-    function _getIndexOfCrvBaseToken(address crvBaseToken)
+    function _getBaseTokenIndex(address crvBaseToken)
         internal
         view
         virtual
@@ -351,20 +344,23 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     /**
      * @dev To be overriden by the pool type variation contract and return the true of token belongs to one of the registered Curve Base Pool Tokens, else return false.
      */
-    function isCrvBaseToken(address token) public view virtual returns (bool res);
+    function _isBaseToken(address token) internal view virtual returns (bool res);
 
     /**
-     * @dev To be overriden by the pool type variation contract and return an array length that corresponds to the size of the curve pool variation (i.e. length of 2 if base pool size of 2).
+     * @dev Function returns an array length that corresponds to the size of the curve pool variation (i.e. length of 2 if base pool size of 2).
      *
      * CrvTokenPool Contract requires an array with each respective index representing the registered index of the curveBaseToken inside the CurvePool to calculate the expected Amount of LP Token to receive upon adding liquidity and this is required before calling 'add_liquidity' to the curve Pool.
      *
      * Given that only 1 token can only be deposited in '_deposit()' function, this function will be called to assign the 'amount' to deposit to the respective index should the token specified be one of the CurveBasePoolToken.
      */
-    function _assignAmountsToCrvBaseIndex(address crvBaseToken, uint256 amountDeposited)
+    function _getBaseTokenAmounts(address crvBaseToken, uint256 amountDeposited)
         internal
         view
-        virtual
-        returns (uint256[] memory res);
+        returns (uint256[] memory res)
+    {
+        res = new uint256[](getBaseTokenPoolLength());
+        res[_getBaseTokenIndex(crvBaseToken)] = amountDeposited;
+    }
 
     function assetInfo()
         external

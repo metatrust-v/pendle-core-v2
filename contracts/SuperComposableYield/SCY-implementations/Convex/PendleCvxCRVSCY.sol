@@ -11,9 +11,6 @@ CRV -> CvxCRV Staking:
 
 *One way conversion from CRV to cvxCRV and then staked. Unstaking can be done anytime. 
 
-
-
-
 Yield Generating Mechanism - Stake CRV (or cvxCRV directly) into cvxCRV and stake  
 
 Asset - CRV/cvxCRV Token
@@ -33,50 +30,13 @@ Exchange Rate - CRV/cvxCRV : SCY should be 1 : 1
 
 *Note: 
 
-1. Base rewards from Rewards Contract of crvCvx Staking Pool i.e. BaseRewardsPool.rewardToken -> Curve DAO Token
+1. Base rewards from Rewards Contract of cvxCrv Staking Pool i.e. BaseRewardsPool.rewardToken -> Curve DAO Token
 
-2. Extra Rewards from Rewards Contract of crvCvx Staking Pool i.e. BaseRewardsPool.extraRewards (length of 1 in this case, pointing to ANOTHER VirtualBalancePool Contract WITH NO EXTRA REWARDS FEATURE which also has a rewardToken).rewardToken -> 3Crv
+2. Extra Rewards from Rewards Contract of cvxCrv Staking Pool i.e. BaseRewardsPool.extraRewards (length of 1 in this case, pointing to ANOTHER VirtualBalancePool Contract WITH NO EXTRA REWARDS FEATURE which also has a rewardToken).rewardToken -> 3Crv
 
 
 3. Depositor Contract (CrvDepositor) -> Handles all the deposits, withdrawals and claiming of rewards.
 
-
-
-
-- deposit function: can do deposit(_amount) or depositAll() -> call Rewards Contract to stake
-
-
-**Under Rewards Contract:
-
-1. Withdraw And Unwrap -> BURN cvxcrvCVXETH (Curve cvx-eth Convex Deposit) -> Transfer CrvcvETH (lpToken) to Convex Finance: Voter proxy which is also Curve CVX-ETH -> Voter Proxy BURNS crvcvxETH GAUGE DEPOSIT (upon receiving the lptoken)  -> Voter Proxy then sends Curve cvxETH to BOOSTER -> BOOSTER returns Cruve cvxETH to owner;
-https://etherscan.io/tx/0x9462dc97a8a5e5028298c1a9504e256f02258e3f8dd6c9453844a83db33e91cb
-
-2. Claim Rewards -> Rewards Contract sends CRV token to user  + [BOOSTER contract] mints CVX to user + Additional Rewards transferred to user from 'ExtraRewards' virtualBalancePool contracts
-
-
-
-Weird Stuff: 
-
-1. Some 'extraRewards' in BaseRewardsPool denominate CVX as one of them i.e. cvxEth, while some don't i.e. sUSD.
-
-But both still receive CVX as rewards, so need to make sure _getRewardTokens do not have a duplicated address. CVX (and also CRV) will be hardcoded into the rewardTokens array since both are present in ALL Convex Curve LP Staking Pool.
-
-
-Miscellaneous Notes: 
-
-operator -> Convex Finance BOOSTER Contract.
-
-[UNIVERSAL] BOOTER Contract (i.e. Deposit Contract) -> 0xb1Fb0BA0676A1fFA83882c7F4805408bA232C1fA
-
-CRV Token ERC20 Contract -> 0xD533a949740bb3306d119CC777fa900bA034cd52
-
-cvxCRV Token ERC20 Contract -> 0x62b9c7356a2dc64a1969e19c23e4f579f9810aa7
-
-CVX Token ERC20 Contract -> 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B
-
-crv -> cvx Rewards Contract (BaseRewardsPool) -> 0x3Fe65692bfCD0e6CF84cB1E7d24108E434A7587e
-
-crvCVX Staking Deposit Contract (CrvDepositor) -> 0x8014595F2AB54cD7c604B00E9fb932176fDc86Ae
 
 */
 
@@ -96,7 +56,6 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
         address _baseRewards,
         address[] memory _currentExtraRewards
     ) SCYBaseWithDynamicRewards(_name, _symbol, _cvxCrv, _currentExtraRewards) {
-        require(_cvxCrv != address(0), "zero address");
         require(_cvx != address(0), "zero address");
         require(_baseRewards != address(0), "zero address");
 
@@ -133,7 +92,6 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
         returns (uint256 amountSharesOut)
     {
         if (tokenIn == CRV) {
-            // Why false, defer someone to lock up? -> Save gas since someone will call lock function periodically.
             ICrvDepositor(CRV_DEPOSITOR).deposit(amount, false, BASE_REWARDS);
         } else {
             IRewards(BASE_REWARDS).stakeFor(address(this), amount);
@@ -146,12 +104,11 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
      *
      * The shares are redeemed into the same amount of cvxCrv . Hence `tokenOut` will only be the underlying asset  in this case. Each time 'withdraw' is called from BaseRewardsPool contract, it will update extraRewards. Since there will NOT be any withdrawal fee from cvxCrv Staking, amountSharesToRedeem will always correspond amountTokenOut.
      */
-    function _redeem(address tokenOut, uint256 amountSharesToRedeem)
+    function _redeem(address, uint256 amountSharesToRedeem)
         internal
         override
         returns (uint256 amountTokenOut)
     {
-        // Just an additional check since CRV will disappear after staking. Can be implemented in external function also.
         IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
         amountTokenOut = amountSharesToRedeem;
     }
@@ -197,7 +154,7 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
         override
         returns (uint256 amountSharesOut)
     {
-        amountSharesOut = (amountTokenToDeposit * 1e18) / exchangeRate();
+        amountSharesOut = amountTokenToDeposit;
     }
 
     function _previewRedeem(address, uint256 amountSharesToRedeem)
@@ -206,7 +163,7 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
         override
         returns (uint256 amountTokenOut)
     {
-        amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+        amountTokenOut = amountSharesToRedeem;
     }
 
     function getTokensIn() public view override returns (address[] memory res) {

@@ -8,7 +8,6 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
     address public immutable BASEPOOL_TOKEN_2;
     address public immutable BASEPOOL_TOKEN_3;
     address public immutable BASEPOOL_TOKEN_4;
-    uint256 public constant BASEPOOL_TOKEN_LENGTH = 4;
 
     constructor(
         string memory _name,
@@ -81,7 +80,7 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
             token == BASEPOOL_TOKEN_4);
     }
 
-    function _getIndexOfCrvBaseToken(address crvBaseToken)
+    function _getBaseTokenIndex(address crvBaseToken)
         internal
         view
         override
@@ -98,20 +97,14 @@ contract PendleConvexCurveLP4PoolSCY is PendleConvexCurveLPSCY {
         }
     }
 
-    function isCrvBaseToken(address token) public view override returns (bool res) {
+    function _isBaseToken(address token) internal view override returns (bool res) {
         return (token == BASEPOOL_TOKEN_1 ||
             token == BASEPOOL_TOKEN_2 ||
             token == BASEPOOL_TOKEN_3 ||
             token == BASEPOOL_TOKEN_4);
     }
 
-    function _assignAmountsToCrvBaseIndex(address crvBaseToken, uint256 amountDeposited)
-        internal
-        view
-        override
-        returns (uint256[] memory res)
-    {
-        res = new uint256[](BASEPOOL_TOKEN_LENGTH);
-        res[_getIndexOfCrvBaseToken(crvBaseToken)] = amountDeposited;
+    function getBaseTokenPoolLength() public view override returns (uint256 length) {
+        length = 4;
     }
 }
