@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import "../../base-implementations/SCYBaseWithRewards.sol";
 import "../../../interfaces/ISJoe.sol";
+import "hardhat/console.sol";
 
 /*
 sJOE Staking
@@ -40,10 +41,10 @@ contract PendleSJoeSCY is SCYBaseWithRewards {
         string memory _name,
         string memory _symbol,
         address _sJOE
-    ) SCYBaseWithRewards(_name, _symbol, _sJOE) {
+    ) SCYBaseWithRewards(_name, _symbol, ISJoe(_sJOE).joe()) {
         require(_sJOE != address(0), "zero address");
         SJOE = _sJOE;
-        JOE = ISJoe(SJOE).joe();
+        JOE = yieldToken;
 
         _safeApprove(JOE, SJOE, type(uint256).max);
     }
@@ -130,7 +131,7 @@ contract PendleSJoeSCY is SCYBaseWithRewards {
                 MISC FUNCTIONS FOR METADATA
     //////////////////////////////////////////////////////////////*/
 
-    function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
+    function _previewDeposit(address, uint256 amountTokenToDeposit)
         internal
         view
         override
@@ -143,13 +144,13 @@ contract PendleSJoeSCY is SCYBaseWithRewards {
             exchangeRate();
     }
 
-    function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
+    function _previewRedeem(address, uint256 amountSharesToRedeem)
         internal
         pure
         override
         returns (uint256 amountTokenOut)
     {
-        amountTokenOut = (amountSharesToRedeem * exchangeRate()) / 1e18;
+        amountTokenOut = amountSharesToRedeem;
     }
 
     function getTokensIn() public view virtual override returns (address[] memory res) {
