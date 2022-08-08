@@ -3,6 +3,7 @@ pragma solidity 0.8.15;
 
 import "../../base-implementations/SCYBaseWithRewards.sol";
 import "../../../interfaces/ISJoe.sol";
+import "hardhat/console.sol";
 
 /*
 sJOE Staking
