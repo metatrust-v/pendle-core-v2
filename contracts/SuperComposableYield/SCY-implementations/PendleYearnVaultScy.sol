@@ -4,7 +4,7 @@ pragma solidity 0.8.15;
 import "../base-implementations/SCYBase.sol";
 import "../../interfaces/IYearnVault.sol";
 
-contract PendleYearnVaultSCY is SCYBase {
+contract PendleYearnVaultScy is SCYBase {
     address public immutable underlying;
     address public immutable yvToken;
     uint256 internal immutable yvTokenDecimals;
