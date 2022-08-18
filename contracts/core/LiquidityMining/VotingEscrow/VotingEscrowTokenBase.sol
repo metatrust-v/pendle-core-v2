@@ -25,6 +25,7 @@ abstract contract VotingEscrowTokenBase is IPVeToken {
 
     uint128 public constant WEEK = 1 weeks;
     uint128 public constant MAX_LOCK_TIME = 104 weeks;
+    uint128 public constant MIN_LOCK_TIME = 1 weeks;
 
     VeBalance internal _totalSupply;
     uint128 public lastSlopeChangeAppliedAt;
@@ -49,7 +50,7 @@ abstract contract VotingEscrowTokenBase is IPVeToken {
         return MiniHelpers.isCurrentlyExpired(positionData[user].expiry);
     }
 
-    function totalSupplyAndBlanaceCurrent(address user) external returns (uint128, uint128) {
-        return (balanceOf(user), totalSupplyCurrent());
+    function totalSupplyAndBalanceCurrent(address user) external returns (uint128, uint128) {
+        return (totalSupplyCurrent(), balanceOf(user));
     }
 }

@@ -71,6 +71,7 @@ contract VotingEscrowPendleMainchain is IPVotingEscrow, VotingEscrowTokenBase, C
         );
 
         require(newExpiry <= block.timestamp + MAX_LOCK_TIME, "max lock time exceeded");
+        require(newExpiry >= block.timestamp + MIN_LOCK_TIME, "insufficient lock time");
         require(positionData[user].expiry <= newExpiry, "new expiry must be after current expiry");
 
         uint128 newTotalAmountLocked = additionalAmountToLock + positionData[user].amount;
@@ -227,7 +228,7 @@ contract VotingEscrowPendleMainchain is IPVotingEscrow, VotingEscrowTokenBase, C
     }
 
     /// @notice broadcast position to all chains in chainIds
-    function _broadcastPosition(address user, uint256[] calldata chainIds) public payable {
+    function _broadcastPosition(address user, uint256[] calldata chainIds) internal {
         require(chainIds.length != 0, "empty chainIds");
 
         (VeBalance memory supply, uint128 wTime) = _applySlopeChange();

@@ -18,7 +18,7 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
     {}
 
     /// @dev refer to the internal function
-    function addLiquidity(
+    function addLiquidityDualScyAndPt(
         address receiver,
         address market,
         uint256 scyDesired,
@@ -32,7 +32,7 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
             uint256 ptUsed
         )
     {
-        (netLpOut, scyUsed, ptUsed) = _addLiquidity(
+        (netLpOut, scyUsed, ptUsed) = _addLiquidityDualScyAndPt(
             receiver,
             market,
             scyDesired,
@@ -40,7 +40,42 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
             minLpOut,
             true
         );
-        emit AddLiquidity(msg.sender, market, receiver, scyUsed, ptUsed, netLpOut);
+        emit AddLiquidityDualScyAndPt(msg.sender, market, receiver, scyUsed, ptUsed, netLpOut);
+    }
+
+    /// @dev refer to the internal function
+    function addLiquidityDualTokenAndPt(
+        address receiver,
+        address market,
+        address tokenIn,
+        uint256 tokenDesired,
+        uint256 ptDesired,
+        uint256 minLpOut
+    )
+        external
+        returns (
+            uint256 netLpOut,
+            uint256 tokenUsed,
+            uint256 ptUsed
+        )
+    {
+        (netLpOut, tokenUsed, ptUsed) = _addLiquidityDualTokenAndPt(
+            receiver,
+            market,
+            tokenIn,
+            tokenDesired,
+            ptDesired,
+            minLpOut
+        );
+        emit AddLiquidityDualTokenAndPt(
+            msg.sender,
+            market,
+            receiver,
+            tokenIn,
+            tokenDesired,
+            ptUsed,
+            netLpOut
+        );
     }
 
     function addLiquiditySinglePt(
@@ -74,22 +109,55 @@ contract ActionCore is IPActionCore, ActionSCYAndPTBase {
     }
 
     /// @dev refer to the internal function
-    function removeLiquidity(
+    function removeLiquidityDualScyAndPt(
         address receiver,
         address market,
         uint256 lpToRemove,
         uint256 scyOutMin,
         uint256 ptOutMin
     ) external returns (uint256 netScyOut, uint256 netPtOut) {
-        (netScyOut, netPtOut) = _removeLiquidity(
+        (netScyOut, netPtOut) = _removeLiquidityDualScyAndPt(
             receiver,
             market,
             lpToRemove,
             scyOutMin,
-            ptOutMin,
-            true
+            ptOutMin
         );
-        emit RemoveLiquidity(msg.sender, market, receiver, lpToRemove, netPtOut, netScyOut);
+        emit RemoveLiquidityDualScyAndPt(
+            msg.sender,
+            market,
+            receiver,
+            lpToRemove,
+            netPtOut,
+            netScyOut
+        );
+    }
+
+    /// @dev refer to the internal function
+    function removeLiquidityDualTokenAndPt(
+        address receiver,
+        address market,
+        uint256 lpToRemove,
+        address tokenOut,
+        uint256 tokenOutMin,
+        uint256 ptOutMin
+    ) external returns (uint256 netTokenOut, uint256 netPtOut) {
+        (netTokenOut, netPtOut) = _removeLiquidityDualTokenAndPt(
+            receiver,
+            market,
+            lpToRemove,
+            tokenOut,
+            tokenOutMin,
+            ptOutMin
+        );
+        emit RemoveLiquidityDualIbTokenAndPt(
+            msg.sender,
+            market,
+            receiver,
+            lpToRemove,
+            netPtOut,
+            netTokenOut
+        );
     }
 
     function removeLiquiditySinglePt(

@@ -5,7 +5,7 @@ import "../libraries/math/MarketApproxLib.sol";
 import "../libraries/kyberswap/KyberSwapHelper.sol";
 
 interface IPActionCore {
-    event AddLiquidity(
+    event AddLiquidityDualScyAndPt(
         address indexed caller,
         address indexed market,
         address indexed receiver,
@@ -14,13 +14,32 @@ interface IPActionCore {
         uint256 lpOut
     );
 
-    event RemoveLiquidity(
+    event AddLiquidityDualTokenAndPt(
+        address indexed caller,
+        address indexed market,
+        address indexed receiver,
+        address tokenIn,
+        uint256 tokenUsed,
+        uint256 ptUsed,
+        uint256 lpOut
+    );
+
+    event RemoveLiquidityDualScyAndPt(
+        address indexed caller,
+        address indexed market,
+        address receiver,
+        uint256 netlpIn,
+        uint256 amountPTOut,
+        uint256 amountSCYOut
+    );
+
+    event RemoveLiquidityDualIbTokenAndPt(
         address indexed caller,
         address indexed market,
         address receiver,
         uint256 lpIn,
         uint256 amountPTOut,
-        uint256 amountSCYOut
+        uint256 amountIbTokenOut
     );
 
     event SwapPtAndScy(
@@ -92,7 +111,7 @@ interface IPActionCore {
         uint256 netTokenOut
     );
 
-    function addLiquidity(
+    function addLiquidityDualScyAndPt(
         address receiver,
         address market,
         uint256 scyDesired,
@@ -103,6 +122,21 @@ interface IPActionCore {
         returns (
             uint256 netLpOut,
             uint256 scyUsed,
+            uint256 ptUsed
+        );
+
+    function addLiquidityDualTokenAndPt(
+        address receiver,
+        address market,
+        address tokenIn,
+        uint256 tokenDesired,
+        uint256 ptDesired,
+        uint256 minLpOut
+    )
+        external
+        returns (
+            uint256 netLpOut,
+            uint256 tokenUsed,
             uint256 ptUsed
         );
 
@@ -130,13 +164,22 @@ interface IPActionCore {
         TokenInput calldata input
     ) external returns (uint256 netLpOut);
 
-    function removeLiquidity(
+    function removeLiquidityDualScyAndPt(
         address receiver,
         address market,
         uint256 lpToRemove,
         uint256 scyOutMin,
         uint256 ptOutMin
     ) external returns (uint256 netScyOut, uint256 netPtOut);
+
+    function removeLiquidityDualTokenAndPt(
+        address receiver,
+        address market,
+        uint256 lpToRemove,
+        address tokenOut,
+        uint256 tokenOutMin,
+        uint256 ptOutMin
+    ) external returns (uint256 netTokenOut, uint256 netPtOut);
 
     function removeLiquiditySinglePt(
         address receiver,
