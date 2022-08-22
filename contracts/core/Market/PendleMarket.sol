@@ -280,7 +280,7 @@ contract PendleMarket is PendleERC20, PendleGauge, IPMarket {
     function observe(uint32[] memory secondsAgos)
         public
         view
-        returns (uint128[] memory lnImpliedRateCumulative)
+        returns (uint216[] memory lnImpliedRateCumulative)
     {
         return oracle.observe(uint32(block.timestamp), secondsAgos, _storage.lastLnImpliedRate);
     }

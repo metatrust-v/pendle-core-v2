@@ -58,7 +58,7 @@ interface IPMarket is IERC20Metadata, IPGauge {
     function observe(uint32[] memory secondsAgos)
         external
         view
-        returns (uint128[] memory lnImpliedRateCumulative);
+        returns (uint216[] memory lnImpliedRateCumulative);
 
     function consult(uint32 secondsAgo) external view returns (uint96 lnImpliedRateMean);
 
