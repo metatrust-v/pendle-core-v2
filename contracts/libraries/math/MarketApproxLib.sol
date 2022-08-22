@@ -27,6 +27,16 @@ struct ApproxParams {
     /// approximation, it will be used (and save all the guessing).
 }
 
+struct GuessData {
+    uint256 iterationsLeft;
+    uint256 currentPtGuess;
+    uint256 minPtGuess;
+    uint256 maxPtGuess;
+    uint256 guessOffchain;
+    uint256 largestGoodSlope;
+    uint256 eps;
+}
+
 // solhint-disable reason-string, ordering
 library MarketApproxLib {
     using Math for uint256;
@@ -97,6 +107,9 @@ library MarketApproxLib {
             );
             if (!vars.isSlopeNonNeg) {
                 approx.guessMax = vars.netPtInGuess;
+                unchecked {
+                    ++iter;
+                }
                 continue;
             }
 
@@ -202,6 +215,9 @@ library MarketApproxLib {
             );
             if (!vars.isSlopeNonNeg) {
                 approx.guessMax = vars.netPtInGuess - 1;
+                unchecked {
+                    ++iter;
+                }
                 continue;
             }
 
@@ -408,17 +424,14 @@ library MarketApproxLib {
     }
 
     struct VarsSwapPtToAddLiquidity {
-        uint256 netPtInGuess;
         int256 assetToAccount;
         int256 assetToReserve;
         uint256 netAssetOut;
         uint256 netPtRemaining;
         uint256 newTotalPt;
         uint256 newTotalAsset;
-        uint256 largestGoodSlope;
         uint256 assetNumerator;
         uint256 ptNumerator;
-        bool isSlopeNonNeg;
     }
 
     function approxSwapPtToAddLiquidity(
@@ -426,7 +439,7 @@ library MarketApproxLib {
         PYIndex index,
         uint256 netPtAdded,
         uint256 blockTime,
-        ApproxParams memory approx
+        ApproxParams calldata approx
     )
         internal
         pure
@@ -451,36 +464,30 @@ library MarketApproxLib {
 
         VarsSwapPtToAddLiquidity memory vars;
         MarketPreCompute memory comp = market.getMarketPreCompute(index, blockTime);
+        GuessData memory guessData = initializeGuessData(approx);
 
-        if (approx.guessMax == type(uint256).max) {
+        if (guessData.maxPtGuess == type(uint256).max) {
             // ensures that netPtIn is always valid and not greater than netPtAdded
-            approx.guessMax = Math.min(calcMaxPtIn(comp.totalAsset), netPtAdded);
+            guessData.maxPtGuess = Math.min(calcMaxPtIn(comp.totalAsset), netPtAdded);
         }
+        require(isValidGuessData(guessData), "invalid approx");
 
-        require(isValidApproxParams(approx), "invalid approx");
+        while (guessData.iterationsLeft != 0) {
+            makeNextGuess(guessData); // guessData.currentPtGuess = netPtIn
 
-        for (uint256 iter = 0; iter < approx.maxIteration; ) {
-            vars.netPtInGuess = getCurrentGuess(iter, approx);
-
-            (vars.isSlopeNonNeg, vars.largestGoodSlope) = updateSlope(
-                comp,
-                market.totalPt,
-                vars.netPtInGuess,
-                vars.largestGoodSlope
-            );
-            if (!vars.isSlopeNonNeg) {
-                approx.guessMax = vars.netPtInGuess;
+            if (!checkSlope(guessData, market.totalPt, comp)) {
+                guessData.maxPtGuess = guessData.currentPtGuess;
                 continue;
             }
 
             (vars.assetToAccount, vars.assetToReserve) = market.calcTrade(
                 comp,
-                vars.netPtInGuess.neg()
+                guessData.currentPtGuess.neg()
             );
 
             vars.netAssetOut = vars.assetToAccount.Uint();
-            vars.netPtRemaining = netPtAdded - vars.netPtInGuess;
-            vars.newTotalPt = market.totalPt.Uint() + vars.netPtInGuess;
+            vars.netPtRemaining = netPtAdded - guessData.currentPtGuess;
+            vars.newTotalPt = market.totalPt.Uint() + guessData.currentPtGuess;
             vars.newTotalAsset = (comp.totalAsset - vars.assetToAccount - vars.assetToReserve)
                 .Uint();
 
@@ -492,9 +499,9 @@ library MarketApproxLib {
             vars.assetNumerator = vars.netAssetOut * vars.newTotalPt;
             vars.ptNumerator = vars.netPtRemaining * vars.newTotalAsset;
 
-            if (Math.isAApproxB(vars.assetNumerator, vars.ptNumerator, approx.eps)) {
+            if (Math.isAApproxB(vars.assetNumerator, vars.ptNumerator, guessData.eps)) {
                 return (
-                    vars.netPtInGuess,
+                    guessData.currentPtGuess,
                     index.assetToScy(vars.netAssetOut),
                     index.assetToScy(vars.assetToReserve.Uint())
                 );
@@ -502,14 +509,10 @@ library MarketApproxLib {
 
             if (vars.assetNumerator <= vars.ptNumerator) {
                 // needs more asset --> swap more PT
-                approx.guessMin = vars.netPtInGuess + 1;
+                guessData.minPtGuess = guessData.currentPtGuess;
             } else {
                 // needs less asset --> swap less PT
-                approx.guessMax = vars.netPtInGuess - 1;
-            }
-
-            unchecked {
-                ++iter;
+                guessData.maxPtGuess = guessData.currentPtGuess;
             }
         }
         revert("approx fail");
@@ -517,7 +520,6 @@ library MarketApproxLib {
 
     struct VarsSwapScyToAddLiquidity {
         uint256 netAssetAdded;
-        uint256 ptOutGuess;
         int256 assetToAccount;
         int256 assetToReserve;
         uint256 netAssetIn;
@@ -533,7 +535,7 @@ library MarketApproxLib {
         PYIndex index,
         uint256 netScyAdded,
         uint256 blockTime,
-        ApproxParams memory approx
+        ApproxParams calldata approx
     )
         internal
         pure
@@ -557,33 +559,33 @@ library MarketApproxLib {
 
         VarsSwapScyToAddLiquidity memory vars;
         MarketPreCompute memory comp = market.getMarketPreCompute(index, blockTime);
-        if (approx.guessMax == type(uint256).max) {
-            approx.guessMax = calcMaxPtOut(market.totalPt, comp);
+        GuessData memory guessData = initializeGuessData(approx);
+
+        if (guessData.maxPtGuess == type(uint256).max) {
+            guessData.maxPtGuess = calcMaxPtOut(market.totalPt, comp);
         }
 
-        require(isValidApproxParams(approx), "invalid approx");
+        require(isValidGuessData(guessData), "invalid approx");
 
         vars.netAssetAdded = index.scyToAsset(netScyAdded);
 
-        for (uint256 iter = 0; iter < approx.maxIteration; ) {
-            vars.ptOutGuess = getCurrentGuess(iter, approx);
+        while (guessData.iterationsLeft != 0) {
+            makeNextGuess(guessData); // guessData.currentPtGuess = netPtOut
+
             (vars.assetToAccount, vars.assetToReserve) = market.calcTrade(
                 comp,
-                vars.ptOutGuess.Int()
+                guessData.currentPtGuess.Int()
             );
 
             vars.netAssetIn = vars.assetToAccount.abs();
 
             if (vars.netAssetIn > vars.netAssetAdded) {
-                approx.guessMax = vars.ptOutGuess - 1;
-                unchecked {
-                    ++iter;
-                }
+                guessData.maxPtGuess = guessData.currentPtGuess;
                 continue;
             }
 
             vars.netAssetRemaining = vars.netAssetAdded - vars.netAssetIn;
-            vars.newTotalPt = market.totalPt.Uint() - vars.ptOutGuess;
+            vars.newTotalPt = market.totalPt.Uint() - guessData.currentPtGuess;
             vars.newTotalAsset = (comp.totalAsset - vars.assetToAccount - vars.assetToReserve)
                 .Uint();
 
@@ -592,12 +594,12 @@ library MarketApproxLib {
             // which is equivalent to
             // ptOutGuess * newTotalAsset = netAssetRemaining * newTotalPt
 
-            vars.ptNumerator = vars.ptOutGuess * vars.newTotalAsset;
+            vars.ptNumerator = guessData.currentPtGuess * vars.newTotalAsset;
             vars.assetNumerator = vars.netAssetRemaining * vars.newTotalPt;
 
-            if (Math.isAApproxB(vars.ptNumerator, vars.assetNumerator, approx.eps)) {
+            if (Math.isAApproxB(vars.ptNumerator, vars.assetNumerator, guessData.eps)) {
                 return (
-                    vars.ptOutGuess,
+                    guessData.currentPtGuess,
                     index.assetToScy(vars.netAssetIn),
                     index.assetToScy(vars.assetToReserve.Uint())
                 );
@@ -605,14 +607,10 @@ library MarketApproxLib {
 
             if (vars.ptNumerator <= vars.assetNumerator) {
                 // needs more PT
-                approx.guessMin = vars.ptOutGuess + 1;
+                guessData.minPtGuess = guessData.currentPtGuess;
             } else {
                 // needs less PT
-                approx.guessMax = vars.ptOutGuess - 1;
-            }
-
-            unchecked {
-                ++iter;
+                guessData.maxPtGuess = guessData.currentPtGuess;
             }
         }
         revert("approx fail");
@@ -687,5 +685,62 @@ library MarketApproxLib {
             if (approx.guessMin > approx.guessMax) return approx.guessMax;
             return (approx.guessMin + approx.guessMax) / 2;
         }
+    }
+
+    function initializeGuessData(ApproxParams calldata approx)
+        internal
+        pure
+        returns (GuessData memory)
+    {
+        return
+            GuessData({
+                iterationsLeft: approx.maxIteration,
+                currentPtGuess: 0,
+                minPtGuess: approx.guessMin,
+                maxPtGuess: approx.guessMax,
+                guessOffchain: approx.guessOffchain,
+                largestGoodSlope: 0,
+                eps: approx.eps
+            });
+    }
+
+    /// Call only when guessData.iterationsLeft > 0
+    function makeNextGuess(GuessData memory guessData) internal pure {
+        unchecked {
+            --guessData.iterationsLeft;
+        }
+
+        if (guessData.guessOffchain != 0) {
+            guessData.currentPtGuess = guessData.guessOffchain;
+            guessData.guessOffchain = 0;
+        } else if (guessData.minPtGuess > guessData.maxPtGuess) {
+            guessData.currentPtGuess = guessData.maxPtGuess;
+        } else {
+            guessData.currentPtGuess = (guessData.minPtGuess + guessData.maxPtGuess) / 2;
+        }
+    }
+
+    /// Only checks if slope is good when currentPtGuess is ptInGuess (not out)
+    function checkSlope(
+        GuessData memory guessData,
+        int256 totalPt,
+        MarketPreCompute memory comp
+    ) internal pure returns (bool) {
+        if (guessData.currentPtGuess <= guessData.largestGoodSlope) {
+            return true;
+        }
+        // it's not guaranteed that the current slope is good
+        // we therefore have to recalculate the slope
+        int256 slope = slopeFactor(totalPt, guessData.currentPtGuess.neg(), comp);
+        if (slope >= 0) {
+            guessData.largestGoodSlope = guessData.currentPtGuess;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function isValidGuessData(GuessData memory guessData) internal pure returns (bool) {
+        return (guessData.minPtGuess <= guessData.maxPtGuess && guessData.eps <= Math.ONE);
     }
 }
