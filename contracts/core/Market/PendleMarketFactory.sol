@@ -8,12 +8,12 @@ import "../../interfaces/IPYieldContractFactory.sol";
 import "../../interfaces/IPMarketFactory.sol";
 
 import "../../libraries/helpers/SSTORE2Deployer.sol";
-import "../../periphery/PermissionsV2Upg.sol";
+import "../../periphery/BoringOwnable.sol";
 
 import "./PendleMarket.sol";
 import "../LiquidityMining/PendleGauge.sol";
 
-contract PendleMarketFactory is PermissionsV2Upg, Initializable, IPMarketFactory {
+contract PendleMarketFactory is BoringOwnable, Initializable, IPMarketFactory {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     struct MarketConfig {
@@ -41,13 +41,12 @@ contract PendleMarketFactory is PermissionsV2Upg, Initializable, IPMarketFactory
     MarketConfig public marketConfig;
 
     constructor(
-        address _governanceManager,
         address _yieldContractFactory,
         address _treasury,
         uint96 _lnFeeRateRoot,
         uint32 _rateOracleTimeWindow,
         uint8 _reserveFeePercent
-    ) PermissionsV2Upg(_governanceManager) {
+    ) {
         require(_yieldContractFactory != address(0), "zero address");
         yieldContractFactory = _yieldContractFactory;
         maxLnFeeRateRoot = uint256(LogExpMath.ln(int256((105 * Math.IONE) / 100))); // ln(1.05)
@@ -62,7 +61,7 @@ contract PendleMarketFactory is PermissionsV2Upg, Initializable, IPMarketFactory
         address newVePendle,
         address newGaugeController,
         bytes memory _marketCreationCode
-    ) external initializer onlyGovernance {
+    ) external initializer onlyOwner {
         require(newVePendle != address(0) && newGaugeController != address(0), "zero address");
         vePendle = newVePendle;
         gaugeController = newGaugeController;
@@ -104,25 +103,25 @@ contract PendleMarketFactory is PermissionsV2Upg, Initializable, IPMarketFactory
         return marketConfig.treasury;
     }
 
-    function setTreasury(address newTreasury) public onlyGovernance {
+    function setTreasury(address newTreasury) public onlyOwner {
         require(newTreasury != address(0), "zero address");
         marketConfig.treasury = newTreasury;
         _emitNewMarketConfigEvent();
     }
 
-    function setlnFeeRateRoot(uint96 newlnFeeRateRoot) public onlyGovernance {
+    function setlnFeeRateRoot(uint96 newlnFeeRateRoot) public onlyOwner {
         require(newlnFeeRateRoot <= maxLnFeeRateRoot, "invalid fee rate root");
         marketConfig.lnFeeRateRoot = newlnFeeRateRoot;
         _emitNewMarketConfigEvent();
     }
 
-    function setRateOracleTimeWindow(uint32 newRateOracleTimeWindow) public onlyGovernance {
+    function setRateOracleTimeWindow(uint32 newRateOracleTimeWindow) public onlyOwner {
         require(newRateOracleTimeWindow >= MIN_RATE_ORACLE_TIME_WINDOW, "invalid time window");
         marketConfig.rateOracleTimeWindow = newRateOracleTimeWindow;
         _emitNewMarketConfigEvent();
     }
 
-    function setReserveFeePercent(uint8 newReserveFeePercent) public onlyGovernance {
+    function setReserveFeePercent(uint8 newReserveFeePercent) public onlyOwner {
         require(newReserveFeePercent <= 100, "invalid reserve fee percent");
         marketConfig.reserveFeePercent = newReserveFeePercent;
         _emitNewMarketConfigEvent();

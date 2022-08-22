@@ -8,14 +8,14 @@ import "../interfaces/IPActionCore.sol";
 import "../interfaces/IPActionYT.sol";
 import "../interfaces/IPRouterStatic.sol";
 import "../interfaces/IPMarketSwapCallback.sol";
-import "../periphery/PermissionsV2Upg.sol";
+import "../periphery/BoringOwnable.sol";
 
 /// @dev this contract will be deployed behind an ERC1967 proxy
 /// calls to the ERC1967 proxy will be resolved at this contract, and proxied again to the
 /// corresponding implementation contracts
 
 // solhint-disable no-empty-blocks
-contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, PermissionsV2Upg {
+contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, BoringOwnable {
     address public immutable ACTION_CORE;
     address public immutable ACTION_YT;
     address public immutable ACTION_CALLBACK;
@@ -23,9 +23,8 @@ contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, PermissionsV2Upg
     constructor(
         address _ACTION_CORE,
         address _ACTION_YT,
-        address _ACTION_CALLBACK,
-        address _governanceManager
-    ) PermissionsV2Upg(_governanceManager) initializer {
+        address _ACTION_CALLBACK
+    ) initializer {
         require(
             _ACTION_CORE != address(0) &&
                 _ACTION_YT != address(0) &&
@@ -39,7 +38,6 @@ contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, PermissionsV2Upg
 
     function initialize() external initializer {
         __UUPSUpgradeable_init();
-        // no need to initialize PermissionsV2Upg
     }
 
     function getRouterImplementation(bytes4 sig) public view returns (address) {
@@ -84,7 +82,7 @@ contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, PermissionsV2Upg
         require(false, "invalid market sig");
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyGovernance {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function _implementation() internal view override returns (address) {
         return getRouterImplementation(msg.sig);
