@@ -28,17 +28,14 @@ contract PendleMarket is PendleERC20, PendleGauge, IPMarket {
     using MarketMathCore for MarketState;
     using SafeERC20 for IERC20;
     using PYIndexLib for IPYieldToken;
-    using OracleLib for OracleLib.Observation[65535];
+    using OracleLib for OracleLib.OracleData;
 
     struct MarketStorage {
         int128 totalPt;
         int128 totalScy;
         // 1 SLOT = 256 bits
         uint96 lastLnImpliedRate;
-        uint16 observationIndex;
-        uint16 observationCardinality;
-        uint16 observationCardinalityNext;
-        // 1 SLOT = 144 bits
+        // 96 bits
     }
 
     string private constant NAME = "Pendle Market";
@@ -54,8 +51,7 @@ contract PendleMarket is PendleERC20, PendleGauge, IPMarket {
     int256 public immutable initialAnchor;
 
     MarketStorage public _storage;
-
-    OracleLib.Observation[65535] public observations;
+    OracleLib.OracleData public oracle;
 
     modifier notExpired() {
         require(!isExpired(), "market expired");
@@ -76,8 +72,7 @@ contract PendleMarket is PendleERC20, PendleGauge, IPMarket {
         SCY = ISuperComposableYield(PT.SCY());
         YT = IPYieldToken(PT.YT());
 
-        (_storage.observationCardinality, _storage.observationCardinalityNext) = observations
-            .initialize(block.timestamp.Uint32());
+        oracle.initialize(uint32(block.timestamp));
 
         require(_scalarRoot > 0, "scalarRoot must be positive");
         scalarRoot = _scalarRoot;
@@ -246,48 +241,6 @@ contract PendleMarket is PendleERC20, PendleGauge, IPMarket {
     }
 
     /*///////////////////////////////////////////////////////////////
-                                ORACLE
-    //////////////////////////////////////////////////////////////*/
-
-    function observe(uint32[] memory secondsAgos)
-        public
-        view
-        returns (uint128[] memory lnImpliedRateCumulative)
-    {
-        return
-            observations.observe(
-                block.timestamp.Uint32(),
-                secondsAgos,
-                _storage.lastLnImpliedRate,
-                _storage.observationIndex,
-                _storage.observationCardinality
-            );
-    }
-
-    function consult(uint32 secondsAgo) external view returns (uint96 lnImpliedRateMean) {
-        require(secondsAgo != 0, "time range is zero");
-
-        uint32[] memory secondsAgos = new uint32[](2);
-        secondsAgos[0] = secondsAgo;
-        secondsAgos[1] = 0;
-
-        uint128[] memory lnImpliedRateCumulatives = observe(secondsAgos);
-
-        return
-            (uint256(lnImpliedRateCumulatives[1] - lnImpliedRateCumulatives[0]) / secondsAgo)
-                .Uint96();
-    }
-
-    function increaseObservationsCardinalityNext(uint16 cardinalityNext) external nonReentrant {
-        uint16 cardinalityNextOld = _storage.observationCardinalityNext;
-        uint16 cardinalityNextNew = observations.grow(cardinalityNextOld, cardinalityNext);
-        if (cardinalityNextOld != cardinalityNextNew) {
-            _storage.observationCardinalityNext = cardinalityNextNew;
-            emit IncreaseObservationCardinalityNext(cardinalityNextOld, cardinalityNextNew);
-        }
-    }
-
-    /*///////////////////////////////////////////////////////////////
                                 READ/WRITE STATES
     //////////////////////////////////////////////////////////////*/
 
@@ -315,15 +268,32 @@ contract PendleMarket is PendleERC20, PendleGauge, IPMarket {
         _storage.totalScy = market.totalScy.Int128();
         _storage.lastLnImpliedRate = market.lastLnImpliedRate.Uint96();
 
-        (_storage.observationIndex, _storage.observationCardinality) = observations.write(
-            _storage.observationIndex,
-            block.timestamp.Uint32(),
-            market.lastLnImpliedRate.Uint96(),
-            _storage.observationCardinality,
-            _storage.observationCardinalityNext
-        );
+        oracle.write(uint32(block.timestamp), market.lastLnImpliedRate.Uint96());
 
         emit UpdateImpliedRate(block.timestamp, market.lastLnImpliedRate);
+    }
+
+    /*///////////////////////////////////////////////////////////////
+                                ORACLE
+    //////////////////////////////////////////////////////////////*/
+
+    function observe(uint32[] memory secondsAgos)
+        public
+        view
+        returns (uint128[] memory lnImpliedRateCumulative)
+    {
+        return oracle.observe(uint32(block.timestamp), secondsAgos, _storage.lastLnImpliedRate);
+    }
+
+    function consult(uint32 secondsAgo) external view returns (uint96 lnImpliedRateMean) {
+        return oracle.consult(uint32(block.timestamp), secondsAgo, _storage.lastLnImpliedRate);
+    }
+
+    function increaseObservationsCardinalityNext(uint16 cardinalityNext) external nonReentrant {
+        uint16 cardinalityNextOld = oracle.cardinalityNext;
+        uint16 cardinalityNextNew = oracle.grow(cardinalityNext);
+        if (cardinalityNextOld != cardinalityNextNew)
+            emit IncreaseObservationCardinalityNext(cardinalityNextOld, cardinalityNextNew);
     }
 
     /*///////////////////////////////////////////////////////////////
