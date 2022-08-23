@@ -8,14 +8,14 @@ import "../interfaces/IPActionCore.sol";
 import "../interfaces/IPActionYT.sol";
 import "../interfaces/IPRouterStatic.sol";
 import "../interfaces/IPMarketSwapCallback.sol";
-import "../periphery/BoringOwnable.sol";
+import "../periphery/BoringOwnableUpgradeable.sol";
 
 /// @dev this contract will be deployed behind an ERC1967 proxy
 /// calls to the ERC1967 proxy will be resolved at this contract, and proxied again to the
 /// corresponding implementation contracts
 
 // solhint-disable no-empty-blocks
-contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, BoringOwnable {
+contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, BoringOwnableUpgradeable {
     address public immutable ACTION_CORE;
     address public immutable ACTION_YT;
     address public immutable ACTION_CALLBACK;
@@ -38,6 +38,7 @@ contract PendleRouter is Proxy, Initializable, UUPSUpgradeable, BoringOwnable {
 
     function initialize() external initializer {
         __UUPSUpgradeable_init();
+        __BoringOwnable_init();
     }
 
     function getRouterImplementation(bytes4 sig) public view returns (address) {
