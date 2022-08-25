@@ -237,7 +237,9 @@ library MarketMathCore {
             netPtToAccount
         );
 
-        netScyToAccount = index.assetToScy(netAssetToAccount);
+        netScyToAccount = netAssetToAccount < 0
+            ? index.assetToScyUp(netAssetToAccount)
+            : index.assetToScy(netAssetToAccount);
         netScyToReserve = index.assetToScy(netAssetToReserve);
 
         /// ------------------------------------------------------------
