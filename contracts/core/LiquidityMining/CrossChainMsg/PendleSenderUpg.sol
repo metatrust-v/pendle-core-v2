@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.15;
 
-import "../../../interfaces/ICelerMessageBus.sol";
+import "../../../interfaces/IPSendEndpoint.sol";
 import "../../../periphery/BoringOwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
@@ -11,10 +11,10 @@ import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 /// - its constructor only sets immutable variables
 /// - it has storage gaps for safe addition of future variables
 /// - it inherits only upgradable contract
-abstract contract CelerSenderUpg is BoringOwnableUpgradeable {
+abstract contract PendleSenderUpg is BoringOwnableUpgradeable {
     using EnumerableMap for EnumerableMap.UintToAddressMap;
 
-    ICelerMessageBus public celerMessageBus;
+    IPSendEndpoint public immutable pendleMsgSendEndpoint;
 
     // destinationContracts mapping contains one address for each chainId only
     EnumerableMap.UintToAddressMap internal destinationContracts;
@@ -28,22 +28,18 @@ abstract contract CelerSenderUpg is BoringOwnableUpgradeable {
         }
     }
 
-    constructor() {}
-
-    function setCelerMessageBus(address _celerMessageBus) external onlyOwner {
-        celerMessageBus = ICelerMessageBus(_celerMessageBus);
+    constructor(address _pendleMsgSendEndpoint) {
+        pendleMsgSendEndpoint = IPSendEndpoint(_pendleMsgSendEndpoint);
     }
 
     function _sendMessage(uint256 chainId, bytes memory message) internal {
         assert(destinationContracts.contains(chainId));
         address toAddr = destinationContracts.get(chainId);
-        uint256 fee = celerMessageBus.calcFee(message);
+        uint256 fee = pendleMsgSendEndpoint.calcFee(toAddr, chainId, message);
         // LM contracts won't hold ETH on its own so this is fine
         require(address(this).balance >= fee, "Insufficient celer fee");
-        celerMessageBus.sendMessage{ value: fee }(toAddr, chainId, message);
+        pendleMsgSendEndpoint.sendMessage{ value: fee }(toAddr, chainId, message);
     }
-
-    function _afterAddDestinationContract(address addr, uint256 chainId) internal virtual {}
 
     function addDestinationContract(address _address, uint256 _chainId)
         external
@@ -67,4 +63,6 @@ abstract contract CelerSenderUpg is BoringOwnableUpgradeable {
             (chainIds[i], addrs[i]) = destinationContracts.at(i);
         }
     }
+
+    function _afterAddDestinationContract(address addr, uint256 chainId) internal virtual {}
 }

@@ -2,18 +2,23 @@
 pragma solidity 0.8.15;
 
 import "./PendleGaugeControllerBaseUpg.sol";
-import "../CelerAbstracts/CelerReceiverUpg.sol";
+import "../CrossChainMsg/PendleReceiverUpg.sol";
 
 // solhint-disable no-empty-blocks
 
 /// This contract is upgradable because
 /// - its constructor only sets immutable variables
 /// - it inherits only upgradable contract
-contract PendleGaugeControllerSidechainUpg is PendleGaugeControllerBaseUpg, CelerReceiverUpg {
+contract PendleGaugeControllerSidechainUpg is PendleGaugeControllerBaseUpg, PendleReceiverUpg {
     constructor(
         address _pendle,
-        address _marketFactory
-    ) PendleGaugeControllerBaseUpg(_pendle, _marketFactory) initializer {}
+        address _marketFactory,
+        address _pendleMsgReceiveEndpoint
+    )
+        PendleGaugeControllerBaseUpg(_pendle, _marketFactory)
+        PendleReceiverUpg(_pendleMsgReceiveEndpoint)
+        initializer
+    {}
 
     function initialize() external initializer {
         __BoringOwnable_init();
