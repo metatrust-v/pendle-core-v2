@@ -23,9 +23,9 @@ abstract contract VotingEscrowTokenBase is IPVeToken {
     using VeBalanceLib for VeBalance;
     using VeBalanceLib for LockedPosition;
 
-    uint128 public constant WEEK = 1 weeks;
+    uint128 public constant WEEK = 2 hours;
     uint128 public constant MAX_LOCK_TIME = 104 weeks;
-    uint128 public constant MIN_LOCK_TIME = 1 weeks;
+    uint128 public constant MIN_LOCK_TIME = 1 hours;
 
     VeBalance internal _totalSupply;
     uint128 public lastSlopeChangeAppliedAt;
