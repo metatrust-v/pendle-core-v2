@@ -13,7 +13,7 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
         string memory _symbol,
         uint256 _pid,
         address _convexBooster,
-        address _wrappedLpToken,
+        address _crvLpToken,
         address _cvx,
         address _baseCrvPool,
         address[] memory _currentExtraRewards,
@@ -24,18 +24,15 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
             _symbol,
             _pid,
             _convexBooster,
-            _wrappedLpToken,
+            _crvLpToken,
             _cvx,
             _baseCrvPool,
             _currentExtraRewards,
             _basePoolTokens
         )
     {
-        require(
-            _basePoolTokens.contains(Pendle3CrvHelper.TOKEN),
-            "3Crv Pool address not found"
-        );
-        
+        require(_basePoolTokens.contains(Pendle3CrvHelper.TOKEN), "3Crv Pool address not found");
+
         _safeApproveInf(Pendle3CrvHelper.DAI, Pendle3CrvHelper.POOL);
         _safeApproveInf(Pendle3CrvHelper.USDC, Pendle3CrvHelper.POOL);
         _safeApproveInf(Pendle3CrvHelper.USDT, Pendle3CrvHelper.POOL);
@@ -68,7 +65,6 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
             return super._redeem(tokenOut, amountSharesToRedeem);
         }
     }
-
 
     function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
         internal
@@ -103,28 +99,25 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
     function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](7);
         res[0] = CRV_LP_TOKEN;
-        res[1] = W_CRV_LP_TOKEN;
-        res[2] = BASEPOOL_TOKEN_1;
-        res[3] = BASEPOOL_TOKEN_2;
-        res[4] = Pendle3CrvHelper.DAI;
-        res[5] = Pendle3CrvHelper.USDC;
-        res[6] = Pendle3CrvHelper.USDT;
+        res[1] = BASEPOOL_TOKEN_1;
+        res[2] = BASEPOOL_TOKEN_2;
+        res[3] = Pendle3CrvHelper.DAI;
+        res[4] = Pendle3CrvHelper.USDC;
+        res[5] = Pendle3CrvHelper.USDT;
     }
 
     function getTokensOut() public view virtual override returns (address[] memory res) {
         res = new address[](7);
         res[0] = CRV_LP_TOKEN;
-        res[1] = W_CRV_LP_TOKEN;
-        res[2] = BASEPOOL_TOKEN_1;
-        res[3] = BASEPOOL_TOKEN_2;
-        res[4] = Pendle3CrvHelper.DAI;
-        res[5] = Pendle3CrvHelper.USDC;
-        res[6] = Pendle3CrvHelper.USDT;
+        res[1] = BASEPOOL_TOKEN_1;
+        res[2] = BASEPOOL_TOKEN_2;
+        res[3] = Pendle3CrvHelper.DAI;
+        res[4] = Pendle3CrvHelper.USDC;
+        res[5] = Pendle3CrvHelper.USDT;
     }
 
     function isValidTokenIn(address token) public view virtual override returns (bool res) {
         res = (token == CRV_LP_TOKEN ||
-            token == W_CRV_LP_TOKEN ||
             token == BASEPOOL_TOKEN_1 ||
             token == BASEPOOL_TOKEN_2 ||
             Pendle3CrvHelper.is3CrvToken(token));
@@ -132,7 +125,6 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
 
     function isValidTokenOut(address token) public view override returns (bool res) {
         res = (token == CRV_LP_TOKEN ||
-            token == W_CRV_LP_TOKEN ||
             token == BASEPOOL_TOKEN_1 ||
             token == BASEPOOL_TOKEN_2 ||
             Pendle3CrvHelper.is3CrvToken(token));

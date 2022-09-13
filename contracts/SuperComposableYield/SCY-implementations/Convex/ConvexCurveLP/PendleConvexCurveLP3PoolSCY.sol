@@ -13,7 +13,7 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
         string memory _symbol,
         uint256 _pid,
         address _convexBooster,
-        address _wrappedLpToken,
+        address _crvLpToken,
         address _cvx,
         address _baseCrvPool,
         address[] memory _currentExtraRewards,
@@ -24,7 +24,7 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
             _symbol,
             _pid,
             _convexBooster,
-            _wrappedLpToken,
+            _crvLpToken,
             _cvx,
             _baseCrvPool,
             _currentExtraRewards
@@ -42,24 +42,21 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
     function getTokensIn() public view override returns (address[] memory res) {
         res = new address[](5);
         res[0] = CRV_LP_TOKEN;
-        res[1] = W_CRV_LP_TOKEN;
-        res[2] = BASEPOOL_TOKEN_1;
-        res[3] = BASEPOOL_TOKEN_2;
-        res[4] = BASEPOOL_TOKEN_3;
+        res[1] = BASEPOOL_TOKEN_1;
+        res[2] = BASEPOOL_TOKEN_2;
+        res[3] = BASEPOOL_TOKEN_3;
     }
 
     function getTokensOut() public view override returns (address[] memory res) {
         res = new address[](5);
         res[0] = CRV_LP_TOKEN;
-        res[1] = W_CRV_LP_TOKEN;
-        res[2] = BASEPOOL_TOKEN_1;
-        res[3] = BASEPOOL_TOKEN_2;
-        res[4] = BASEPOOL_TOKEN_3;
+        res[1] = BASEPOOL_TOKEN_1;
+        res[2] = BASEPOOL_TOKEN_2;
+        res[3] = BASEPOOL_TOKEN_3;
     }
 
     function isValidTokenIn(address token) public view override returns (bool res) {
         res = (token == CRV_LP_TOKEN ||
-            token == W_CRV_LP_TOKEN ||
             token == BASEPOOL_TOKEN_1 ||
             token == BASEPOOL_TOKEN_2 ||
             token == BASEPOOL_TOKEN_3);
@@ -67,7 +64,6 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
 
     function isValidTokenOut(address token) public view override returns (bool res) {
         res = (token == CRV_LP_TOKEN ||
-            token == W_CRV_LP_TOKEN ||
             token == BASEPOOL_TOKEN_1 ||
             token == BASEPOOL_TOKEN_2 ||
             token == BASEPOOL_TOKEN_3);

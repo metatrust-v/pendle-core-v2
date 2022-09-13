@@ -5,15 +5,16 @@ import "../../../base-implementations/SCYBaseWithDynamicRewards.sol";
 import "../../../../interfaces/ConvexCurve/IBooster.sol";
 import "../../../../interfaces/ConvexCurve/IRewards.sol";
 import "../../../../interfaces/Curve/ICrvPool.sol";
+import "hardhat/console.sol";
 
 /*
 Convex Curve LP Tokens Staking:
 
 2 ways to stake:
-
 1. Only deposit CurveLP Token -> Convert half to wrapped CurveLP Token and provide liquidity to the pool (under the hood)
 2. Only deposit wrapped CurveLP Token -> Unwrap half into CurveLP token and provide liquidity (under the hood)
-3. Deposit half wrapped CurveLP and half CurveLP to the pool.
+3. Deposit half wrapped CurveLP and h
+alf CurveLP to the pool.
 
 
 
@@ -102,34 +103,35 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     address public immutable CVX;
 
     address public immutable CRV_LP_TOKEN;
-    address public immutable W_CRV_LP_TOKEN; // To Add.
 
     constructor(
         string memory _name,
         string memory _symbol,
         uint256 _pid,
         address _convexBooster,
-        address _wrappedLpToken,
+        address _crvLpToken,
         address _cvx,
         address _baseCrvPool,
         address[] memory _currentExtraRewards
     )
         // To Change _yieldToken
-        SCYBaseWithDynamicRewards(_name, _symbol, _wrappedLpToken, _currentExtraRewards)
+        SCYBaseWithDynamicRewards(_name, _symbol, _crvLpToken, _currentExtraRewards)
     {
         require(_cvx != address(0), "zero address");
         require(_baseCrvPool != address(0), "zero address");
 
         PID = _pid;
         CVX = _cvx;
-        W_CRV_LP_TOKEN = _wrappedLpToken;
         BASE_CRV_POOL = _baseCrvPool;
 
         BOOSTER = _convexBooster;
+
         (CRV_LP_TOKEN, BASE_REWARDS, CRV) = _getPoolInfo(PID);
+        require(CRV_LP_TOKEN == _crvLpToken, "pid and lpToken mismatched");
 
         _safeApprove(CRV_LP_TOKEN, BOOSTER, type(uint256).max);
-        _safeApprove(W_CRV_LP_TOKEN, BOOSTER, type(uint256).max);
+
+        console.log(BASE_CRV_POOL);
     }
 
     function _getPoolInfo(uint256 pid)
@@ -170,11 +172,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         override
         returns (uint256 amountSharesOut)
     {
-        if (tokenIn == W_CRV_LP_TOKEN) {
-            // Directly stake in BaseRewards contract
-            IRewards(BASE_REWARDS).stakeFor(address(this), amount);
-            amountSharesOut = amount;
-        } else if (tokenIn == CRV_LP_TOKEN) {
+        if (tokenIn == CRV_LP_TOKEN) {
             // Deposit via Convex Booster contract
             IBooster(BOOSTER).deposit(PID, amount, true);
             amountSharesOut = amount;
@@ -213,25 +211,18 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         override
         returns (uint256 amountTokenOut)
     {
-        if (tokenOut == W_CRV_LP_TOKEN) {
-            // If 'tokenOut' is wrapped CRV_LP_TOKEN, Withdraw W_CRV_LP_TOKEN without claiming rewards
-            IRewards(BASE_REWARDS).withdraw(amountSharesToRedeem, false);
-            amountTokenOut = amountSharesToRedeem;
-        } else {
-            // Withdraw and unwrap from W_CRV_LP_TOKEN to CRV_LP_TOKEN without claiming rewards
-            IRewards(BASE_REWARDS).withdrawAndUnwrap(amountSharesToRedeem, false);
+        IRewards(BASE_REWARDS).withdrawAndUnwrap(amountSharesToRedeem, false);
 
-            if (_isBaseToken(tokenOut)) {
-                amountTokenOut = ICrvPool(BASE_CRV_POOL).remove_liquidity_one_coin(
-                    amountSharesToRedeem,
-                    Math.Int128(_getBaseTokenIndex(tokenOut)),
-                    0,
-                    address(this)
-                );
-            } else {
-                // 'tokenOut' is CRV_LP_TOKEN
-                amountTokenOut = amountSharesToRedeem;
-            }
+        if (_isBaseToken(tokenOut)) {
+            amountTokenOut = ICrvPool(BASE_CRV_POOL).remove_liquidity_one_coin(
+                amountSharesToRedeem,
+                Math.Int128(_getBaseTokenIndex(tokenOut)),
+                0,
+                address(this)
+            );
+        } else {
+            // 'tokenOut' is CRV_LP_TOKEN
+            amountTokenOut = amountSharesToRedeem;
         }
     }
 
@@ -259,7 +250,9 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
      *Refer to currentExtraRewards array of reward tokens specific to the curve pool.
      **/
     function _getRewardTokens() internal view virtual override returns (address[] memory res) {
-        return currentExtraRewards;
+        res = new address[](currentExtraRewards.length + 2);
+        res[0] = CVX;
+        res[1] = CRV;
     }
 
     function _redeemExternalReward() internal virtual override {
@@ -278,7 +271,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         override
         returns (uint256 amountSharesOut)
     {
-        if (tokenIn == W_CRV_LP_TOKEN || tokenIn == CRV_LP_TOKEN) {
+        if (tokenIn == CRV_LP_TOKEN) {
             // If 'tokenIn' is CRV_LP_TOKEN or W_CRV_LP_TOKEN, return corresponding shares LP token amount is entitled to
             amountSharesOut = amountTokenToDeposit;
         } else {
@@ -299,7 +292,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     {
         uint256 amountLpTokenToReceive = (amountSharesToRedeem * exchangeRate()) / 1e18;
 
-        if (tokenOut == W_CRV_LP_TOKEN || tokenOut == CRV_LP_TOKEN) {
+        if (tokenOut == CRV_LP_TOKEN) {
             // CRV or CVX_CRV token will result in a 1:1 exchangeRate with SCY
             amountTokenOut = amountLpTokenToReceive;
         } else {
