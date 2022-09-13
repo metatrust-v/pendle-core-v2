@@ -166,6 +166,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
      */
     function _deposit(address tokenIn, uint256 amount)
         internal
+        virtual
         override
         returns (uint256 amountSharesOut)
     {
@@ -208,6 +209,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
      */
     function _redeem(address tokenOut, uint256 amountSharesToRedeem)
         internal
+        virtual
         override
         returns (uint256 amountTokenOut)
     {
@@ -224,7 +226,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
                     amountSharesToRedeem,
                     Math.Int128(_getBaseTokenIndex(tokenOut)),
                     0,
-                    msg.sender
+                    address(this)
                 );
             } else {
                 // 'tokenOut' is CRV_LP_TOKEN
@@ -244,7 +246,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
      * The current price of the pool LP token relative to the underlying pool assets. Given as an integer with 1e18 precision.
      *
      */
-    function exchangeRate() public view override returns (uint256) {
+    function exchangeRate() public view virtual override returns (uint256) {
         return ICrvPool(BASE_CRV_POOL).get_virtual_price();
     }
 
@@ -256,11 +258,11 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
      * @dev See {ISuperComposableYield-getRewardTokens}
      *Refer to currentExtraRewards array of reward tokens specific to the curve pool.
      **/
-    function _getRewardTokens() internal view override returns (address[] memory res) {
+    function _getRewardTokens() internal view virtual override returns (address[] memory res) {
         return currentExtraRewards;
     }
 
-    function _redeemExternalReward() internal override {
+    function _redeemExternalReward() internal virtual override {
         // Redeem all extra rewards from the curve pool
         IRewards(BASE_REWARDS).getReward();
     }
@@ -272,6 +274,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     function _previewDeposit(address tokenIn, uint256 amountTokenToDeposit)
         internal
         view
+        virtual
         override
         returns (uint256 amountSharesOut)
     {
@@ -290,6 +293,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     function _previewRedeem(address tokenOut, uint256 amountSharesToRedeem)
         internal
         view
+        virtual
         override
         returns (uint256 amountTokenOut)
     {
@@ -330,7 +334,7 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
     /**
      * @dev To be overriden by the pool type variation contract and return the tokens length of the curve base pool based on the pool variation.
      */
-    function getBaseTokenPoolLength() public view virtual returns (uint256 length);
+    function getBaseTokenPoolLength() public pure virtual returns (uint256 length);
 
     /**
      * @dev To be overriden by the pool type variation contract and return the respective index based on the registered Index of the Curve Base Token.

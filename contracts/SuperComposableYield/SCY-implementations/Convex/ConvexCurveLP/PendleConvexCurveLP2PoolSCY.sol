@@ -36,7 +36,7 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
         _safeApprove(BASEPOOL_TOKEN_2, BASE_CRV_POOL, type(uint256).max);
     }
 
-    function getTokensIn() public view override returns (address[] memory res) {
+    function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](4);
         res[0] = CRV_LP_TOKEN;
         res[1] = W_CRV_LP_TOKEN;
@@ -44,7 +44,7 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
         res[3] = BASEPOOL_TOKEN_2;
     }
 
-    function getTokensOut() public view override returns (address[] memory res) {
+    function getTokensOut() public view virtual override returns (address[] memory res) {
         res = new address[](4);
         res[0] = CRV_LP_TOKEN;
         res[1] = W_CRV_LP_TOKEN;
@@ -52,14 +52,14 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
         res[3] = BASEPOOL_TOKEN_2;
     }
 
-    function isValidTokenIn(address token) public view override returns (bool res) {
+    function isValidTokenIn(address token) public view virtual override returns (bool res) {
         res = (token == CRV_LP_TOKEN ||
             token == W_CRV_LP_TOKEN ||
             token == BASEPOOL_TOKEN_1 ||
             token == BASEPOOL_TOKEN_2);
     }
 
-    function isValidTokenOut(address token) public view override returns (bool res) {
+    function isValidTokenOut(address token) public view virtual override returns (bool res) {
         res = (token == CRV_LP_TOKEN ||
             token == W_CRV_LP_TOKEN ||
             token == BASEPOOL_TOKEN_1 ||
@@ -69,6 +69,7 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
     function _getBaseTokenIndex(address crvBaseToken)
         internal
         view
+        virtual
         override
         returns (uint256 index)
     {
@@ -79,11 +80,11 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
         }
     }
 
-    function _isBaseToken(address token) internal view override returns (bool res) {
+    function _isBaseToken(address token) internal view virtual override returns (bool res) {
         return (token == BASEPOOL_TOKEN_1 || token == BASEPOOL_TOKEN_2);
     }
 
-    function getBaseTokenPoolLength() public view override returns (uint256 length) {
+    function getBaseTokenPoolLength() public pure virtual override returns (uint256 length) {
         length = 2;
     }
 }

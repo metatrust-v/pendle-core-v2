@@ -94,7 +94,7 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
             token == BASEPOOL_TOKEN_3);
     }
 
-    function getBaseTokenPoolLength() public view override returns (uint256 length) {
+    function getBaseTokenPoolLength() public pure override returns (uint256 length) {
         length = 3;
     }
 }
