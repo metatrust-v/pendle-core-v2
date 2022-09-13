@@ -3,8 +3,11 @@ pragma solidity 0.8.15;
 
 import "./ConvexCurveLP/PendleConvexCurveLP2PoolSCY.sol";
 import "./Pendle3CrvHelper.sol";
+import "../../../libraries/helpers/ArrayLib.sol";
 
 contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
+    using ArrayLib for address[];
+
     constructor(
         string memory _name,
         string memory _symbol,
@@ -14,7 +17,7 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
         address _cvx,
         address _baseCrvPool,
         address[] memory _currentExtraRewards,
-        address[2] memory _basePoolTokens
+        address[] memory _basePoolTokens
     )
         PendleConvexCurveLP2PoolSCY(
             _name,
@@ -29,10 +32,13 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
         )
     {
         require(
-            _basePoolTokens[0] == Pendle3CrvHelper.TOKEN ||
-                _basePoolTokens[1] == Pendle3CrvHelper.TOKEN,
+            _basePoolTokens.contains(Pendle3CrvHelper.TOKEN),
             "3Crv Pool address not found"
         );
+        
+        _safeApproveInf(Pendle3CrvHelper.DAI, Pendle3CrvHelper.POOL);
+        _safeApproveInf(Pendle3CrvHelper.USDC, Pendle3CrvHelper.POOL);
+        _safeApproveInf(Pendle3CrvHelper.USDT, Pendle3CrvHelper.POOL);
     }
 
     function _deposit(address tokenIn, uint256 amount)
