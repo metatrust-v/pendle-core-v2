@@ -90,7 +90,21 @@ contract PendleConvexCurveLP3PoolSCY is PendleConvexCurveLPSCY {
             token == BASEPOOL_TOKEN_3);
     }
 
-    function getBaseTokenPoolLength() public pure override returns (uint256 length) {
-        length = 3;
+    function _depositToCurve(address token, uint256 amount) internal virtual override {
+        uint256[3] memory amounts;
+        amounts[_getBaseTokenIndex(token)] = amount;
+        ICrvPool(BASE_CRV_POOL).add_liquidity(amounts, 0);
+    }
+
+    function _previewDepositToCurve(address token, uint256 amount)
+        internal
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        uint256[3] memory amounts;
+        amounts[_getBaseTokenIndex(token)] = amount;
+        return ICrvPool(BASE_CRV_POOL).calc_token_amount(amounts, true);
     }
 }

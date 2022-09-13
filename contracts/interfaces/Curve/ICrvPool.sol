@@ -24,6 +24,16 @@ interface ICrvPool {
         address _receiver
     ) external returns (uint256);
 
+    function add_liquidity(
+        uint256[2] memory _deposit_amount,
+        uint256 _min_amount
+    ) external;
+
+    function add_liquidity(
+        uint256[3] memory _deposit_amount,
+        uint256 _min_amount
+    ) external;
+
     function remove_liquidity(
         uint256 _burn_amount,
         uint256[] memory _min_amounts,
@@ -41,6 +51,17 @@ interface ICrvPool {
         external
         view
         returns (uint256);
+
+    function calc_token_amount(uint256[2] memory _amounts, bool _is_deposit)
+        external
+        view
+        returns (uint256);
+
+    function calc_token_amount(uint256[3] memory _amounts, bool _is_deposit)
+        external
+        view
+        returns (uint256);
+
 
     function calc_withdraw_one_coin(uint256 _burn_amount, int128 i)
         external

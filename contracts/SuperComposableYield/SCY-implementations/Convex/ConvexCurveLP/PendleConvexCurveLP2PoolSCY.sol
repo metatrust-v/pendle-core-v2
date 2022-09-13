@@ -31,8 +31,6 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
     {
         require(_basePoolTokens.length == 2, "basePoolTokens length mismatch");
 
-        console.log(_baseCrvPool);
-
         BASEPOOL_TOKEN_1 = _basePoolTokens[0];
         BASEPOOL_TOKEN_2 = _basePoolTokens[1];
 
@@ -80,7 +78,21 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
         return (token == BASEPOOL_TOKEN_1 || token == BASEPOOL_TOKEN_2);
     }
 
-    function getBaseTokenPoolLength() public pure virtual override returns (uint256 length) {
-        length = 2;
+    function _depositToCurve(address token, uint256 amount) internal virtual override {
+        uint256[2] memory amounts;
+        amounts[_getBaseTokenIndex(token)] = amount;
+        ICrvPool(BASE_CRV_POOL).add_liquidity(amounts, 0);
+    }
+
+    function _previewDepositToCurve(address token, uint256 amount)
+        internal
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        uint256[2] memory amounts;
+        amounts[_getBaseTokenIndex(token)] = amount;
+        return ICrvPool(BASE_CRV_POOL).calc_token_amount(amounts, true);
     }
 }

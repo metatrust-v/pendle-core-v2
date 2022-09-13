@@ -97,7 +97,7 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
     }
 
     function getTokensIn() public view virtual override returns (address[] memory res) {
-        res = new address[](7);
+        res = new address[](6);
         res[0] = CRV_LP_TOKEN;
         res[1] = BASEPOOL_TOKEN_1;
         res[2] = BASEPOOL_TOKEN_2;
@@ -107,7 +107,7 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
     }
 
     function getTokensOut() public view virtual override returns (address[] memory res) {
-        res = new address[](7);
+        res = new address[](6);
         res[0] = CRV_LP_TOKEN;
         res[1] = BASEPOOL_TOKEN_1;
         res[2] = BASEPOOL_TOKEN_2;
