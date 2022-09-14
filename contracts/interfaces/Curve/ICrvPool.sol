@@ -43,9 +43,8 @@ interface ICrvPool {
     function remove_liquidity_one_coin(
         uint256 _burn_amount,
         int128 i,
-        uint256 _min_amount,
-        address _receiver
-    ) external returns (uint256);
+        uint256 _min_amount
+    ) external;
 
     function calc_token_amount(uint256[] memory _amounts, bool _is_deposit)
         external

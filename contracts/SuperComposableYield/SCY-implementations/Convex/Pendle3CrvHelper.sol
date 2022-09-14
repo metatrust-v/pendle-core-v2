@@ -4,7 +4,6 @@ pragma solidity 0.8.15;
 import "../../../interfaces/Curve/ICrvPool.sol";
 import "../../../libraries/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "hardhat/console.sol";
 
 library Pendle3CrvHelper {
     using Math for uint256;
@@ -53,13 +52,14 @@ library Pendle3CrvHelper {
         internal
         returns (uint256)
     {
-        return
-            ICrvPool(POOL).remove_liquidity_one_coin(
-                amountSharesToRedeem,
-                _get3CrvTokenIndex(tokenOut).Int128(),
-                0,
-                address(this)
-            );
+        uint256 balBefore = IERC20(tokenOut).balanceOf(address(this));
+        ICrvPool(POOL).remove_liquidity_one_coin(
+            amountSharesToRedeem,
+            _get3CrvTokenIndex(tokenOut).Int128(),
+            0
+        );
+        uint256 balAfter = IERC20(tokenOut).balanceOf(address(this));
+        return balAfter - balBefore;
     }
 
     function _getTokenAmounts(address token, uint256 amount)

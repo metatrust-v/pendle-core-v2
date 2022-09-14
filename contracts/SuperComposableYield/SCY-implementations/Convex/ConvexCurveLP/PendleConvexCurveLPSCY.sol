@@ -175,9 +175,9 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
             amountSharesOut = amount;
         } else {
             // Add liquidity to curve pool
-            uint256 preLpBalance = _selfBalance(CRV_LP_TOKEN);
+            uint256 prevLpBalance = _selfBalance(CRV_LP_TOKEN);
             _depositToCurve(tokenIn, amount);
-            amountSharesOut = _selfBalance(CRV_LP_TOKEN) - preLpBalance;
+            amountSharesOut = _selfBalance(CRV_LP_TOKEN) - prevLpBalance;
 
             // Deposit LP Token received into Convex Booster
             IBooster(BOOSTER).deposit(PID, amountSharesOut, true);
@@ -204,12 +204,13 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         IRewards(BASE_REWARDS).withdrawAndUnwrap(amountSharesToRedeem, false);
 
         if (_isBaseToken(tokenOut)) {
-            amountTokenOut = ICrvPool(BASE_CRV_POOL).remove_liquidity_one_coin(
+            uint256 prevBal = _selfBalance(tokenOut);
+            ICrvPool(BASE_CRV_POOL).remove_liquidity_one_coin(
                 amountSharesToRedeem,
                 Math.Int128(_getBaseTokenIndex(tokenOut)),
-                0,
-                address(this)
+                0
             );
+            amountTokenOut = _selfBalance(tokenOut) - prevBal;
         } else {
             // 'tokenOut' is CRV_LP_TOKEN
             amountTokenOut = amountSharesToRedeem;
@@ -316,7 +317,11 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
      */
     function _depositToCurve(address token, uint256 amount) internal virtual;
 
-    function _previewDepositToCurve(address token, uint256 amount) internal view virtual returns (uint256 amountLpOut);
+    function _previewDepositToCurve(address token, uint256 amount)
+        internal
+        view
+        virtual
+        returns (uint256 amountLpOut);
 
     /**
      * @dev To be overriden by the pool type variation contract and return the respective index based on the registered Index of the Curve Base Token.
