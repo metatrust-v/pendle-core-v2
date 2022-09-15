@@ -29,14 +29,14 @@ contract ActionSwapPTYT is IPActionSwapPTYT, CallbackHelper {
         uint256 exactPtIn,
         uint256 minYtOut,
         ApproxParams calldata guessTotalPtToSwap
-    ) external returns (uint256 netYtOut, uint256 netScyFee) {
+    ) external returns (uint256 netYtOut) {
         (, IPPrincipalToken PT, IPYieldToken YT) = IPMarket(market).readTokens();
         MarketState memory state = IPMarket(market).readState();
 
         PT.safeTransferFrom(msg.sender, market, exactPtIn);
 
         uint256 totalPtToSwap;
-        (netYtOut, , totalPtToSwap, netScyFee) = state.approxSwapExactPtForYt(
+        (netYtOut, , totalPtToSwap, ) = state.approxSwapExactPtForYt(
             YT.newIndex(),
             exactPtIn,
             block.timestamp,
@@ -59,14 +59,14 @@ contract ActionSwapPTYT is IPActionSwapPTYT, CallbackHelper {
         uint256 exactYtIn,
         uint256 minPtOut,
         ApproxParams calldata guessTotalPtSwapped
-    ) external returns (uint256 netPtOut, uint256 netScyFee) {
+    ) external returns (uint256 netPtOut) {
         (, , IPYieldToken YT) = IPMarket(market).readTokens();
         MarketState memory state = IPMarket(market).readState();
 
         YT.safeTransferFrom(msg.sender, address(YT), exactYtIn);
 
         uint256 totalPtSwapped;
-        (netPtOut, , totalPtSwapped, netScyFee) = state.approxSwapExactYtForPt(
+        (netPtOut, , totalPtSwapped, ) = state.approxSwapExactYtForPt(
             YT.newIndex(),
             exactYtIn,
             block.timestamp,
