@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.15;
 
-import "./ConvexCurveLP/PendleConvexCurveLP2PoolSCY.sol";
-import "./Pendle3CrvHelper.sol";
-import "../../../libraries/helpers/ArrayLib.sol";
+import "./PendleConvexCurveLP2PoolSCY.sol";
+import "../Pendle3CrvHelper.sol";
+import "../../../../libraries/helpers/ArrayLib.sol";
 
 contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
     using ArrayLib for address[];
@@ -16,7 +16,6 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
         address _crvLpToken,
         address _cvx,
         address _baseCrvPool,
-        address[] memory _currentExtraRewards,
         address[] memory _basePoolTokens
     )
         PendleConvexCurveLP2PoolSCY(
@@ -27,7 +26,6 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
             _crvLpToken,
             _cvx,
             _baseCrvPool,
-            _currentExtraRewards,
             _basePoolTokens
         )
     {

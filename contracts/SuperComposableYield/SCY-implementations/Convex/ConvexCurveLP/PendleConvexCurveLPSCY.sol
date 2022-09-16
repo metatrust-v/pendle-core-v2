@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.15;
 
-import "../../../base-implementations/SCYBaseWithDynamicRewards.sol";
+import "../../../base-implementations/SCYBaseWithRewards.sol";
 import "../../../../interfaces/ConvexCurve/IBooster.sol";
 import "../../../../interfaces/ConvexCurve/IRewards.sol";
 import "../../../../interfaces/Curve/ICrvPool.sol";
@@ -90,7 +90,7 @@ CVX Token ERC20 Contract -> 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B
 
 */
 
-abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
+abstract contract PendleConvexCurveLPSCY is SCYBaseWithRewards {
     using SafeERC20 for IERC20;
 
     uint256 public immutable PID;
@@ -110,11 +110,10 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
         address _convexBooster,
         address _crvLpToken,
         address _cvx,
-        address _baseCrvPool,
-        address[] memory _currentExtraRewards
+        address _baseCrvPool
     )
         // To Change _yieldToken
-        SCYBaseWithDynamicRewards(_name, _symbol, _crvLpToken, _currentExtraRewards)
+        SCYBaseWithRewards(_name, _symbol, _crvLpToken)
     {
         require(_cvx != address(0), "zero address");
         require(_baseCrvPool != address(0), "zero address");
@@ -241,9 +240,9 @@ abstract contract PendleConvexCurveLPSCY is SCYBaseWithDynamicRewards {
      *Refer to currentExtraRewards array of reward tokens specific to the curve pool.
      **/
     function _getRewardTokens() internal view virtual override returns (address[] memory res) {
-        res = new address[](currentExtraRewards.length + 2);
-        res[0] = CVX;
-        res[1] = CRV;
+        res = new address[](2);
+        res[0] = CRV;
+        res[1] = CVX;
     }
 
     function _redeemExternalReward() internal virtual override {

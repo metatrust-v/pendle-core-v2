@@ -26,11 +26,13 @@ interface IRewards {
 
     function rewardPerToken() external returns (uint256);
 
-    function rewardPerTokenStored() external returns (uint256);
+    function rewardPerTokenStored() external view returns (uint256);
 
     function extraRewardsLength() external view returns (uint256);
 
     function extraRewards(uint256) external returns (address);
 
     function stakingToken() external returns (address);
+
+    function lastTimeRewardApplicable() external view returns (uint256);
 }

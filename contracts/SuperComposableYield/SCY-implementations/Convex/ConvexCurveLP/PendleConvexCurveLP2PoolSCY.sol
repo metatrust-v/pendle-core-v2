@@ -15,7 +15,6 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
         address _crvLpToken,
         address _cvx,
         address _baseCrvPool,
-        address[] memory _currentExtraRewards,
         address[] memory _basePoolTokens
     )
         PendleConvexCurveLPSCY(
@@ -25,8 +24,7 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
             _convexBooster,
             _crvLpToken,
             _cvx,
-            _baseCrvPool,
-            _currentExtraRewards
+            _baseCrvPool
         )
     {
         require(_basePoolTokens.length == 2, "basePoolTokens length mismatch");

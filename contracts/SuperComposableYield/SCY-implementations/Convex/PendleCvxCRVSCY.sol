@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.15;
 
-import "../../base-implementations/SCYBaseWithDynamicRewards.sol";
+import "../../base-implementations/SCYBaseWithRewards.sol";
 import "../../../interfaces/ConvexCurve/ICrvDepositor.sol";
 import "../../../interfaces/ConvexCurve/IRewards.sol";
 import "../../../interfaces/ConvexCurve/ICvxCrv.sol";
@@ -40,7 +40,7 @@ Exchange Rate - CRV/cvxCRV : SCY should be 1 : 1
 
 */
 
-contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
+contract PendleCvxCRVSCY is SCYBaseWithRewards {
     address public immutable CRV_DEPOSITOR;
     address public immutable BASE_REWARDS;
 
@@ -53,9 +53,8 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
         string memory _symbol,
         address _cvxCrv,
         address _cvx,
-        address _baseRewards,
-        address[] memory _currentExtraRewards
-    ) SCYBaseWithDynamicRewards(_name, _symbol, _cvxCrv, _currentExtraRewards) {
+        address _baseRewards
+    ) SCYBaseWithRewards (_name, _symbol, _cvxCrv) {
         require(_cvx != address(0), "zero address");
         require(_baseRewards != address(0), "zero address");
 
@@ -134,7 +133,9 @@ contract PendleCvxCRVSCY is SCYBaseWithDynamicRewards {
      *Get Extra Rewards from SCYBaseWithDynamicRewards Contract immutable variables. To update, simply use a proxy and update with the new rewards.
      **/
     function _getRewardTokens() internal view override returns (address[] memory res) {
-        return currentExtraRewards;
+        res = new address[](2);
+        res[0] = CRV;
+        res[1] = CVX;
     }
 
     /**
