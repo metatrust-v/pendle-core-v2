@@ -6,9 +6,9 @@ import "../../interfaces/IPMarket.sol";
 import "../../interfaces/IPActionMintRedeem.sol";
 
 contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
-    using MarketMathCore for MarketState;
-    using Math for uint256;
-    using Math for int256;
+    using MarketMathCoreUC for MarketState;
+    using MathUC for uint256;
+    using MathUC for int256;
 
     /// @dev since this contract will be proxied, it must not contains non-immutable variables
     constructor(address _kyberSwapRouter)

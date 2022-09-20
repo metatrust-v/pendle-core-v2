@@ -6,9 +6,9 @@ import "../../interfaces/IPActionSwapPT.sol";
 import "../../interfaces/IPMarket.sol";
 
 contract ActionSwapPT is IPActionSwapPT, ActionBaseMintRedeem {
-    using MarketMathCore for MarketState;
-    using MarketApproxPtInLib for MarketState;
-    using MarketApproxPtOutLib for MarketState;
+    using MarketMathCoreUC for MarketState;
+    using MarketApproxPtInUCLib for MarketState;
+    using MarketApproxPtOutUCLib for MarketState;
     using Math for uint256;
     using Math for int256;
     using SafeERC20 for IERC20;

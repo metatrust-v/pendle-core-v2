@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.15;
 
-import "../libraries/math/MarketApproxLib.sol";
+import "../libraries/math/MarketApproxLibUC.sol";
 import "../interfaces/IPMarket.sol";
 
 library MarketMathStatic {
     using MarketMathCore for MarketState;
-    using MarketApproxPtInLib for MarketState;
-    using MarketApproxPtOutLib for MarketState;
+    using MarketApproxPtInUCLib for MarketState;
+    using MarketApproxPtOutUCLib for MarketState;
     using Math for uint256;
     using Math for int256;
     using LogExpMath for int256;

@@ -10,8 +10,8 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
     using Math for uint256;
     using Math for int256;
     using MarketMathCore for MarketState;
-    using MarketApproxPtInLib for MarketState;
-    using MarketApproxPtOutLib for MarketState;
+    using MarketApproxPtInUCLib for MarketState;
+    using MarketApproxPtOutUCLib for MarketState;
     using SafeERC20 for ISuperComposableYield;
     using SafeERC20 for IPYieldToken;
     using PYIndexLib for IPYieldToken;

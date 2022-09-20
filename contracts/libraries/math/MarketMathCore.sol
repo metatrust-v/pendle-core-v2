@@ -6,28 +6,6 @@ import "./LogExpMath.sol";
 import "../helpers/PYIndex.sol";
 import "../helpers/MiniHelpers.sol";
 
-struct MarketState {
-    int256 totalPt;
-    int256 totalScy;
-    int256 totalLp;
-    address treasury;
-    /// immutable variables ///
-    int256 scalarRoot;
-    uint256 lnFeeRateRoot;
-    uint256 expiry;
-    uint256 reserveFeePercent; // base 100
-    /// last trade data ///
-    uint256 lastLnImpliedRate;
-}
-
-// params that are expensive to compute, therefore we pre-compute them
-struct MarketPreCompute {
-    int256 rateScalar;
-    int256 totalAsset;
-    int256 rateAnchor;
-    int256 feeRate;
-}
-
 // solhint-disable ordering
 library MarketMathCore {
     using Math for uint256;

@@ -4,21 +4,21 @@ pragma solidity 0.8.15;
 import "../../interfaces/IPMarketFactory.sol";
 import "../../interfaces/IPMarket.sol";
 import "../../interfaces/IPMarketSwapCallback.sol";
-import "../../libraries/SCY/SCYUtils.sol";
-import "../../libraries/math/MarketApproxLib.sol";
+import "../../libraries/SCY/SCYUtilsUC.sol";
+import "../../libraries/math/MarketApproxLibUC.sol";
 import "./base/ActionBaseMintRedeem.sol";
 import "./base/CallbackHelper.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract ActionCallback is IPMarketSwapCallback, CallbackHelper {
-    using Math for int256;
-    using Math for uint256;
+    using MathUC for int256;
+    using MathUC for uint256;
     using SafeERC20 for ISuperComposableYield;
     using SafeERC20 for IPYieldToken;
     using SafeERC20 for IPPrincipalToken;
     using SafeERC20 for IERC20;
-    using PYIndexLib for PYIndex;
-    using PYIndexLib for IPYieldToken;
+    using PYIndexLibUC for PYIndex;
+    using PYIndexLibUC for IPYieldToken;
 
     address public immutable marketFactory;
 
@@ -41,20 +41,22 @@ contract ActionCallback is IPMarketSwapCallback, CallbackHelper {
         int256 scyToAccount,
         bytes calldata data
     ) external override onlyPendleMarket(msg.sender) {
-        address market = msg.sender;
-        ActionType swapType = _getActionType(data);
-        if (swapType == ActionType.SwapExactScyForYt) {
-            _callbackSwapExactScyForYt(market, ptToAccount, scyToAccount, data);
-        } else if (swapType == ActionType.SwapScyForExactYt) {
-            _callbackSwapScyForExactYt(market, ptToAccount, scyToAccount, data);
-        } else if (swapType == ActionType.SwapYtForScy) {
-            _callbackSwapYtForScy(market, ptToAccount, scyToAccount, data);
-        } else if (swapType == ActionType.SwapExactYtForPt) {
-            _callbackSwapExactYtForPt(market, ptToAccount, scyToAccount, data);
-        } else if (swapType == ActionType.SwapExactPtForYt) {
-            _callbackSwapExactPtForYt(market, ptToAccount, scyToAccount, data);
-        } else {
-            require(false, "unknown swapType");
+        unchecked {
+            address market = msg.sender;
+            ActionType swapType = _getActionType(data);
+            if (swapType == ActionType.SwapExactScyForYt) {
+                _callbackSwapExactScyForYt(market, ptToAccount, scyToAccount, data);
+            } else if (swapType == ActionType.SwapScyForExactYt) {
+                _callbackSwapScyForExactYt(market, ptToAccount, scyToAccount, data);
+            } else if (swapType == ActionType.SwapYtForScy) {
+                _callbackSwapYtForScy(market, ptToAccount, scyToAccount, data);
+            } else if (swapType == ActionType.SwapExactYtForPt) {
+                _callbackSwapExactYtForPt(market, ptToAccount, scyToAccount, data);
+            } else if (swapType == ActionType.SwapExactPtForYt) {
+                _callbackSwapExactPtForYt(market, ptToAccount, scyToAccount, data);
+            } else {
+                require(false, "unknown swapType");
+            }
         }
     }
 
@@ -65,14 +67,16 @@ contract ActionCallback is IPMarketSwapCallback, CallbackHelper {
         int256, /*scyToAccount*/
         bytes calldata data
     ) internal {
-        (, , IPYieldToken YT) = IPMarket(market).readTokens();
-        (address receiver, uint256 minYtOut) = _decodeSwapExactScyForYt(data);
+        unchecked {
+            (, , IPYieldToken YT) = IPMarket(market).readTokens();
+            (address receiver, uint256 minYtOut) = _decodeSwapExactScyForYt(data);
 
-        uint256 ptOwed = ptToAccount.abs();
-        uint256 netPyOut = YT.mintPY(market, receiver);
+            uint256 ptOwed = ptToAccount.abs();
+            uint256 netPyOut = YT.mintPY(market, receiver);
 
-        require(netPyOut >= ptOwed, "insufficient PT to pay");
-        require(netPyOut >= minYtOut, "insufficient YT out");
+            require(netPyOut >= ptOwed, "insufficient PT to pay");
+            require(netPyOut >= minYtOut, "insufficient YT out");
+        }
     }
 
     struct VarsSwapScyForExactYt {
@@ -88,33 +92,35 @@ contract ActionCallback is IPMarketSwapCallback, CallbackHelper {
         int256 scyToAccount,
         bytes calldata data
     ) internal {
-        VarsSwapScyForExactYt memory vars;
-        (vars.payer, vars.receiver, vars.maxScyToPull) = _decodeSwapScyForExactYt(data);
-        (ISuperComposableYield SCY, , IPYieldToken YT) = IPMarket(market).readTokens();
+        unchecked {
+            VarsSwapScyForExactYt memory vars;
+            (vars.payer, vars.receiver, vars.maxScyToPull) = _decodeSwapScyForExactYt(data);
+            (ISuperComposableYield SCY, , IPYieldToken YT) = IPMarket(market).readTokens();
 
-        /// ------------------------------------------------------------
-        /// calc totalScyNeed
-        /// ------------------------------------------------------------
-        PYIndex pyIndex = YT.newIndex();
-        uint256 ptOwed = ptToAccount.abs();
-        uint256 totalScyNeed = pyIndex.assetToScyUp(ptOwed);
+            /// ------------------------------------------------------------
+            /// calc totalScyNeed
+            /// ------------------------------------------------------------
+            PYIndex pyIndex = YT.newIndex();
+            uint256 ptOwed = ptToAccount.abs();
+            uint256 totalScyNeed = pyIndex.assetToScyUp(ptOwed);
 
-        /// ------------------------------------------------------------
-        /// calc netScyToPull
-        /// ------------------------------------------------------------
-        uint256 scyReceived = scyToAccount.Uint();
-        uint256 netScyToPull = totalScyNeed.subMax0(scyReceived);
-        require(netScyToPull <= vars.maxScyToPull, "exceed SCY in limit");
+            /// ------------------------------------------------------------
+            /// calc netScyToPull
+            /// ------------------------------------------------------------
+            uint256 scyReceived = scyToAccount.Uint();
+            uint256 netScyToPull = totalScyNeed.subMax0(scyReceived);
+            require(netScyToPull <= vars.maxScyToPull, "exceed SCY in limit");
 
-        /// ------------------------------------------------------------
-        /// mint & transfer
-        /// ------------------------------------------------------------
-        if (netScyToPull > 0) {
-            SCY.safeTransferFrom(vars.payer, address(YT), netScyToPull);
+            /// ------------------------------------------------------------
+            /// mint & transfer
+            /// ------------------------------------------------------------
+            if (netScyToPull > 0) {
+                SCY.safeTransferFrom(vars.payer, address(YT), netScyToPull);
+            }
+
+            uint256 netPyOut = YT.mintPY(market, vars.receiver);
+            require(netPyOut >= ptOwed, "insufficient pt to pay");
         }
-
-        uint256 netPyOut = YT.mintPY(market, vars.receiver);
-        require(netPyOut >= ptOwed, "insufficient pt to pay");
     }
 
     /// @dev refer to _swapExactYtForScy or _swapYtForExactScy
@@ -124,23 +130,25 @@ contract ActionCallback is IPMarketSwapCallback, CallbackHelper {
         int256 scyToAccount,
         bytes calldata data
     ) internal {
-        (address receiver, uint256 minScyOut) = _decodeSwapYtForScy(data);
-        (, , IPYieldToken YT) = IPMarket(market).readTokens();
-        PYIndex pyIndex = YT.newIndex();
+        unchecked {
+            (address receiver, uint256 minScyOut) = _decodeSwapYtForScy(data);
+            (, , IPYieldToken YT) = IPMarket(market).readTokens();
+            PYIndex pyIndex = YT.newIndex();
 
-        uint256 scyOwed = scyToAccount.neg().Uint();
+            uint256 scyOwed = scyToAccount.neg().Uint();
 
-        address[] memory receivers = new address[](2);
-        uint256[] memory amountPYToRedeems = new uint256[](2);
+            address[] memory receivers = new address[](2);
+            uint256[] memory amountPYToRedeems = new uint256[](2);
 
-        (receivers[0], amountPYToRedeems[0]) = (market, pyIndex.scyToAsset(scyOwed));
-        (receivers[1], amountPYToRedeems[1]) = (
-            receiver,
-            ptToAccount.Uint() - amountPYToRedeems[0]
-        );
+            (receivers[0], amountPYToRedeems[0]) = (market, pyIndex.scyToAsset(scyOwed));
+            (receivers[1], amountPYToRedeems[1]) = (
+                receiver,
+                ptToAccount.Uint() - amountPYToRedeems[0]
+            );
 
-        uint256[] memory amountScyOuts = YT.redeemPYMulti(receivers, amountPYToRedeems);
-        require(amountScyOuts[1] >= minScyOut, "insufficient SCY out");
+            uint256[] memory amountScyOuts = YT.redeemPYMulti(receivers, amountPYToRedeems);
+            require(amountScyOuts[1] >= minScyOut, "insufficient SCY out");
+        }
     }
 
     function _callbackSwapExactPtForYt(
@@ -149,13 +157,17 @@ contract ActionCallback is IPMarketSwapCallback, CallbackHelper {
         int256, /*scyToAccount*/
         bytes calldata data
     ) internal {
-        (address receiver, uint256 exactPtIn, uint256 minYtOut) = _decodeSwapExactPtForYt(data);
-        uint256 netPtOwed = ptToAccount.abs();
-        (, , IPYieldToken YT) = IPMarket(market).readTokens();
+        unchecked {
+            (address receiver, uint256 exactPtIn, uint256 minYtOut) = _decodeSwapExactPtForYt(
+                data
+            );
+            uint256 netPtOwed = ptToAccount.abs();
+            (, , IPYieldToken YT) = IPMarket(market).readTokens();
 
-        uint256 netPyOut = YT.mintPY(market, receiver);
-        require(netPyOut >= minYtOut, "insufficient YT out");
-        require(exactPtIn + netPyOut >= netPtOwed, "insufficient PT to pay");
+            uint256 netPyOut = YT.mintPY(market, receiver);
+            require(netPyOut >= minYtOut, "insufficient YT out");
+            require(exactPtIn + netPyOut >= netPtOwed, "insufficient PT to pay");
+        }
     }
 
     function _callbackSwapExactYtForPt(
@@ -164,16 +176,20 @@ contract ActionCallback is IPMarketSwapCallback, CallbackHelper {
         int256 scyToAccount,
         bytes calldata data
     ) internal {
-        (address receiver, uint256 exactYtIn, uint256 minPtOut) = _decodeSwapExactYtForPt(data);
-        (, IPPrincipalToken PT, IPYieldToken YT) = IPMarket(market).readTokens();
+        unchecked {
+            (address receiver, uint256 exactYtIn, uint256 minPtOut) = _decodeSwapExactYtForPt(
+                data
+            );
+            (, IPPrincipalToken PT, IPYieldToken YT) = IPMarket(market).readTokens();
 
-        uint256 netScyOwed = scyToAccount.abs();
+            uint256 netScyOwed = scyToAccount.abs();
 
-        PT.safeTransfer(address(YT), exactYtIn);
-        uint256 netScyToMarket = YT.redeemPY(market);
+            PT.safeTransfer(address(YT), exactYtIn);
+            uint256 netScyToMarket = YT.redeemPY(market);
 
-        require(netScyToMarket >= netScyOwed, "insufficient SCY to pay");
-        require(ptToAccount.Uint() - exactYtIn >= minPtOut, "insufficient PT out");
-        PT.safeTransfer(receiver, ptToAccount.Uint() - exactYtIn);
+            require(netScyToMarket >= netScyOwed, "insufficient SCY to pay");
+            require(ptToAccount.Uint() - exactYtIn >= minPtOut, "insufficient PT out");
+            PT.safeTransfer(receiver, ptToAccount.Uint() - exactYtIn);
+        }
     }
 }
