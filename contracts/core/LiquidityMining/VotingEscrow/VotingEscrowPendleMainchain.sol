@@ -119,7 +119,12 @@ contract VotingEscrowPendleMainchain is IPVotingEscrow, VotingEscrowTokenBase, C
      * @dev state changes expected:
         - _totalSupply & lastSlopeChangeAppliedAt is updated
      */
-    function totalSupplyCurrent() public virtual override returns (uint128) {
+    function totalSupplyCurrent()
+        public
+        virtual
+        override(IPVeToken, VotingEscrowTokenBase)
+        returns (uint128)
+    {
         (VeBalance memory supply, ) = _applySlopeChange();
         return supply.getCurrentValue();
     }
