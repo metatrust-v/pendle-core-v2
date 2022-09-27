@@ -2,10 +2,11 @@
 pragma solidity 0.8.15;
 import "../../periphery/BoringOwnableUpgradeable.sol";
 import "../../interfaces/IPAllAction.sol";
+import "../../interfaces/IPBatchSeller.sol";
 import "../../libraries/helpers/TokenHelper.sol";
 import "../../libraries/math/Math.sol";
 
-contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper {
+contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper, IPBatchSeller {
     using Math for uint256;
 
     address public immutable router;
@@ -19,37 +20,38 @@ contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper {
         address _router,
         address _token,
         address _PT,
-        uint256 _feeRatio
+        uint256 _initialFeeRatio
     ) initializer {
         __BoringOwnable_init();
         router = _router;
         token = _token;
         PT = _PT;
-        setFeeRatio(_feeRatio);
+        setFeeRatio(_initialFeeRatio);
     }
 
-    function buyExactPt(uint256 netPtOut, uint256 maxTokenIn)
-        external
-        returns (uint256 netTokenIn)
-    {
+    function buyExactPt(
+        address receiver,
+        uint256 netPtOut,
+        uint256 maxTokenIn
+    ) external returns (uint256 netTokenIn) {
         netTokenIn = calcTokenIn(netPtOut);
         require(netPtOut <= _selfBalance(PT), "netPtOut exceeds balance");
         require(netTokenIn <= maxTokenIn, "netTokenIn exceeds maxTokenIn");
 
         _transferIn(token, msg.sender, netTokenIn);
-        _transferOut(PT, msg.sender, netPtOut);
+        _transferOut(PT, receiver, netPtOut);
     }
 
-    function buyPtWithExactToken(uint256 netTokenIn, uint256 minPtOut)
-        external
-        returns (uint256 netPtOut)
-    {
+    function buyPtWithExactToken(
+        address receiver,
+        uint256 netTokenIn,
+        uint256 minPtOut
+    ) external returns (uint256 netPtOut) {
         netPtOut = calcPtOut(netTokenIn);
-        require(netPtOut <= _selfBalance(PT), "netPtOut exceeds balance");
         require(netPtOut >= minPtOut, "insufficient pt out");
 
         _transferIn(token, msg.sender, netTokenIn);
-        _transferOut(PT, msg.sender, netPtOut);
+        _transferOut(PT, receiver, netPtOut);
     }
 
     function sellPt(uint256 amountPtToSell, uint256 rawPrice) external onlyOwner {
@@ -82,6 +84,7 @@ contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper {
 
     function calcPtOut(uint256 netTokenIn) public view returns (uint256 netPtOut) {
         netPtOut = netTokenIn.divDown(price);
+        require(netPtOut <= _selfBalance(PT), "insufficient PT out");
     }
 
     function _calcPriceAfterFee(uint256 _price) internal view returns (uint256) {
