@@ -53,7 +53,7 @@ contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper {
     }
 
     function sellPt(uint256 amountPtToSell, uint256 rawPrice) external onlyOwner {
-        uint256 feeIncludedPrice = (rawPrice * (Math.ONE + feeRatio)) / Math.ONE;
+        uint256 feeIncludedPrice = _calcPriceAfterFee(rawPrice);
         uint256 amountPtLeftOver = _selfBalance(PT);
 
         price =
@@ -64,8 +64,16 @@ contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper {
     }
 
     function sellPtAndSetPrice(uint256 amountPtToSell, uint256 _price) external onlyOwner {
+        setPrice(_calcPriceAfterFee(_price));
         _transferIn(PT, msg.sender, amountPtToSell);
-        setPrice(_price);
+    }
+
+    function setFeeRatio(uint256 _feeRatio) public onlyOwner {
+        feeRatio = _feeRatio;
+    }
+
+    function setPrice(uint256 _price) public onlyOwner {
+        price = _price;
     }
 
     function calcTokenIn(uint256 netPtOut) public view returns (uint256 netTokenIn) {
@@ -76,11 +84,7 @@ contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper {
         netPtOut = netTokenIn.divDown(price);
     }
 
-    function setFeeRatio(uint256 _feeRatio) public onlyOwner {
-        feeRatio = _feeRatio;
-    }
-
-    function setPrice(uint256 _price) public onlyOwner {
-        price = _price;
+    function _calcPriceAfterFee(uint256 _price) internal view returns (uint256) {
+        return (_price * (Math.ONE + feeRatio)) / Math.ONE;
     }
 }
