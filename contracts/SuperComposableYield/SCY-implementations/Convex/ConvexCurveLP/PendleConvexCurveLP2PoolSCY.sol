@@ -4,8 +4,8 @@ pragma solidity 0.8.15;
 import "./PendleConvexCurveLPSCY.sol";
 
 contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
-    address public immutable BASEPOOL_TOKEN_1;
-    address public immutable BASEPOOL_TOKEN_2;
+    address public immutable token1;
+    address public immutable token2;
 
     constructor(
         string memory _name,
@@ -29,33 +29,33 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
     {
         require(_basePoolTokens.length == 2, "basePoolTokens length mismatch");
 
-        BASEPOOL_TOKEN_1 = _basePoolTokens[0];
-        BASEPOOL_TOKEN_2 = _basePoolTokens[1];
+        token1 = _basePoolTokens[0];
+        token2 = _basePoolTokens[1];
 
-        _safeApprove(BASEPOOL_TOKEN_1, BASE_CRV_POOL, type(uint256).max);
-        _safeApprove(BASEPOOL_TOKEN_2, BASE_CRV_POOL, type(uint256).max);
+        _safeApprove(token1, crvPool, type(uint256).max);
+        _safeApprove(token2, crvPool, type(uint256).max);
     }
 
     function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](3);
-        res[0] = CRV_LP_TOKEN;
-        res[1] = BASEPOOL_TOKEN_1;
-        res[2] = BASEPOOL_TOKEN_2;
+        res[0] = LP;
+        res[1] = token1;
+        res[2] = token2;
     }
 
     function getTokensOut() public view virtual override returns (address[] memory res) {
         res = new address[](3);
-        res[0] = CRV_LP_TOKEN;
-        res[1] = BASEPOOL_TOKEN_1;
-        res[2] = BASEPOOL_TOKEN_2;
+        res[0] = LP;
+        res[1] = token1;
+        res[2] = token2;
     }
 
     function isValidTokenIn(address token) public view virtual override returns (bool res) {
-        res = (token == CRV_LP_TOKEN || token == BASEPOOL_TOKEN_1 || token == BASEPOOL_TOKEN_2);
+        res = (token == LP || token == token1 || token == token2);
     }
 
     function isValidTokenOut(address token) public view virtual override returns (bool res) {
-        res = (token == CRV_LP_TOKEN || token == BASEPOOL_TOKEN_1 || token == BASEPOOL_TOKEN_2);
+        res = (token == LP || token == token1 || token == token2);
     }
 
     function _getBaseTokenIndex(address crvBaseToken)
@@ -65,7 +65,7 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
         override
         returns (uint256 index)
     {
-        if (crvBaseToken == BASEPOOL_TOKEN_1) {
+        if (crvBaseToken == token1) {
             index = 0;
         } else {
             index = 1;
@@ -73,13 +73,13 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
     }
 
     function _isBaseToken(address token) internal view virtual override returns (bool res) {
-        return (token == BASEPOOL_TOKEN_1 || token == BASEPOOL_TOKEN_2);
+        return (token == token1 || token == token2);
     }
 
     function _depositToCurve(address token, uint256 amount) internal virtual override {
         uint256[2] memory amounts;
         amounts[_getBaseTokenIndex(token)] = amount;
-        ICrvPool(BASE_CRV_POOL).add_liquidity(amounts, 0);
+        ICrvPool(crvPool).add_liquidity(amounts, 0);
     }
 
     function _previewDepositToCurve(address token, uint256 amount)
@@ -91,6 +91,6 @@ contract PendleConvexCurveLP2PoolSCY is PendleConvexCurveLPSCY {
     {
         uint256[2] memory amounts;
         amounts[_getBaseTokenIndex(token)] = amount;
-        return ICrvPool(BASE_CRV_POOL).calc_token_amount(amounts, true);
+        return ICrvPool(crvPool).calc_token_amount(amounts, true);
     }
 }

@@ -5,7 +5,7 @@ import "./PendleConvexCurveLP2PoolSCY.sol";
 import "../Pendle3CrvHelper.sol";
 import "../../../../libraries/helpers/ArrayLib.sol";
 
-contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
+contract Pendle3CrvAndTokenSCY is PendleConvexCurveLP2PoolSCY {
     using ArrayLib for address[];
 
     constructor(
@@ -96,9 +96,9 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
 
     function getTokensIn() public view virtual override returns (address[] memory res) {
         res = new address[](6);
-        res[0] = CRV_LP_TOKEN;
-        res[1] = BASEPOOL_TOKEN_1;
-        res[2] = BASEPOOL_TOKEN_2;
+        res[0] = LP;
+        res[1] = token1;
+        res[2] = token2;
         res[3] = Pendle3CrvHelper.DAI;
         res[4] = Pendle3CrvHelper.USDC;
         res[5] = Pendle3CrvHelper.USDT;
@@ -106,25 +106,25 @@ contract Pendle3CrvTokenSCY is PendleConvexCurveLP2PoolSCY {
 
     function getTokensOut() public view virtual override returns (address[] memory res) {
         res = new address[](6);
-        res[0] = CRV_LP_TOKEN;
-        res[1] = BASEPOOL_TOKEN_1;
-        res[2] = BASEPOOL_TOKEN_2;
+        res[0] = LP;
+        res[1] = token1;
+        res[2] = token2;
         res[3] = Pendle3CrvHelper.DAI;
         res[4] = Pendle3CrvHelper.USDC;
         res[5] = Pendle3CrvHelper.USDT;
     }
 
     function isValidTokenIn(address token) public view virtual override returns (bool res) {
-        res = (token == CRV_LP_TOKEN ||
-            token == BASEPOOL_TOKEN_1 ||
-            token == BASEPOOL_TOKEN_2 ||
+        res = (token == LP ||
+            token == token1 ||
+            token == token2 ||
             Pendle3CrvHelper.is3CrvToken(token));
     }
 
     function isValidTokenOut(address token) public view override returns (bool res) {
-        res = (token == CRV_LP_TOKEN ||
-            token == BASEPOOL_TOKEN_1 ||
-            token == BASEPOOL_TOKEN_2 ||
+        res = (token == LP ||
+            token == token1 ||
+            token == token2 ||
             Pendle3CrvHelper.is3CrvToken(token));
     }
 }
