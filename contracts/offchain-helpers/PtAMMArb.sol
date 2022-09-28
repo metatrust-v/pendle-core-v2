@@ -34,6 +34,7 @@ contract PtAMMArb is Initializable, UUPSUpgradeable, BoringOwnableUpgradeable {
         baseToken = _baseToken;
         (SCY, PT, YT) = IPMarket(market).readTokens();
         batchSeller = _batchSeller;
+        IERC20(_baseToken).approve(_batchSeller, type(uint256).max);
     }
 
     function initialize() external initializer {
