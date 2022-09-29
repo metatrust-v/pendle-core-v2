@@ -52,6 +52,13 @@ library Math {
         }
     }
 
+    function divUp(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 aInflated = a * ONE + b - 1;
+        unchecked {
+            return aInflated / b;
+        }
+    }
+
     function divDown(int256 a, int256 b) internal pure returns (int256) {
         int256 aInflated = a * IONE;
         unchecked {
