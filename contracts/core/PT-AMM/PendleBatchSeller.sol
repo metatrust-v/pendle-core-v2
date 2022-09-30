@@ -119,6 +119,7 @@ contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper, IPBatchSell
     }
 
     function _getMarketSwapPrice(uint256 netPtOut) internal returns (uint256) {
+        return 0;
         MarketState memory state = IPMarket(market).readState();
         PYIndex index = PYIndex.wrap(IPYieldToken(YT).pyIndexCurrent());
         (uint256 netScyIn, ) = state.swapScyForExactPt(index, netPtOut, block.timestamp);
