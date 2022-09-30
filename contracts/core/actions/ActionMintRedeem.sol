@@ -189,7 +189,7 @@ contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
         netTokenOut = _swapAllToOutputToken(tokensOut, dataSwap);
 
         if (netTokenOut < dataSwap.minTokenOut)
-            revert Errors.RouterInsufficientTokenOut(netTokenOut, dataSwap.minTokenOut);
+            require(netTokenOut < dataSwap.minTokenOut, "Insufficient Token Out");
 
         amountsSwapped = tokensOut.amounts;
 
