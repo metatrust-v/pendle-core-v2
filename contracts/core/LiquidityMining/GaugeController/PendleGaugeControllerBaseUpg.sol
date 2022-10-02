@@ -36,7 +36,7 @@ abstract contract PendleGaugeControllerBaseUpg is IPGaugeController, BoringOwnab
         uint128 incentiveEndsAt;
     }
 
-    uint128 internal constant WEEK = 1 weeks;
+    uint128 internal constant WEEK = 1 days;
 
     address public immutable pendle;
     IPMarketFactory public immutable marketFactory;
