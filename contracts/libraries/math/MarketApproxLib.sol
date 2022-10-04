@@ -106,7 +106,7 @@ library MarketApproxPtInLib {
                 p.guessMin = guess;
             }
         }
-        revert("approx fail");
+        revert Errors.ApproxFail();
     }
 
     struct Args2 {
@@ -179,7 +179,7 @@ library MarketApproxPtInLib {
                 p.guessMax = guess;
             }
         }
-        revert("approx fail");
+        revert Errors.ApproxFail();
     }
 
     struct Args6 {
@@ -269,7 +269,7 @@ library MarketApproxPtInLib {
                 p.guessMax = guess - 1;
             }
         }
-        revert("approx fail");
+        revert Errors.ApproxFail();
     }
 
     struct Args7 {
@@ -327,7 +327,7 @@ library MarketApproxPtInLib {
                 p.guessMax = guess - 1;
             }
         }
-        revert("approx fail");
+        revert Errors.ApproxFail();
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -383,8 +383,8 @@ library MarketApproxPtInLib {
         returns (uint256)
     {
         if (iter == 0 && p.guessOffchain != 0) return p.guessOffchain;
-        else if (p.guessMin > p.guessMax) return p.guessMax;
-        else return (p.guessMin + p.guessMax) / 2;
+        if (p.guessMin <= p.guessMax) return (p.guessMin + p.guessMax) / 2;
+        revert Errors.ApproxGuessRangeInvalid(p.guessMin, p.guessMax);
     }
 
     function calcSlope(
@@ -475,7 +475,8 @@ library MarketApproxPtOutLib {
                 p.guessMax = guess - 1;
             }
         }
-        revert("approx fail");
+
+        revert Errors.ApproxFail();
     }
 
     struct Args5 {
@@ -538,7 +539,7 @@ library MarketApproxPtOutLib {
                 p.guessMin = guess + 1;
             }
         }
-        revert("approx fail");
+        revert Errors.ApproxFail();
     }
 
     struct Args6 {
@@ -624,7 +625,7 @@ library MarketApproxPtOutLib {
                 p.guessMax = guess - 1;
             }
         }
-        revert("approx fail");
+        revert Errors.ApproxFail();
     }
 
     struct Args8 {
@@ -683,7 +684,7 @@ library MarketApproxPtOutLib {
                 p.guessMax = guess - 1;
             }
         }
-        revert("approx fail");
+        revert Errors.ApproxFail();
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -728,7 +729,7 @@ library MarketApproxPtOutLib {
 
     function nextGuess(ApproxParamsPtOut memory p, uint256 iter) private pure returns (uint256) {
         if (iter == 0 && p.guessOffchain != 0) return p.guessOffchain;
-        else if (p.guessMin > p.guessMax) return p.guessMax;
-        else return (p.guessMin + p.guessMax) / 2;
+        if (p.guessMin <= p.guessMax) return (p.guessMin + p.guessMax) / 2;
+        revert Errors.ApproxGuessRangeInvalid(p.guessMin, p.guessMax);
     }
 }
