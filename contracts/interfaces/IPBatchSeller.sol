@@ -14,9 +14,9 @@ interface IPBatchSeller {
         uint256 maxTokenIn
     ) external returns (uint256 netTokenIn);
 
-    function getPrice(uint256 netPtOut) external returns (uint256);
+    function getPrice() external view returns (uint256);
 
-    function calcPtOut(uint256 netTokenIn) external returns (uint256 netPtOut);
+    function calcPtOut(uint256 netTokenIn) external view returns (uint256 netPtOut);
 
-    function calcTokenIn(uint256 netPtOut) external returns (uint256 netTokenIn);
+    function calcTokenIn(uint256 netPtOut) external view returns (uint256 netTokenIn);
 }
