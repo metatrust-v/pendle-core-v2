@@ -8,6 +8,8 @@ import "../../libraries/helpers/TokenHelper.sol";
 import "../../libraries/math/Math.sol";
 import "../../libraries/math/LogExpMath.sol";
 
+import "hardhat/console.sol";
+
 contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper, IPBatchSeller {
     using Math for uint256;
     using Math for int256;
@@ -58,7 +60,7 @@ contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper, IPBatchSell
         uint256 maxTokenIn
     ) external returns (uint256 netTokenIn) {
         netTokenIn = calcTokenIn(netPtOut);
-        require(netPtOut <= _selfBalance(PT), "netPtOut exceeds balance");
+        require(netPtOut <= maxPtOut(), "netPtOut exceeds balance");
         require(netTokenIn <= maxTokenIn, "netTokenIn exceeds maxTokenIn");
 
         _transferIn(token, msg.sender, netTokenIn);
@@ -113,11 +115,15 @@ contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper, IPBatchSell
     function calcPtOut(uint256 netTokenIn) public view returns (uint256 netPtOut) {
         uint256 price = getPrice();
         netPtOut = netTokenIn.divDown(price);
-        require(netPtOut <= _selfBalance(PT), "insufficient PT out");
+        require(netPtOut <= maxPtOut(), "insufficient PT out");
     }
 
     function getPrice() public view returns (uint256) {
         return Math.max(batchPrice, _getMarketSwapPrice());
+    }
+
+    function maxPtOut() public view returns (uint256) {
+        return _selfBalance(PT);
     }
 
     function _calcPriceAfterFee(uint256 _price) internal view returns (uint256) {
@@ -128,10 +134,10 @@ contract PendleBatchSeller is BoringOwnableUpgradeable, TokenHelper, IPBatchSell
         MarketState memory state = IPMarket(market).readState();
 
         uint256 timeToExpiry = IPMarket(market).expiry() - block.timestamp;
-        uint256 lnRate = (state.lastLnImpliedRate * timeToExpiry) /
-            MarketMathCore.IMPLIED_RATE_TIME;
-        uint256 exchangeRate = LogExpMath.exp(lnRate.Int()).Uint();
+        uint256 exchangeRate = MarketMathCore
+            ._getExchangeRateFromImpliedRate(state.lastLnImpliedRate, timeToExpiry)
+            .Uint();
 
-        return exchangeRate.mulDown(assetToTokenRate);
+        return assetToTokenRate.divDown(exchangeRate);
     }
 }
