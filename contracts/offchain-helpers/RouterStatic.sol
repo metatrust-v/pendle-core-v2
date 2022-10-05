@@ -362,6 +362,14 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
         return MarketMathStatic.removeLiquidityDualScyAndPtStatic(market, netLpToRemove);
     }
 
+    function removeLiquidityDualScyAndPtStatic(address market, uint256 netLpToRemove)
+        external
+        view
+        returns (uint256 netScyOut, uint256 netPtOut)
+    {
+        return MarketMathStatic.removeLiquidityDualScyAndPtStatic(market, netLpToRemove);
+    }
+
     function removeLiquidityDualTokenAndPtStatic(
         address market,
         uint256 netLpToRemove,
