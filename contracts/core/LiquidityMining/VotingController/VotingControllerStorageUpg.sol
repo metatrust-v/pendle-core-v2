@@ -242,6 +242,7 @@ abstract contract VotingControllerStorageUpg is IPVotingController {
     ) internal {
         poolData[pool].totalVote = vote;
         poolData[pool].lastSlopeChangeAppliedAt = wTime;
+        emit PoolVoteChange(pool, vote);
     }
 
     function _modifyVoteWeight(
@@ -279,6 +280,7 @@ abstract contract VotingControllerStorageUpg is IPVotingController {
         }
 
         userPoolHistory[user][pool].push(newVote);
+        emit PoolVoteChange(pool, newVote);
     }
 
     function _setAllPastEpochsAsFinalized() internal {
