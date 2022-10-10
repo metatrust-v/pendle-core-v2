@@ -76,6 +76,10 @@ library MarketApproxPtInLib {
         MarketPreCompute memory comp = arg.market.getMarketPreCompute(arg.index, arg.blockTime);
         ApproxParamsPtIn memory p = newApproxParamsPtIn(_approx, comp.totalAsset);
 
+        if (p.guessMin > p.guessMax) {
+            revert Errors.ApproxGuessRangeInvalid(p.guessMin, p.guessMax);
+        }
+
         uint256 minAssetOut = arg.index.scyToAssetUp(arg.minScyOut);
 
         for (uint256 iter = 0; iter < p.maxIteration; ++iter) {
@@ -144,6 +148,10 @@ library MarketApproxPtInLib {
         Args2 memory arg = Args2(_market, _index, _maxScyIn, _blockTime);
         MarketPreCompute memory comp = arg.market.getMarketPreCompute(arg.index, arg.blockTime);
         ApproxParamsPtIn memory p = newApproxParamsPtIn(_approx, comp.totalAsset);
+
+        if (p.guessMin > p.guessMax) {
+            revert Errors.ApproxGuessRangeInvalid(p.guessMin, p.guessMax);
+        }
 
         uint256 maxAssetIn = arg.index.scyToAsset(arg.maxScyIn);
 
@@ -223,6 +231,11 @@ library MarketApproxPtInLib {
 
         p.guessMax = Math.min(p.guessMax, arg.totalPtIn);
 
+        if (p.guessMin > p.guessMax) {
+            revert Errors.ApproxGuessRangeInvalid(p.guessMin, p.guessMax);
+        }
+
+
         for (uint256 iter = 0; iter < p.maxIteration; ++iter) {
             (bool isGoodSlope, uint256 guess) = nextGuess(p, comp, arg.market.totalPt, iter);
 
@@ -301,6 +314,10 @@ library MarketApproxPtInLib {
         ApproxParamsPtIn memory p = newApproxParamsPtIn(_approx, comp.totalAsset);
 
         p.guessMin = Math.max(p.guessMin, arg.maxPtIn);
+
+        if (p.guessMin > p.guessMax) {
+            revert Errors.ApproxGuessRangeInvalid(p.guessMin, p.guessMax);
+        }
 
         for (uint256 iter = 0; iter < p.maxIteration; ++iter) {
             (bool isGoodSlope, uint256 guess) = nextGuess(p, comp, arg.market.totalPt, iter);
@@ -455,6 +472,10 @@ library MarketApproxPtOutLib {
         MarketPreCompute memory comp = arg.market.getMarketPreCompute(arg.index, arg.blockTime);
         ApproxParamsPtOut memory p = newApproxParamsPtOut(_approx, comp, arg.market.totalPt);
 
+        if (p.guessMin > p.guessMax) {
+            revert Errors.ApproxGuessRangeInvalid(p.guessMin, p.guessMax);
+        }
+
         uint256 maxAssetIn = arg.index.scyToAsset(arg.maxScyIn);
 
         for (uint256 iter = 0; iter < p.maxIteration; ++iter) {
@@ -512,6 +533,10 @@ library MarketApproxPtOutLib {
         Args5 memory arg = Args5(_market, _index, _minScyOut, _blockTime);
         MarketPreCompute memory comp = arg.market.getMarketPreCompute(arg.index, arg.blockTime);
         ApproxParamsPtOut memory p = newApproxParamsPtOut(_approx, comp, arg.market.totalPt);
+
+        if (p.guessMin > p.guessMax) {
+            revert Errors.ApproxGuessRangeInvalid(p.guessMin, p.guessMax);
+        }
 
         uint256 minAssetOut = arg.index.scyToAssetUp(arg.minScyOut);
 
@@ -579,6 +604,10 @@ library MarketApproxPtOutLib {
 
         MarketPreCompute memory comp = arg.market.getMarketPreCompute(arg.index, arg.blockTime);
         ApproxParamsPtOut memory p = newApproxParamsPtOut(_approx, comp, arg.market.totalPt);
+
+        if (p.guessMin > p.guessMax) {
+            revert Errors.ApproxGuessRangeInvalid(p.guessMin, p.guessMax);
+        }
 
         uint256 totalAssetIn = arg.index.scyToAsset(arg.totalScyIn);
 
@@ -664,6 +693,10 @@ library MarketApproxPtOutLib {
 
         p.guessMin = Math.max(p.guessMin, arg.maxYtIn);
 
+        if (p.guessMin > p.guessMax) {
+            revert Errors.ApproxGuessRangeInvalid(p.guessMin, p.guessMax);
+        }
+
         for (uint256 iter = 0; iter < p.maxIteration; ++iter) {
             uint256 guess = nextGuess(p, iter);
 
@@ -730,6 +763,5 @@ library MarketApproxPtOutLib {
     function nextGuess(ApproxParamsPtOut memory p, uint256 iter) private pure returns (uint256) {
         if (iter == 0 && p.guessOffchain != 0) return p.guessOffchain;
         if (p.guessMin <= p.guessMax) return (p.guessMin + p.guessMax) / 2;
-        revert Errors.ApproxGuessRangeInvalid(p.guessMin, p.guessMax);
     }
 }
