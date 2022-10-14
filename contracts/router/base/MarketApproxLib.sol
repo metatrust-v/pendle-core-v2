@@ -59,7 +59,7 @@ library MarketApproxPtInLib {
         ApproxParams memory _approx
     )
         internal
-        pure
+        view
         returns (
             uint256, /*netPtIn*/
             uint256, /*netScyOut*/
@@ -113,7 +113,7 @@ library MarketApproxPtInLib {
         ApproxParams memory _approx
     )
         internal
-        pure
+        view
         returns (
             uint256, /*netYtOut*/
             uint256 /*netScyFee*/
@@ -167,7 +167,7 @@ library MarketApproxPtInLib {
         ApproxParams memory _approx
     )
         internal
-        pure
+        view
         returns (
             uint256, /*netPtSwap*/
             uint256, /*netScyFromSwap*/
@@ -253,7 +253,7 @@ library MarketApproxPtInLib {
         ApproxParams memory _approx // approx for totalPtToSwap
     )
         internal
-        pure
+        view
         returns (
             uint256, /*netYtOut*/
             uint256, /*totalPtToSwap*/
@@ -301,7 +301,7 @@ library MarketApproxPtInLib {
         MarketPreCompute memory comp,
         PYIndex index,
         uint256 netPtIn
-    ) internal pure returns (uint256 netScyOut, uint256 netScyFee) {
+    ) internal view returns (uint256 netScyOut, uint256 netScyFee) {
         (int256 _netScyOut, int256 _netScyFee) = market.calcTrade(comp, index, netPtIn.neg());
         netScyOut = _netScyOut.Uint();
         netScyFee = _netScyFee.Uint();
@@ -311,7 +311,7 @@ library MarketApproxPtInLib {
         ApproxParams memory _approx,
         uint256 minGuessMin,
         uint256 maxGuessMax
-    ) internal pure returns (ApproxParamsPtIn memory res) {
+    ) internal view returns (ApproxParamsPtIn memory res) {
         res.guessMin = Math.max(_approx.guessMin, minGuessMin);
         res.guessMax = Math.min(_approx.guessMax, maxGuessMax);
 
@@ -323,7 +323,7 @@ library MarketApproxPtInLib {
         res.eps = _approx.eps;
     }
 
-    function calcMaxPtIn(int256 totalAsset) internal pure returns (uint256) {
+    function calcMaxPtIn(int256 totalAsset) internal view returns (uint256) {
         return totalAsset.Uint() - 1;
     }
 
@@ -332,7 +332,7 @@ library MarketApproxPtInLib {
         MarketPreCompute memory comp,
         int256 totalPt,
         uint256 iter
-    ) internal pure returns (bool, uint256) {
+    ) internal view returns (bool, uint256) {
         uint256 guess = _nextGuessPrivate(p, iter);
         if (guess <= p.biggestGoodGuess) return (true, guess);
 
@@ -349,7 +349,7 @@ library MarketApproxPtInLib {
      */
     function _nextGuessPrivate(ApproxParamsPtIn memory p, uint256 iter)
         private
-        pure
+        view
         returns (uint256)
     {
         if (iter == 0 && p.guessOffchain != 0) return p.guessOffchain;
@@ -361,7 +361,7 @@ library MarketApproxPtInLib {
         MarketPreCompute memory comp,
         int256 totalPt,
         int256 ptToMarket //
-    ) internal pure returns (int256) {
+    ) internal view returns (int256) {
         int256 diffAssetPtToMarket = comp.totalAsset - ptToMarket;
         int256 sumPt = ptToMarket + totalPt; // probably can skip sumPt check
 
@@ -408,7 +408,7 @@ library MarketApproxPtOutLib {
         ApproxParams memory _approx
     )
         internal
-        pure
+        view
         returns (
             uint256, /*netPtOut*/
             uint256 /*netScyFee*/
@@ -460,7 +460,7 @@ library MarketApproxPtOutLib {
         ApproxParams memory _approx
     )
         internal
-        pure
+        view
         returns (
             uint256, /*netYtIn*/
             uint256, /*netScyOut*/
@@ -518,7 +518,7 @@ library MarketApproxPtOutLib {
         ApproxParams memory _approx
     )
         internal
-        pure
+        view
         returns (
             uint256, /*netPtFromSwap*/
             uint256, /*netScySwap*/
@@ -603,7 +603,7 @@ library MarketApproxPtOutLib {
         ApproxParams memory _approx
     )
         internal
-        pure
+        view
         returns (
             uint256, /*netPtOut*/
             uint256, /*totalPtSwapped*/
@@ -648,7 +648,7 @@ library MarketApproxPtOutLib {
         MarketPreCompute memory comp,
         PYIndex index,
         uint256 netPtOut
-    ) internal pure returns (uint256 netScyIn, uint256 netScyFee) {
+    ) internal view returns (uint256 netScyIn, uint256 netScyFee) {
         (int256 _netScyIn, int256 _netScyFee) = market.calcTrade(comp, index, netPtOut.Int());
 
         netScyIn = _netScyIn.abs();
@@ -659,7 +659,7 @@ library MarketApproxPtOutLib {
         ApproxParams memory _approx,
         uint256 minGuessMin,
         uint256 maxGuessMax
-    ) internal pure returns (ApproxParamsPtOut memory res) {
+    ) internal view returns (ApproxParamsPtOut memory res) {
         res.guessMin = Math.max(_approx.guessMin, minGuessMin);
         res.guessMax = Math.min(_approx.guessMax, maxGuessMax);
 
@@ -673,7 +673,7 @@ library MarketApproxPtOutLib {
 
     function calcMaxPtOut(MarketPreCompute memory comp, int256 totalPt)
         internal
-        pure
+        view
         returns (uint256)
     {
         int256 logitP = (comp.feeRate - comp.rateAnchor).mulDown(comp.rateScalar).exp();
@@ -688,7 +688,7 @@ library MarketApproxPtOutLib {
      * @dev it is safe to assume that p.guessMin <= p.guessMax from the initialization of p
      * So once guessMin becomes larger, it should always be the case of ApproxFail
      */
-    function nextGuess(ApproxParamsPtOut memory p, uint256 iter) private pure returns (uint256) {
+    function nextGuess(ApproxParamsPtOut memory p, uint256 iter) private view returns (uint256) {
         if (iter == 0 && p.guessOffchain != 0) return p.guessOffchain;
         if (p.guessMin <= p.guessMax) return (p.guessMin + p.guessMax) / 2;
         revert Errors.ApproxFail();

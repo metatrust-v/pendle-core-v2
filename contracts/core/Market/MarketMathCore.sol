@@ -7,6 +7,7 @@ import "../libraries/math/LogExpMath.sol";
 import "../SuperComposableYield/PYIndex.sol";
 import "../libraries/MiniHelpers.sol";
 import "../libraries/Errors.sol";
+import "hardhat/console.sol";
 
 struct MarketState {
     int256 totalPt;
@@ -58,7 +59,7 @@ library MarketMathCore {
         uint256 blockTime
     )
         internal
-        pure
+        view
         returns (
             uint256 lpToReserve,
             uint256 lpToAccount,
@@ -81,7 +82,7 @@ library MarketMathCore {
 
     function removeLiquidity(MarketState memory market, uint256 lpToRemove)
         internal
-        pure
+        view
         returns (uint256 scyToAccount, uint256 netPtToAccount)
     {
         (int256 _scyToAccount, int256 _ptToAccount) = removeLiquidityCore(
@@ -98,7 +99,7 @@ library MarketMathCore {
         PYIndex index,
         uint256 exactPtToMarket,
         uint256 blockTime
-    ) internal pure returns (uint256 netScyToAccount, uint256 netScyToReserve) {
+    ) internal view returns (uint256 netScyToAccount, uint256 netScyToReserve) {
         (int256 _netScyToAccount, int256 _netScyToReserve) = executeTradeCore(
             market,
             index,
@@ -115,7 +116,7 @@ library MarketMathCore {
         PYIndex index,
         uint256 exactPtToAccount,
         uint256 blockTime
-    ) internal pure returns (uint256 netScyToMarket, uint256 netScyToReserve) {
+    ) internal view returns (uint256 netScyToMarket, uint256 netScyToReserve) {
         (int256 _netScyToAccount, int256 _netScyToReserve) = executeTradeCore(
             market,
             index,
@@ -138,7 +139,7 @@ library MarketMathCore {
         uint256 blockTime
     )
         internal
-        pure
+        view
         returns (
             int256 lpToReserve,
             int256 lpToAccount,
@@ -186,7 +187,7 @@ library MarketMathCore {
 
     function removeLiquidityCore(MarketState memory market, int256 lpToRemove)
         internal
-        pure
+        view
         returns (int256 netScyToAccount, int256 netPtToAccount)
     {
         /// ------------------------------------------------------------
@@ -215,7 +216,7 @@ library MarketMathCore {
         PYIndex index,
         int256 netPtToAccount,
         uint256 blockTime
-    ) internal pure returns (int256 netScyToAccount, int256 netScyToReserve) {
+    ) internal view returns (int256 netScyToAccount, int256 netScyToReserve) {
         /// ------------------------------------------------------------
         /// CHECKS
         /// ------------------------------------------------------------
@@ -248,7 +249,7 @@ library MarketMathCore {
         MarketState memory market,
         PYIndex index,
         uint256 blockTime
-    ) internal pure returns (MarketPreCompute memory res) {
+    ) internal view returns (MarketPreCompute memory res) {
         if (MiniHelpers.isExpired(market.expiry, blockTime)) revert Errors.MarketExpired();
 
         uint256 timeToExpiry = market.expiry - blockTime;
@@ -274,7 +275,7 @@ library MarketMathCore {
         MarketPreCompute memory comp,
         PYIndex index,
         int256 netPtToAccount
-    ) internal pure returns (int256 netScyToAccount, int256 netScyToReserve) {
+    ) internal view returns (int256 netScyToAccount, int256 netScyToReserve) {
         int256 preFeeExchangeRate = _getExchangeRate(
             market.totalPt,
             comp.totalAsset,
@@ -282,6 +283,7 @@ library MarketMathCore {
             comp.rateAnchor,
             netPtToAccount
         );
+        console.log("rateScalar: ", comp.rateScalar.Uint());
 
         int256 preFeeAssetToAccount = netPtToAccount.divDown(preFeeExchangeRate).neg();
         int256 fee = comp.feeRate;
@@ -313,7 +315,7 @@ library MarketMathCore {
         int256 netScyToAccount,
         int256 netScyToReserve,
         uint256 blockTime
-    ) internal pure {
+    ) internal view {
         uint256 timeToExpiry = market.expiry - blockTime;
 
         market.totalPt = market.totalPt.subNoNeg(netPtToAccount);
@@ -336,7 +338,7 @@ library MarketMathCore {
         int256 totalAsset,
         int256 rateScalar,
         uint256 timeToExpiry
-    ) internal pure returns (int256 rateAnchor) {
+    ) internal view returns (int256 rateAnchor) {
         int256 newExchangeRate = _getExchangeRateFromImpliedRate(lastLnImpliedRate, timeToExpiry);
 
         if (newExchangeRate < Math.IONE) revert Errors.MarketExchangeRateBelowOne(newExchangeRate);
@@ -358,7 +360,7 @@ library MarketMathCore {
         int256 rateScalar,
         int256 rateAnchor,
         uint256 timeToExpiry
-    ) internal pure returns (uint256 lnImpliedRate) {
+    ) internal view returns (uint256 lnImpliedRate) {
         // This will check for exchange rates < Math.IONE
         int256 exchangeRate = _getExchangeRate(totalPt, totalAsset, rateScalar, rateAnchor, 0);
 
@@ -372,7 +374,7 @@ library MarketMathCore {
     /// formula is E = e^rt
     function _getExchangeRateFromImpliedRate(uint256 lnImpliedRate, uint256 timeToExpiry)
         internal
-        pure
+        view
         returns (int256 exchangeRate)
     {
         uint256 rt = (lnImpliedRate * timeToExpiry) / IMPLIED_RATE_TIME;
@@ -386,7 +388,7 @@ library MarketMathCore {
         int256 rateScalar,
         int256 rateAnchor,
         int256 netPtToAccount
-    ) internal pure returns (int256 exchangeRate) {
+    ) internal view returns (int256 exchangeRate) {
         int256 numerator = totalPt.subNoNeg(netPtToAccount);
 
         int256 proportion = (numerator.divDown(totalPt + totalAsset));
@@ -401,7 +403,7 @@ library MarketMathCore {
         if (exchangeRate < Math.IONE) revert Errors.MarketExchangeRateBelowOne(exchangeRate);
     }
 
-    function _logProportion(int256 proportion) internal pure returns (int256 res) {
+    function _logProportion(int256 proportion) internal view returns (int256 res) {
         if (proportion == Math.IONE) revert Errors.MarketProportionMustNotEqualOne();
 
         int256 logitP = proportion.divDown(Math.IONE - proportion);
@@ -411,7 +413,7 @@ library MarketMathCore {
 
     function _getRateScalar(MarketState memory market, uint256 timeToExpiry)
         internal
-        pure
+        view
         returns (int256 rateScalar)
     {
         rateScalar = (market.scalarRoot * IMPLIED_RATE_TIME.Int()) / timeToExpiry.Int();
@@ -423,7 +425,7 @@ library MarketMathCore {
         PYIndex index,
         int256 initialAnchor,
         uint256 blockTime
-    ) internal pure {
+    ) internal view {
         /// ------------------------------------------------------------
         /// CHECKS
         /// ------------------------------------------------------------
