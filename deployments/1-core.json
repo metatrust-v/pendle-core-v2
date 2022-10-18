@@ -1,0 +1,16 @@
+{
+    "deployer": "0x1FcCC097db89A86Bfc474A1028F93958295b1Fb7",
+    "network": 1,
+    "splitter": "0x1e56299EbC8A1010cEc26005d12e3e5c5cC2db00",
+    "celerBus": "0x4066D196A423b2b3B8B054f4F40efB47a74E200C",
+    "treasury": "0x8D407705b0a3d78167E979f71e009F5820f51C5E",
+    "PENDLE": "0x59968008a703dC13E6beaECed644bdCe4ee45d13",
+    "yieldContractFactory": "0xaD511b12F73c145Cf158EB92E4fa256937d952A4",
+    "marketFactory": "0x4d717868F4Bd14ac8B29Bb6361901e30Ae05e340",
+    "router": "0xB4205a645c7e920BD8504181B1D7f2c5C955C3e7",
+    "routerStatic": "0x96F77F24b3d17166FcaF3a9E3B8330fF38B966F9",
+    "vePendle": "0x6875e4a945e498fe1b90bbb13cfbaf0b68658c9c",
+    "senderEndpoint": "0xd5C47D2383Fddc19596489280C0A33AC42b2bB18",
+    "votingController": "0xC33B62D73cf92970e71Ce2A6162C63D4bd7AeB26",
+    "gaugeController": "0x998CF52b2585e05494BF9F2bF502351a9C7FdA8f"
+}
