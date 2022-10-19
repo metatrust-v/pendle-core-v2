@@ -4,6 +4,11 @@ pragma solidity 0.8.17;
 /// Adapted from UniswapV3's Oracle
 
 library Errors {
+    // BulkSeller
+
+    error BulkInsufficientSyForTrade(uint256 currentAmount, uint256 requiredAmount);
+    error BulkInsufficientTokenForTrade(uint256 currentAmount, uint256 requiredAmount);
+
     // APPROX
     error ApproxFail();
     error ApproxParamsInvalid(uint256 guessMin, uint256 guessMax, uint256 eps);
