@@ -32,13 +32,16 @@ contract BulkSellerSY is TokenHelper {
 
     // TODO: not yet verify balance and all
     // TODO: convert to custom errors
-    function swapExactTokenForSy(address receiver, uint256 netTokenIn)
-        external
-        returns (uint256 netSyOut)
-    {
+    function swapExactTokenForSy(
+        address receiver,
+        uint256 netTokenIn,
+        uint256 minSyOut
+    ) external returns (uint256 netSyOut) {
         BulkSellerState memory state = readState();
 
         netSyOut = state.swapExactTokenForSy(netTokenIn);
+
+        require(netSyOut >= minSyOut, "netSyOut < minSyOut");
 
         if (receiver != address(this)) _transferOut(SY, receiver, netSyOut);
 
@@ -47,13 +50,15 @@ contract BulkSellerSY is TokenHelper {
         require(_selfBalance(token) >= state.totalToken, "insufficient token balance");
     }
 
-    function swapExactSyForToken(address receiver, uint256 exactSyIn)
-        external
-        returns (uint256 netTokenOut)
-    {
+    function swapExactSyForToken(
+        address receiver,
+        uint256 exactSyIn,
+        uint256 minTokenOut
+    ) external returns (uint256 netTokenOut) {
         BulkSellerState memory state = readState();
 
         netTokenOut = state.swapExactSyForToken(exactSyIn);
+        require(netTokenOut >= minTokenOut, "netTokenOut < minTokenOut");
 
         if (receiver != address(this)) _transferOut(token, receiver, netTokenOut);
 

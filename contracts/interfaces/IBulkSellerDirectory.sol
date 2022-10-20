@@ -2,5 +2,5 @@
 pragma solidity 0.8.17;
 
 interface IBulkSellerDirectory {
-    function getBulkSeller(address token, address SY) external view returns (address);
+    function get(address token, address SY) external view returns (address);
 }

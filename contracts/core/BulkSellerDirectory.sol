@@ -29,7 +29,9 @@ contract BulkSellerDirectory is IBulkSellerDirectory, BoringOwnableUpgradeable {
         }
     }
 
-    function getBulkSeller(address token, address SY) external view override returns (address) {
+    function get(address token, address SY) external view override returns (address) {
+        if (syToBulkSeller[token][SY] == address(0))
+            revert Errors.RouterBulkSellerNotFound(token, SY);
         return syToBulkSeller[token][SY];
     }
 }
