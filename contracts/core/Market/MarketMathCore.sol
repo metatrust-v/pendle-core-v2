@@ -283,9 +283,10 @@ library MarketMathCore {
             comp.rateAnchor,
             netPtToAccount
         );
-        console.log("rateScalar: ", comp.rateScalar.Uint());
+        console.log("Exchange Rate: ", preFeeExchangeRate.Uint());
 
         int256 preFeeAssetToAccount = netPtToAccount.divDown(preFeeExchangeRate).neg();
+        console.log("Asset to accout no fee: ", preFeeAssetToAccount.Uint());
         int256 fee = comp.feeRate;
 
         if (netPtToAccount > 0) {
@@ -304,6 +305,9 @@ library MarketMathCore {
         netScyToAccount = netAssetToAccount < 0
             ? index.assetToScyUp(netAssetToAccount)
             : index.assetToScy(netAssetToAccount);
+
+        console.log("Net SY: ", netScyToAccount.Uint(), "Net Asset: ", netAssetToAccount.Uint());
+        
         netScyToReserve = index.assetToScy(netAssetToReserve);
     }
 

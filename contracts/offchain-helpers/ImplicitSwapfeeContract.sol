@@ -7,7 +7,7 @@ contract ImplicitSwapfeeContract {
     using Math for int256;
     using MarketMathCore for MarketState;
 
-    int256 public constant K = 2;
+    int256 public constant K = 100;
     
     constructor() {}
 
@@ -19,13 +19,16 @@ contract ImplicitSwapfeeContract {
         (,, IPYieldToken YT) = IPMarket(market).readTokens();
         PYIndex index = PYIndex.wrap(YT.pyIndexStored());
 
+        // console.log(netPtToAccount.Uint());
+        console.log("At first, there are ", prevState.totalPt.Uint());
+
         for(int256 i = 0; i < K; ++i) {
             console.log("Trade no ", i.Uint(), "-th");
             (int256 scyToAccount, ) = prevState.executeTradeCore(index, netPtToAccount / K, block.timestamp);
 
             netScyToAccount += scyToAccount;
 
-            // console.log(i.Uint(), prevState.totalPt.Uint());
+            console.log(scyToAccount.Uint(), prevState.totalPt.Uint());
         }
     }
 }
