@@ -32,7 +32,7 @@ struct TokenInput {
     uint256 netTokenIn;
     address tokenMintSy;
     bytes kybercall;
-    bool useBulkSeller;
+    bool useBulk;
 }
 
 struct TokenOutput {
@@ -40,7 +40,7 @@ struct TokenOutput {
     uint256 minTokenOut;
     address tokenRedeemSy;
     bytes kybercall;
-    bool useBulkSeller;
+    bool useBulk;
 }
 
 abstract contract KyberSwapHelper is TokenHelper {

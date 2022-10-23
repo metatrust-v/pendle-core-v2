@@ -6,8 +6,9 @@ import "./libraries/math/Math.sol";
 import "./libraries/Errors.sol";
 import "./BulkSellerMathCore.sol";
 import "../interfaces/IStandardizedYield.sol";
+import "../interfaces/IPBulkSeller.sol";
 
-contract BulkSellerSY is TokenHelper {
+contract BulkSellerSY is TokenHelper, IPBulkSeller {
     using Math for uint256;
     using SafeERC20 for IERC20;
     using BulkSellerMathCore for BulkSellerState;
@@ -32,6 +33,8 @@ contract BulkSellerSY is TokenHelper {
 
     // TODO: not yet verify balance and all
     // TODO: convert to custom errors
+    // TODO: add events
+    // TODO: price scale tokenToSy should guarantee sy can redeem more tokens?
     function swapExactTokenForSy(
         address receiver,
         uint256 netTokenIn,
@@ -67,7 +70,7 @@ contract BulkSellerSY is TokenHelper {
         require(_selfBalance(SY) >= state.totalSy, "insufficient sy balance");
     }
 
-    function readState() internal view returns (BulkSellerState memory state) {
+    function readState() public view returns (BulkSellerState memory state) {
         BulkSellerStorage storage s = _storage;
         state = BulkSellerState({
             coreRateTokenToSy: s.coreRateTokenToSy,

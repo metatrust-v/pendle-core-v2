@@ -7,10 +7,10 @@ import "./libraries/Errors.sol";
 import "./libraries/BoringOwnableUpgradeable.sol";
 import "./BulkSellerMathCore.sol";
 import "../interfaces/IStandardizedYield.sol";
-import "../interfaces/IBulkSeller.sol";
-import "../interfaces/IBulkSellerDirectory.sol";
+import "../interfaces/IPBulkSeller.sol";
+import "../interfaces/IPBulkSellerDirectory.sol";
 
-contract BulkSellerDirectory is IBulkSellerDirectory, BoringOwnableUpgradeable {
+contract BulkSellerDirectory is IPBulkSellerDirectory, BoringOwnableUpgradeable {
     mapping(address => mapping(address => address)) internal syToBulkSeller;
 
     constructor() initializer {
@@ -18,8 +18,8 @@ contract BulkSellerDirectory is IBulkSellerDirectory, BoringOwnableUpgradeable {
     }
 
     function setBulkSeller(address bulkSeller, bool force) external onlyOwner {
-        address token = IBulkSeller(bulkSeller).token();
-        address SY = IBulkSeller(bulkSeller).SY();
+        address token = IPBulkSeller(bulkSeller).token();
+        address SY = IPBulkSeller(bulkSeller).SY();
 
         if (force) {
             syToBulkSeller[token][SY] = bulkSeller;
