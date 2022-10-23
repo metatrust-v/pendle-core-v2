@@ -135,6 +135,7 @@ library BulkSellerMathCore {
 
         uint256 newRate = hypoTotalSy.divDown(netTokenFromSy);
         require(Math.isAApproxB(newRate, state.coreRateSyToToken, state.maxDiffRate), "bad rate");
+
         state.coreRateSyToToken = newRate.Uint128();
     }
 }

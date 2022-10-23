@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.17;
 
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
 import "./libraries/TokenHelper.sol";
 import "./libraries/math/Math.sol";
 import "./libraries/Errors.sol";
@@ -8,7 +10,7 @@ import "./BulkSellerMathCore.sol";
 import "../interfaces/IStandardizedYield.sol";
 import "../interfaces/IPBulkSeller.sol";
 
-contract BulkSellerSY is TokenHelper, IPBulkSeller {
+contract BulkSellerSY is TokenHelper, IPBulkSeller, AccessControl {
     using Math for uint256;
     using SafeERC20 for IERC20;
     using BulkSellerMathCore for BulkSellerState;
@@ -22,19 +24,30 @@ contract BulkSellerSY is TokenHelper, IPBulkSeller {
         uint128 totalToken;
     }
 
+    bytes32 public constant MAINTAINER = keccak256("MAINTAINER");
+
     address public immutable token;
     address public immutable SY;
     BulkSellerStorage public _storage;
 
-    constructor(address token_, address SY_) {
-        token = token_;
-        SY = SY_;
+    modifier onlyMaintainer() {
+        if (!(hasRole(DEFAULT_ADMIN_ROLE, msg.sender) || hasRole(MAINTAINER, msg.sender)))
+            revert Errors.BulkNotMaintainer();
+        _;
     }
 
-    // TODO: not yet verify balance and all
-    // TODO: convert to custom errors
+    modifier onlyAdmin() {
+        if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) revert Errors.BulkNotAdmin();
+        _;
+    }
+
+    constructor(address _token, address _SY) {
+        token = _token;
+        SY = _SY;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
     // TODO: add events
-    // TODO: price scale tokenToSy should guarantee sy can redeem more tokens?
     function swapExactTokenForSy(
         address receiver,
         uint256 netTokenIn,
@@ -44,13 +57,14 @@ contract BulkSellerSY is TokenHelper, IPBulkSeller {
 
         netSyOut = state.swapExactTokenForSy(netTokenIn);
 
-        require(netSyOut >= minSyOut, "netSyOut < minSyOut");
+        if (netSyOut < minSyOut) revert Errors.BulkInSufficientSyOut(netSyOut, minSyOut);
 
         if (receiver != address(this)) _transferOut(SY, receiver, netSyOut);
 
         _writeState(state);
 
-        require(_selfBalance(token) >= state.totalToken, "insufficient token balance");
+        if (_selfBalance(token) < state.totalToken)
+            revert Errors.BulkInsufficientTokenReceived(_selfBalance(token), state.totalToken);
     }
 
     function swapExactSyForToken(
@@ -61,17 +75,20 @@ contract BulkSellerSY is TokenHelper, IPBulkSeller {
         BulkSellerState memory state = readState();
 
         netTokenOut = state.swapExactSyForToken(exactSyIn);
-        require(netTokenOut >= minTokenOut, "netTokenOut < minTokenOut");
 
+        if (netTokenOut < minTokenOut)
+            revert Errors.BulkInSufficientTokenOut(netTokenOut, minTokenOut);
         if (receiver != address(this)) _transferOut(token, receiver, netTokenOut);
 
         _writeState(state);
 
-        require(_selfBalance(SY) >= state.totalSy, "insufficient sy balance");
+        if (_selfBalance(SY) < state.totalSy)
+            revert Errors.BulkInsufficientSyReceived(_selfBalance(SY), state.totalSy);
     }
 
     function readState() public view returns (BulkSellerState memory state) {
         BulkSellerStorage storage s = _storage;
+
         state = BulkSellerState({
             coreRateTokenToSy: s.coreRateTokenToSy,
             coreRateSyToToken: s.coreRateSyToToken,
@@ -99,7 +116,7 @@ contract BulkSellerSY is TokenHelper, IPBulkSeller {
 
     //////////////////////////
 
-    function increaseReserve(uint256 netTokenIn, uint256 netSyIn) external {
+    function increaseReserve(uint256 netTokenIn, uint256 netSyIn) external onlyMaintainer {
         BulkSellerState memory state = readState();
 
         state.totalToken += netTokenIn;
@@ -111,7 +128,7 @@ contract BulkSellerSY is TokenHelper, IPBulkSeller {
         _writeState(state);
     }
 
-    function decreaseReserve(uint256 netTokenOut, uint256 netSyOut) external {
+    function decreaseReserve(uint256 netTokenOut, uint256 netSyOut) external onlyAdmin {
         BulkSellerState memory state = readState();
 
         if (netTokenOut == type(uint256).max) netTokenOut = state.totalToken;
@@ -126,13 +143,13 @@ contract BulkSellerSY is TokenHelper, IPBulkSeller {
         _writeState(state);
     }
 
-    // rebalancing code should not be public
-    // TODO: add access control
-    function reBalance(uint256 targetSyProportion) external {
+    function reBalance(uint256 targetProportion) external onlyMaintainer {
         BulkSellerState memory state = readState();
+
         (uint256 netTokenToDeposit, uint256 netSyToRedeem) = state.getReBalanceParams(
-            targetSyProportion
+            targetProportion
         );
+
         if (netTokenToDeposit > 0) {
             uint256 netSyFromToken = _depositToken(netTokenToDeposit);
             state.reBalanceTokenToSy(netTokenToDeposit, netSyFromToken);
@@ -140,19 +157,11 @@ contract BulkSellerSY is TokenHelper, IPBulkSeller {
             uint256 netTokenFromSy = _redeemSy(netSyToRedeem);
             state.reBalanceSyToToken(netSyToRedeem, netTokenFromSy);
         }
+
+        _writeState(state);
     }
 
-    function _depositToken(uint256 netTokenToDeposit) internal returns (uint256 netSyFromToken) {
-        _safeApprove(token, SY, netTokenToDeposit);
-        return IStandardizedYield(SY).deposit(address(this), token, netTokenToDeposit, 0);
-    }
-
-    function _redeemSy(uint256 netSyToRedeem) internal returns (uint256 netTokenFromSy) {
-        IERC20(SY).transfer(SY, netSyToRedeem);
-        return IStandardizedYield(SY).redeem(address(this), netSyToRedeem, token, 0, true);
-    }
-
-    function updateRate() external {
+    function updateRate() external onlyMaintainer {
         BulkSellerState memory state = readState();
 
         state.updateRateSyToToken(IStandardizedYield(SY).previewDeposit);
@@ -164,5 +173,15 @@ contract BulkSellerSY is TokenHelper, IPBulkSeller {
     function getTokenProportion() external view returns (uint256) {
         BulkSellerState memory state = readState();
         return state.getTokenProportion();
+    }
+
+    function _depositToken(uint256 netTokenToDeposit) internal returns (uint256 netSyFromToken) {
+        _safeApprove(token, SY, netTokenToDeposit);
+        return IStandardizedYield(SY).deposit(address(this), token, netTokenToDeposit, 0);
+    }
+
+    function _redeemSy(uint256 netSyToRedeem) internal returns (uint256 netTokenFromSy) {
+        IERC20(SY).transfer(SY, netSyToRedeem);
+        return IStandardizedYield(SY).redeem(address(this), netSyToRedeem, token, 0, true);
     }
 }
