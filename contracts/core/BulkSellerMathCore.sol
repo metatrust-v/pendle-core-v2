@@ -52,6 +52,7 @@ library BulkSellerMathCore {
         pure
         returns (uint256 netSyOut)
     {
+        // TODO: maybe eliminate the fee rate in the calculation
         uint256 postFeeRate = state.coreRateTokenToSy.mulDown(Math.ONE - state.feeRate);
         require(postFeeRate != 0, "zero rate");
         netSyOut = netTokenIn.mulDown(postFeeRate);
@@ -69,7 +70,7 @@ library BulkSellerMathCore {
 
     function getTokenProportion(BulkSellerState memory state) internal pure returns (uint256) {
         uint256 totalToken = state.totalToken;
-        uint256 totalTokenFromSy = state.totalSy.divDown(state.coreRateTokenToSy);
+        uint256 totalTokenFromSy = state.totalSy.mulDown(state.coreRateSyToToken);
         return totalToken.divDown(totalToken + totalTokenFromSy);
     }
 
@@ -120,7 +121,7 @@ library BulkSellerMathCore {
         uint256 hypoTotalToken = state.totalToken + calcSwapExactSyForToken(state, state.totalSy);
         uint256 netSyFromToken = previewDeposit(state.token, hypoTotalToken);
 
-        uint256 newRate = hypoTotalToken.divDown(netSyFromToken);
+        uint256 newRate = netSyFromToken.divDown(hypoTotalToken);
         require(Math.isAApproxB(newRate, state.coreRateTokenToSy, state.maxDiffRate), "bad rate");
 
         state.coreRateTokenToSy = newRate.Uint128();
@@ -133,7 +134,7 @@ library BulkSellerMathCore {
         uint256 hypoTotalSy = state.totalSy + calcSwapExactTokenForSy(state, state.totalToken);
         uint256 netTokenFromSy = previewRedeem(state.token, hypoTotalSy);
 
-        uint256 newRate = hypoTotalSy.divDown(netTokenFromSy);
+        uint256 newRate = netTokenFromSy.divDown(hypoTotalSy);
         require(Math.isAApproxB(newRate, state.coreRateSyToToken, state.maxDiffRate), "bad rate");
 
         state.coreRateSyToToken = newRate.Uint128();

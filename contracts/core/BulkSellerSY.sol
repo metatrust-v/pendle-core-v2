@@ -48,6 +48,7 @@ contract BulkSellerSY is TokenHelper, IPBulkSeller, AccessControl {
     }
 
     // TODO: add events
+    // TODO: add reentrancy
     function swapExactTokenForSy(
         address receiver,
         uint256 netTokenIn,
@@ -184,4 +185,9 @@ contract BulkSellerSY is TokenHelper, IPBulkSeller, AccessControl {
         IERC20(SY).transfer(SY, netSyToRedeem);
         return IStandardizedYield(SY).redeem(address(this), netSyToRedeem, token, 0, true);
     }
+
+    // TODO: add setters
+    // TODO: pause contract when rate is bad compared to market
+    // TODO: how to update if the requires failed
+    // TODO: add a max with currentRate to guarantee no loss?
 }
