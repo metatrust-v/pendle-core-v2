@@ -79,12 +79,17 @@ library BulkSellerMathCore {
         pure
         returns (uint256 netTokenToDeposit, uint256 netSyToRedeem)
     {
-        uint256 currentProportion = getTokenProportion(state);
+        uint256 currentTokenProportion = getTokenProportion(state);
 
-        if (currentProportion > targetProportion) {
-            netTokenToDeposit = state.totalToken.mulDown(currentProportion - targetProportion);
+        if (currentTokenProportion > targetProportion) {
+            netTokenToDeposit = state.totalToken.mulDown(
+                (currentTokenProportion - targetProportion).divDown(currentTokenProportion)
+            );
         } else {
-            netSyToRedeem = state.totalSy.mulDown(targetProportion - currentProportion);
+            uint256 currentSyProportion = Math.ONE - currentTokenProportion;
+            netSyToRedeem = state.totalSy.mulDown(
+                (targetProportion - currentTokenProportion).divDown(currentSyProportion)
+            );
         }
     }
 
