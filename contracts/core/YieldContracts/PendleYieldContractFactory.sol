@@ -174,12 +174,12 @@ contract PendleYieldContractFactory is BoringOwnableUpgradeable, IPYieldContract
         emit SetInterestFeeRate(newInterestFeeRate);
     }
 
-    function setRewardFeeRate(uint128 newInterestFeeRate) public onlyOwner {
+    function setRewardFeeRate(uint128 newRewardFeeRate) public onlyOwner {
         if (rewardFeeRate > maxRewardFeeRate)
-            revert Errors.YCFactoryRewardFeeRateTooHigh(newInterestFeeRate, maxRewardFeeRate);
+            revert Errors.YCFactoryRewardFeeRateTooHigh(newRewardFeeRate, maxRewardFeeRate);
 
-        rewardFeeRate = newInterestFeeRate;
-        emit SetInterestFeeRate(newInterestFeeRate);
+        rewardFeeRate = newRewardFeeRate;
+        emit SetRewardFeeRate(newRewardFeeRate);
     }
 
     function setTreasury(address newTreasury) public onlyOwner {
