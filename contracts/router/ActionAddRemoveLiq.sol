@@ -57,6 +57,9 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
         emit AddLiquidityDualSyAndPt(msg.sender, market, receiver, netSyUsed, netPtUsed, netLpOut);
     }
 
+    /**
+     * @dev this function assumes that netTokenDesired = netTokenUsed, and fails if this does not hold
+     */
     function addLiquidityDualTokenAndPt(
         address receiver,
         address market,
@@ -87,12 +90,13 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
             );
         }
 
+        if (netSyDesired != netSyUsed) revert Errors.RouterNotAllSyUsed(netSyDesired, netSyUsed);
         if (netLpOut < minLpOut) revert Errors.RouterInsufficientLpOut(netLpOut, minLpOut);
 
         IERC20(PT).safeTransferFrom(msg.sender, market, netPtUsed);
 
         // convert tokenIn to SY to deposit
-        netTokenUsed = (netTokenDesired * netSyUsed).rawDivUp(netSyDesired);
+        netTokenUsed = netTokenDesired;
 
         if (tokenIn == NATIVE) {
             _transferIn(tokenIn, msg.sender, netTokenDesired);
