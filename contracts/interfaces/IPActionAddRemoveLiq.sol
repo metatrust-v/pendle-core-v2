@@ -19,7 +19,7 @@ interface IPActionAddRemoveLiq {
         address indexed market,
         address indexed receiver,
         address tokenIn,
-        uint256 tokenUsed,
+        uint256 netTokenUsed,
         uint256 netPtUsed,
         uint256 netLpOut
     );
@@ -110,8 +110,7 @@ interface IPActionAddRemoveLiq {
     function addLiquidityDualTokenAndPt(
         address receiver,
         address market,
-        address tokenIn,
-        uint256 netTokenDesired,
+        TokenInput calldata input,
         uint256 netPtDesired,
         uint256 minLpOut
     )
@@ -159,8 +158,7 @@ interface IPActionAddRemoveLiq {
         address receiver,
         address market,
         uint256 netLpToRemove,
-        address tokenOut,
-        uint256 minTokenOut,
+        TokenOutput calldata output,
         uint256 minPtOut
     ) external returns (uint256 netTokenOut, uint256 netPtOut);
 
