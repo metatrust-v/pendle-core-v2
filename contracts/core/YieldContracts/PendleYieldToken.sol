@@ -82,6 +82,7 @@ contract PendleYieldToken is
     }
 
     /// @notice Tokenize SY into PT + YT of equal qty. Every unit of underlying of SY will create 1 PT + 1 YT
+    /// @dev SY should be transferred directly into this contract prior to calling this function
     function mintPY(address receiverPT, address receiverYT)
         external
         nonReentrant
@@ -103,7 +104,7 @@ contract PendleYieldToken is
         amountPYOut = amountPYOuts[0];
     }
 
-    /// @notice Tokenize SY into PT + YT of equal qty. Every unit of underlying of SY will create 1 PT + 1 YT
+    /// @notice Tokenize SY into PT + YT for multiple receivers. See `mintPY()` for more details
     function mintPYMulti(
         address[] calldata receiverPTs,
         address[] calldata receiverYTs,
@@ -122,7 +123,8 @@ contract PendleYieldToken is
         amountPYOuts = _mintPY(receiverPTs, receiverYTs, amountSyToMints);
     }
 
-    /// @dev this function converts PY tokens into sy, but interests & rewards are not redeemed at the same time
+    /// @notice Converts PY tokens into SY, but interests & rewards are not redeemed at the same time
+    /// @dev PT/YT tokens should be transferred into this contract prior to redeeming
     function redeemPY(address receiver)
         external
         nonReentrant
@@ -139,9 +141,8 @@ contract PendleYieldToken is
         amountSyOut = amountSyOuts[0];
     }
 
-    /// @dev this function limit how much each receiver will receive. For example, if the totalOut is 100,
-    /// and the max are 50 30 INF, the first receiver will receive 50, the second will receive 30, and the third will receive 20.
-    /// @dev intended to mostly be used by Pendle router
+    /// @notice Converts PY tokens into SY for multiple receivers. See (`redeemPY`) for more details
+    /// @dev Reverts if unable to redeem the total amount in `amountPYToRedeems`
     function redeemPYMulti(address[] calldata receivers, uint256[] calldata amountPYToRedeems)
         external
         nonReentrant
@@ -154,12 +155,15 @@ contract PendleYieldToken is
     }
 
     /**
-    * @dev With YT yielding interest in the form of SY, which is redeemable by users, the reward
-    distribution should be based on the amount of SYs that their YT currently represent, plus their
-    dueInterest. It has been proven and tested that _rewardSharesUser will not change over time,
-    unless users redeem their dueInterest or redeemPY. Due to this, it is required to update users'
-    accruedReward STRICTLY BEFORE transferring out their interest.
-    */
+     * @notice Redeems interests and rewards for `user`
+     * @param redeemInterest will only transfer out interest for user if true
+     * @param redeemRewards will only transfer out rewards for user if true
+     * @dev With YT yielding interest in the form of SY, which is redeemable by users, the reward
+     * distribution should be based on the amount of SYs that their YT currently represent, plus their
+     * dueInterest. It has been proven and tested that _rewardSharesUser will not change over time,
+     * unless users redeem their dueInterest or redeemPY. Due to this, it is required to update users'
+     * accruedReward STRICTLY BEFORE transferring out their interest.
+     */
     function redeemDueInterestAndRewards(
         address user,
         bool redeemInterest,
