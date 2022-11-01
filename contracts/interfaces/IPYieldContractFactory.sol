@@ -34,10 +34,8 @@ interface IPYieldContractFactory {
 
     event SetTreasury(address indexed treasury);
 
-    /// @dev returns `address(0)` if the corresponding PY pair has not been created
     function getPT(address SY, uint256 expiry) external view returns (address);
 
-    /// @dev returns `address(0)` if the corresponding PY pair has not been created
     function getYT(address SY, uint256 expiry) external view returns (address);
 
     function expiryDivisor() external view returns (uint96);

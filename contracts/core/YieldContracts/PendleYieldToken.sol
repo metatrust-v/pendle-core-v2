@@ -65,6 +65,17 @@ contract PendleYieldToken is
         _;
     }
 
+    /**
+     * @param _doCacheIndexSameBlock equivalent to whether the PY index is constant within the same block
+     * @dev There are yield tokens such that its exchange rate is constant on the same block (e.g. cTokens)
+     * By caching the PY index, we can potentially avoid unnecessary re-calculations and saves gas.
+     *
+     * This does not apply for all yield tokens, e.g. AMM liquidity tokens have their exchange rate updated
+     * on a per-tx basis, instead of on a per-block bases.
+     *
+     * Therefore `_doCacheIndexSameBlock` should be true if and only if the PY index is guaranteed to be
+     * constant within the same block.
+     */
     constructor(
         address _SY,
         address _PT,
@@ -81,8 +92,10 @@ contract PendleYieldToken is
         doCacheIndexSameBlock = _doCacheIndexSameBlock;
     }
 
-    /// @notice Tokenize SY into PT + YT of equal qty. Every unit of underlying of SY will create 1 PT + 1 YT
-    /// @dev SY should be transferred directly into this contract prior to calling this function
+    /** 
+     * @notice Tokenize SY into PT + YT of equal qty. Every unit of underlying of SY will create 1 PT + 1 YT
+     * @dev SY should be transferred directly into this contract prior to calling this function
+     */
     function mintPY(address receiverPT, address receiverYT)
         external
         nonReentrant
@@ -123,8 +136,10 @@ contract PendleYieldToken is
         amountPYOuts = _mintPY(receiverPTs, receiverYTs, amountSyToMints);
     }
 
-    /// @notice Converts PY tokens into SY, but interests & rewards are not redeemed at the same time
-    /// @dev PT/YT tokens should be transferred into this contract prior to redeeming
+    /**
+     * @notice Converts PY tokens into SY, but interests & rewards are not redeemed at the same time
+     * @dev PT/YT tokens should be transferred into this contract prior to redeeming
+     */
     function redeemPY(address receiver)
         external
         nonReentrant
@@ -141,8 +156,10 @@ contract PendleYieldToken is
         amountSyOut = amountSyOuts[0];
     }
 
-    /// @notice Converts PY tokens into SY for multiple receivers. See (`redeemPY`) for more details
-    /// @dev Reverts if unable to redeem the total amount in `amountPYToRedeems`
+    /** 
+     * @notice Converts PY tokens into SY for multiple receivers. See (`redeemPY`) for more details
+     * @dev Reverts if unable to redeem the total amount in `amountPYToRedeems`
+     */
     function redeemPYMulti(address[] calldata receivers, uint256[] calldata amountPYToRedeems)
         external
         nonReentrant
@@ -192,6 +209,7 @@ contract PendleYieldToken is
         }
     }
 
+    /// @dev reverts if called before expiry
     function redeemInterestAndRewardsPostExpiryForTreasury()
         external
         nonReentrant
@@ -226,13 +244,27 @@ contract PendleYieldToken is
     function pyIndexCurrent() public nonReentrant returns (uint256 currentIndex) {
         currentIndex = _pyIndexCurrent();
     }
+    
+    /// @notice returns the last-updated PY index
+    function pyIndexStored() public view returns (uint256) {
+        return _pyIndexStored;
+    }
 
+    /// @dev has no effect if called pre-expiry
     function setPostExpiryData() external nonReentrant {
         if (isExpired()) {
             _setPostExpiryData();
         }
     }
 
+    /**
+     * @notice returns the current data post-expiry, if exists
+     * @dev reverts if post-expiry data not set (see `setPostExpiryData()`)
+     * @return firstPYIndex the earliest PY index post-expiry
+     * @return totalSyInterestForTreasury current amount of SY interests post-expiry for treasury
+     * @return firstRewardIndexes the earliest reward indices post-expiry, for each reward token
+     * @return userRewardOwed amount of unclaimed user rewards, for each reward token
+     */
     function getPostExpiryData()
         external
         view
@@ -281,10 +313,6 @@ contract PendleYieldToken is
                 amountPYOuts[i]
             );
         }
-    }
-
-    function pyIndexStored() public view returns (uint256) {
-        return _pyIndexStored;
     }
 
     function isExpired() public view returns (bool) {
