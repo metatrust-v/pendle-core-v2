@@ -66,15 +66,8 @@ contract PendleYieldToken is
     }
 
     /**
-     * @param _doCacheIndexSameBlock equivalent to whether the PY index is constant within the same block
-     * @dev There are yield tokens such that its exchange rate is constant on the same block (e.g. cTokens)
-     * By caching the PY index, we can potentially avoid unnecessary re-calculations and saves gas.
-     *
-     * This does not apply for all yield tokens, e.g. AMM liquidity tokens have their exchange rate updated
-     * on a per-tx basis, instead of on a per-block bases.
-     *
-     * Therefore `_doCacheIndexSameBlock` should be true if and only if the PY index is guaranteed to be
-     * constant within the same block.
+     * @param _doCacheIndexSameBlock if true, the PY index is cached for each block, and thus is constant 
+     * for all txs within the same block. Otherwise, the PY index is recalculated for every tx.
      */
     constructor(
         address _SY,
@@ -236,11 +229,12 @@ contract PendleYieldToken is
         _transferOut(SY, treasury, interestOut);
     }
 
+    /// @notice updates and returns the reward indexes
     function rewardIndexesCurrent() external override nonReentrant returns (uint256[] memory) {
         return IStandardizedYield(SY).rewardIndexesCurrent();
     }
 
-    /// @dev maximize the current rate with the previous rate to guarantee non-decreasing rate
+    /// @dev maximizes the current rate with the previous rate to guarantee non-decreasing rate
     function pyIndexCurrent() public nonReentrant returns (uint256 currentIndex) {
         currentIndex = _pyIndexCurrent();
     }
