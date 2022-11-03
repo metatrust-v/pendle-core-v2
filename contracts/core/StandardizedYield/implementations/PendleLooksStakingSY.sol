@@ -5,6 +5,21 @@ import "../SYBase.sol";
 import "../../../interfaces/ILooksFeeSharing.sol";
 import "../../../interfaces/ILooksStaking.sol";
 
+/**
+ * @dev
+ * Firstly, LOOKS holder has an option to stake their token into Looksrare's TokenDistributor to earn LOOKS over time
+ * Ref: https://github.com/LooksRare/contracts-token-staking/blob/master/contracts/TokenDistributor.sol
+ * 
+ * Secondly, instead of staking to TokenDistributor, users can stake their token to a contract called FeeSharingSystem to auto-compound their earned LOOKS to TokenDistributor
+ * This contract also implements a FeeSharing mechanism (collected from protocol) in WETH 
+ * Ref: https://github.com/LooksRare/contracts-token-staking/blob/master/contracts/FeeSharingSystem.sol
+ * 
+ * On top of this, they've built a contract to auto-compound earned ETH to LOOKS by selling ETH on Uniswap V3 and stake them to FeeSharingSystem
+ * Ref: https://github.com/LooksRare/contracts-token-staking/blob/master/contracts/AggregatorFeeSharingWithUniswapV3.sol
+ * 
+ * ETH fee will be continuously claimed, and only sold on UniV3 once it reached a certain amount, and not lower than some price (for gas saving purpose only).
+ */
+
 contract PendleLooksStakingSY is SYBase {
     using Math for uint256;
 
