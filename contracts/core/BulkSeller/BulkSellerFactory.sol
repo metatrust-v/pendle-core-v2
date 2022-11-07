@@ -58,6 +58,8 @@ contract BulkSellerFactory is
 
         syToBulkSeller[token][SY] = bulk;
 
+        emit BulkSellerCreated(token, SY, bulk);
+
         return bulk;
     }
 

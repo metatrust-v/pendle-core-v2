@@ -21,8 +21,7 @@ contract BulkSellerOffchain {
         address token = bulk.token();
 
         {
-            uint256 hypoTotalToken = state.totalToken +
-                state.totalSy.mulDown(state.rateSyToToken);
+            uint256 hypoTotalToken = state.totalToken + state.totalSy.mulDown(state.rateSyToToken);
             uint256 netSyFromToken = IStandardizedYield(SY).previewDeposit(token, hypoTotalToken);
 
             rateTokenToSy = netSyFromToken.divDown(hypoTotalToken);
