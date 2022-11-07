@@ -35,6 +35,25 @@ contract BulkSellerOffchain {
         }
     }
 
+    function calcCurrentRatesWithAmount(
+        IPBulkSeller bulk,
+        uint256 hypoTotalToken,
+        uint256 hypoTotalSy
+    ) external view returns (uint256 rateTokenToSy, uint256 rateSyToToken) {
+        address SY = bulk.SY();
+        address token = bulk.token();
+
+        {
+            uint256 netSyFromToken = IStandardizedYield(SY).previewDeposit(token, hypoTotalToken);
+            rateTokenToSy = netSyFromToken.divDown(hypoTotalToken);
+        }
+
+        {
+            uint256 netTokenFromSy = IStandardizedYield(SY).previewRedeem(token, hypoTotalSy);
+            rateSyToToken = netTokenFromSy.divDown(hypoTotalSy);
+        }
+    }
+
     // TODO: pause contract when rate is bad compared to market
     // TODO: Sound alarm if updates fail
     // TODO: audit even the typescript code
