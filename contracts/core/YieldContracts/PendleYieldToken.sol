@@ -45,8 +45,6 @@ contract PendleYieldToken is
     address public immutable factory;
     uint256 public immutable expiry;
 
-    bool public immutable doCacheIndexSameBlock;
-
     uint256 public syReserve;
 
     uint128 public pyIndexLastUpdatedBlock;
@@ -66,7 +64,6 @@ contract PendleYieldToken is
     }
 
     /**
-     * @param _doCacheIndexSameBlock if true, the PY index is cached for each block, and thus is constant 
      * for all txs within the same block. Otherwise, the PY index is recalculated for every tx.
      */
     constructor(
@@ -75,14 +72,12 @@ contract PendleYieldToken is
         string memory _name,
         string memory _symbol,
         uint8 __decimals,
-        uint256 _expiry,
-        bool _doCacheIndexSameBlock
+        uint256 _expiry
     ) PendleERC20Permit(_name, _symbol, __decimals) {
         SY = _SY;
         PT = _PT;
         expiry = _expiry;
         factory = msg.sender;
-        doCacheIndexSameBlock = _doCacheIndexSameBlock;
     }
 
     /** 
@@ -401,9 +396,6 @@ contract PendleYieldToken is
     }
 
     function _pyIndexCurrent() internal returns (uint256 currentIndex) {
-        if (doCacheIndexSameBlock && pyIndexLastUpdatedBlock == block.number)
-            return _pyIndexStored;
-
         uint128 index128 = Math
             .max(IStandardizedYield(SY).exchangeRate(), _pyIndexStored)
             .Uint128();

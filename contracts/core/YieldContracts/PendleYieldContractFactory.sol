@@ -102,8 +102,7 @@ contract PendleYieldContractFactory is BoringOwnableUpgradeable, IPYieldContract
      */
     function createYieldContract(
         address SY,
-        uint32 expiry,
-        bool doCacheIndexSameBlock
+        uint32 expiry
     ) external returns (address PT, address YT) {
         if (MiniHelpers.isTimeInThePast(expiry) || expiry % expiryDivisor != 0)
             revert Errors.YCFactoryInvalidExpiry();
@@ -141,8 +140,7 @@ contract PendleYieldContractFactory is BoringOwnableUpgradeable, IPYieldContract
                 YT_PREFIX.concat(syCoreName, expiry, " "),
                 YT_PREFIX.concat(syCoreSymbol, expiry, "-"),
                 assetDecimals,
-                expiry,
-                doCacheIndexSameBlock
+                expiry
             ),
             ytCreationCodeContractA,
             ytCreationCodeSizeA,
