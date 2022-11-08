@@ -7,6 +7,7 @@
     "PENDLE": "0x59968008a703dC13E6beaECed644bdCe4ee45d13",
     "yieldContractFactory": "0xaD511b12F73c145Cf158EB92E4fa256937d952A4",
     "marketFactory": "0x4d717868F4Bd14ac8B29Bb6361901e30Ae05e340",
+    "bulkSellerFactory": "0x25e5e9E134ddAf1D378fcB0Ec8dbd3F148cb55FD",
     "router": "0xB4205a645c7e920BD8504181B1D7f2c5C955C3e7",
     "routerStatic": "0x96F77F24b3d17166FcaF3a9E3B8330fF38B966F9",
     "vePendle": "0x6875e4a945e498fe1b90bbb13cfbaf0b68658c9c",
