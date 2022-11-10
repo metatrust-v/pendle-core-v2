@@ -81,7 +81,10 @@ contract PendleYieldToken is
         doCacheIndexSameBlock = _doCacheIndexSameBlock;
     }
 
-    /// @notice Tokenize SY into PT + YT of equal qty. Every unit of underlying of SY will create 1 PT + 1 YT
+    /**
+     * @notice Tokenize SY into PT + YT of equal qty. Every unit of underlying of SY will create 1 PT + 1 YT
+     * @dev SY must be transferred to this contract prior to calling
+     */
     function mintPY(address receiverPT, address receiverYT)
         external
         nonReentrant
@@ -103,7 +106,7 @@ contract PendleYieldToken is
         amountPYOut = amountPYOuts[0];
     }
 
-    /// @notice Tokenize SY into PT + YT of equal qty. Every unit of underlying of SY will create 1 PT + 1 YT
+    /// @notice Tokenize SY into PT + YT for multiple users. See `mintPY()`
     function mintPYMulti(
         address[] calldata receiverPTs,
         address[] calldata receiverYTs,
@@ -122,7 +125,10 @@ contract PendleYieldToken is
         amountPYOuts = _mintPY(receiverPTs, receiverYTs, amountSyToMints);
     }
 
-    /// @dev this function converts PY tokens into sy, but interests & rewards are not redeemed at the same time
+    /**
+     * @notice converts PY tokens into SY, but interests & rewards are not redeemed at the same time
+     * @dev PY must be transferred to this contract prior to calling
+     */
     function redeemPY(address receiver)
         external
         nonReentrant
@@ -139,9 +145,11 @@ contract PendleYieldToken is
         amountSyOut = amountSyOuts[0];
     }
 
-    /// @dev this function limit how much each receiver will receive. For example, if the totalOut is 100,
-    /// and the max are 50 30 INF, the first receiver will receive 50, the second will receive 30, and the third will receive 20.
-    /// @dev intended to mostly be used by Pendle router
+    /**
+     * @notice redeems PY for multiple users. See `redeemPY()`
+     * @dev PY must be transferred to this contract prior to calling
+     * @dev fails if unable to redeem the total PY amount in `amountPYToRedeems`
+     */
     function redeemPYMulti(address[] calldata receivers, uint256[] calldata amountPYToRedeems)
         external
         nonReentrant
@@ -188,6 +196,7 @@ contract PendleYieldToken is
         }
     }
 
+    /// @dev only callable post-expiry
     function redeemInterestAndRewardsPostExpiryForTreasury()
         external
         nonReentrant
