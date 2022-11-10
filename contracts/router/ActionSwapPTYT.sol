@@ -5,6 +5,7 @@ import "../interfaces/IPActionSwapPTYT.sol";
 import "../interfaces/IPMarket.sol";
 import "./base/CallbackHelper.sol";
 
+/// @dev All swap actions will fail if market is expired
 contract ActionSwapPTYT is IPActionSwapPTYT, CallbackHelper {
     using MarketMathCore for MarketState;
     using MarketApproxPtInLib for MarketState;
@@ -23,6 +24,16 @@ contract ActionSwapPTYT is IPActionSwapPTYT, CallbackHelper {
 
     }
 
+    /**
+     * @notice swap exact PT to YT with the help of flashswaps & YT tokenization / redemption
+     * @dev inner working of this function:
+     - `exactPtIn` PT is transferred to market contract
+     - `market.swapExactPtForSy` is called, which will transfer SY directly to YT contract & callback is invoked.
+        Note that we will owe PT, the amount before is not sufficient
+     - in callback, all SY in YT contract is used to mint PT + YT, with PT used to pay the rest of the loan, and YT
+        transferred to the receiver
+     * @dev this function works in conjunction with ActionCallback
+     */
     function swapExactPtForYt(
         address receiver,
         address market,
@@ -54,6 +65,16 @@ contract ActionSwapPTYT is IPActionSwapPTYT, CallbackHelper {
         emit SwapPtAndYt(msg.sender, market, receiver, exactPtIn.neg(), netYtOut.Int());
     }
 
+    /**
+     * @notice swap exact YT to PT with the help of flashswaps & YT tokenization / redemption
+     * @dev inner working of this function:
+     - `exactYtIn` YT is transferred to yield contract
+     - `market.swapSyForExactPt` is called, which will transfer PT directly to this contract & callback is invoked.
+        Note that we now owe SY
+     - in callback, a portion of PT + YT is used to redeem SY, which is then used to payback the loan. The rest of 
+       of the PT is transferred to `receiver`
+     * @dev this function works in conjunction with ActionCallback
+     */
     function swapExactYtForPt(
         address receiver,
         address market,

@@ -6,6 +6,7 @@ import "../interfaces/IPActionSwapPT.sol";
 import "../interfaces/IPMarket.sol";
 import "../core/libraries/Errors.sol";
 
+/// @dev All swap actions will fail if market is expired
 contract ActionSwapPT is IPActionSwapPT, ActionBaseMintRedeem {
     using MarketMathCore for MarketState;
     using MarketApproxPtInLib for MarketState;
@@ -20,6 +21,7 @@ contract ActionSwapPT is IPActionSwapPT, ActionBaseMintRedeem {
         ActionBaseMintRedeem(_kyberScalingLib, _bulkSellerDirectory) //solhint-disable-next-line no-empty-blocks
     {}
 
+    /// @notice swaps exact amount of PT for SY
     function swapExactPtForSy(
         address receiver,
         address market,
@@ -37,7 +39,7 @@ contract ActionSwapPT is IPActionSwapPT, ActionBaseMintRedeem {
     }
 
     /**
-     * @notice Note that the amount of SY out will be a bit more than `exactSyOut`, since an approximation is used. It's
+     * @dev Note that the amount of SY out will be a bit more than `exactSyOut`, since an approximation is used. It's
         guaranteed that the `netSyOut` is at least `exactSyOut`
      */
     function swapPtForExactSy(
@@ -70,6 +72,7 @@ contract ActionSwapPT is IPActionSwapPT, ActionBaseMintRedeem {
         emit SwapPtAndSy(msg.sender, market, receiver, netPtIn.neg(), exactSyOut.Int());
     }
 
+    /// @notice swaps SY for exact amount of PT
     function swapSyForExactPt(
         address receiver,
         address market,
@@ -91,6 +94,7 @@ contract ActionSwapPT is IPActionSwapPT, ActionBaseMintRedeem {
         emit SwapPtAndSy(msg.sender, market, receiver, exactPtOut.Int(), netSyIn.neg());
     }
 
+    /// @notice swaps exact SY for as much PT as possible
     function swapExactSyForPt(
         address receiver,
         address market,

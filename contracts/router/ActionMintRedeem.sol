@@ -17,6 +17,10 @@ contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
         ActionBaseMintRedeem(_kyberScalingLib, _bulkSellerDirectory) //solhint-disable-next-line no-empty-blocks
     {}
 
+    /**
+     * @notice swaps input token for asset (if needed), then mints SY
+     * @param input data for input token, see {`./kyberswap/KyberSwapHelper.sol`}
+     */
     function mintSyFromToken(
         address receiver,
         address SY,
@@ -27,6 +31,10 @@ contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
         emit MintSyFromToken(msg.sender, receiver, SY, input.tokenIn, input.netTokenIn, netSyOut);
     }
 
+    /**
+     * @notice redeems SY for asset, then (if needed) swaps for output token
+     * @param output data for desired output token, see {`./kyberswap/KyberSwapHelper.sol`}
+     */
     function redeemSyToToken(
         address receiver,
         address SY,
@@ -37,6 +45,12 @@ contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
         emit RedeemSyToToken(msg.sender, receiver, SY, netSyIn, output.tokenOut, netTokenOut);
     }
 
+    /**
+     * @notice mints PY from input token
+     * @dev swaps input token to SY-asset first, then mints SY from asset, finally mints PY from SY
+     * @param input data for input token, see {`./kyberswap/KyberSwapHelper.sol`}
+     * @dev fails if PY is expired
+     */
     function mintPyFromToken(
         address receiver,
         address YT,
@@ -51,6 +65,11 @@ contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
         emit MintPyFromToken(msg.sender, receiver, YT, input.tokenIn, input.netTokenIn, netPyOut);
     }
 
+    /**
+     * @notice redeems PY for token
+     * @dev redeems PY for SY first, then redeems SY-assets, finally swaps to output token (if needed)
+     * @param output data for desired output token, see {`./kyberswap/KyberSwapHelper.sol`}
+     */
     function redeemPyToToken(
         address receiver,
         address YT,
@@ -65,6 +84,10 @@ contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
         emit RedeemPyToToken(msg.sender, receiver, YT, netPyIn, output.tokenOut, netTokenOut);
     }
 
+    /**
+     * @notice mints PY from input SY
+     * @dev fails if PY is expired
+     */
     function mintPyFromSy(
         address receiver,
         address YT,
@@ -75,6 +98,7 @@ contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
         emit MintPyFromSy(msg.sender, receiver, YT, netSyIn, netPyOut);
     }
 
+    /// @notice redeems PY for its corresponding SY
     function redeemPyToSy(
         address receiver,
         address YT,
@@ -85,6 +109,11 @@ contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
         emit RedeemPyToSy(msg.sender, receiver, YT, netPyIn, netSyOut);
     }
 
+    /**
+     * @notice A unified interface for redeeming rewards and interests for any SYs,
+     * YTs, and markets alike for `user`.
+     * @dev returns arrays of amounts claimed for each asset.
+     */
     function redeemDueInterestAndRewards(
         address user,
         address[] calldata sys,
@@ -135,6 +164,10 @@ contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
         uint256[] amounts;
     }
 
+    /** 
+     * @notice redeems interests and rewards for all given SYs, YTs, and markets of `msg.sender`
+     * then swaps all resulting  TODO
+     */
     function redeemDueInterestAndRewardsThenSwapAll(
         address[] calldata sys,
         RouterYtRedeemStruct calldata dataYT,
@@ -247,7 +280,12 @@ contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
     ) internal returns (uint256 netTokenOut) {
         for (uint256 i = 0; i < tokens.tokens.length; ++i) {
             if (tokens.amounts[i] == 0) continue;
-            _kyberswap(tokens.tokens[i], tokens.amounts[i], dataSwap.kyberRouter, dataSwap.kybercalls[i]);
+            _kyberswap(
+                tokens.tokens[i],
+                tokens.amounts[i],
+                dataSwap.kyberRouter,
+                dataSwap.kybercalls[i]
+            );
         }
         netTokenOut = _selfBalance(dataSwap.outputToken);
         _transferOut(dataSwap.outputToken, msg.sender, netTokenOut);
