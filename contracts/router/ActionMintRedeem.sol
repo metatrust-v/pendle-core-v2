@@ -165,8 +165,11 @@ contract ActionMintRedeem is IPActionMintRedeem, ActionBaseMintRedeem {
     }
 
     /** 
-     * @notice redeems interests and rewards for all given SYs, YTs, and markets of `msg.sender`
-     * then swaps all resulting  TODO
+     * @notice A function to:
+        - Redeem all of caller's due interest and rewards in SYs, YTs, and markets
+        - Redeem SYs themselves
+        - Finally swaps all resulting tokens to `dataSwap.outputToken`
+     * @return amountsSwapped the amounts swapped for each token defined in `dataSwap.tokens`
      */
     function redeemDueInterestAndRewardsThenSwapAll(
         address[] calldata sys,
