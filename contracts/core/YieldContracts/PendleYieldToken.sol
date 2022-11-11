@@ -65,6 +65,10 @@ contract PendleYieldToken is
         _;
     }
 
+    /**
+     * @param _doCacheIndexSameBlock if true, the PY index is cached for each block, and thus is constant 
+     * for all txs within the same block. Otherwise, the PY index is recalculated for every tx.
+     */
     constructor(
         address _SY,
         address _PT,
@@ -106,7 +110,7 @@ contract PendleYieldToken is
         amountPYOut = amountPYOuts[0];
     }
 
-    /// @notice Tokenize SY into PT + YT for multiple users. See `mintPY()`
+    /// @notice Tokenize SY into PT + YT for multiple receivers. See `mintPY()` for more details
     function mintPYMulti(
         address[] calldata receiverPTs,
         address[] calldata receiverYTs,
@@ -162,12 +166,15 @@ contract PendleYieldToken is
     }
 
     /**
-    * @dev With YT yielding interest in the form of SY, which is redeemable by users, the reward
-    distribution should be based on the amount of SYs that their YT currently represent, plus their
-    dueInterest. It has been proven and tested that _rewardSharesUser will not change over time,
-    unless users redeem their dueInterest or redeemPY. Due to this, it is required to update users'
-    accruedReward STRICTLY BEFORE transferring out their interest.
-    */
+     * @notice Redeems interests and rewards for `user`
+     * @param redeemInterest will only transfer out interest for user if true
+     * @param redeemRewards will only transfer out rewards for user if true
+     * @dev With YT yielding interest in the form of SY, which is redeemable by users, the reward
+     * distribution should be based on the amount of SYs that their YT currently represent, plus their
+     * dueInterest. It has been proven and tested that _rewardSharesUser will not change over time,
+     * unless users redeem their dueInterest or redeemPY. Due to this, it is required to update users'
+     * accruedReward STRICTLY BEFORE transferring out their interest.
+     */
     function redeemDueInterestAndRewards(
         address user,
         bool redeemInterest,
@@ -223,21 +230,36 @@ contract PendleYieldToken is
         _transferOut(SY, treasury, interestOut);
     }
 
+    /// @notice updates and returns the reward indexes
     function rewardIndexesCurrent() external override nonReentrant returns (uint256[] memory) {
         return IStandardizedYield(SY).rewardIndexesCurrent();
     }
 
-    /// @dev maximize the current rate with the previous rate to guarantee non-decreasing rate
+    /// @dev maximizes the current rate with the previous rate to guarantee non-decreasing rate
     function pyIndexCurrent() public nonReentrant returns (uint256 currentIndex) {
         currentIndex = _pyIndexCurrent();
     }
+    
+    /// @notice returns the last-updated PY index
+    function pyIndexStored() public view returns (uint256) {
+        return _pyIndexStored;
+    }
 
+    /// @dev has no effect if called pre-expiry
     function setPostExpiryData() external nonReentrant {
         if (isExpired()) {
             _setPostExpiryData();
         }
     }
 
+    /**
+     * @notice returns the current data post-expiry, if exists
+     * @dev reverts if post-expiry data not set (see `setPostExpiryData()`)
+     * @return firstPYIndex the earliest PY index post-expiry
+     * @return totalSyInterestForTreasury current amount of SY interests post-expiry for treasury
+     * @return firstRewardIndexes the earliest reward indices post-expiry, for each reward token
+     * @return userRewardOwed amount of unclaimed user rewards, for each reward token
+     */
     function getPostExpiryData()
         external
         view
@@ -286,10 +308,6 @@ contract PendleYieldToken is
                 amountPYOuts[i]
             );
         }
-    }
-
-    function pyIndexStored() public view returns (uint256) {
-        return _pyIndexStored;
     }
 
     function isExpired() public view returns (bool) {

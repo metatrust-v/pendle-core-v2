@@ -155,7 +155,7 @@ contract BulkSeller is IPBulkSeller, Initializable, TokenHelper, ReentrancyGuard
 
     // ----------------- BulkSeller management -----------------
 
-    function increaseReserve(uint256 netTokenIn, uint256 netSyIn) external onlyMaintainer {
+    function increaseReserve(uint256 netTokenIn, uint256 netSyIn) external payable onlyMaintainer {
         BulkSellerState memory state = readState();
 
         state.totalToken += netTokenIn;
@@ -240,11 +240,20 @@ contract BulkSeller is IPBulkSeller, Initializable, TokenHelper, ReentrancyGuard
 
     function _depositToken(uint256 netTokenDeposit) internal returns (uint256 netSyFromToken) {
         _safeApprove(token, SY, netTokenDeposit);
-        return IStandardizedYield(SY).deposit(address(this), token, netTokenDeposit, 0);
+        uint256 nativeToDeposit = token == NATIVE ? netTokenDeposit : 0;
+        return
+            IStandardizedYield(SY).deposit{ value: nativeToDeposit }(
+                address(this),
+                token,
+                netTokenDeposit,
+                0
+            );
     }
 
     function _redeemSy(uint256 netSyRedeem) internal returns (uint256 netTokenFromSy) {
         _transferOut(SY, SY, netSyRedeem);
         return IStandardizedYield(SY).redeem(address(this), netSyRedeem, token, 0, true);
     }
+
+    receive() external payable {}
 }

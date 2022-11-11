@@ -5,23 +5,15 @@ import "../kyberswap/KyberSwapHelper.sol";
 import "../../core/libraries/TokenHelper.sol";
 import "../../interfaces/IStandardizedYield.sol";
 import "../../interfaces/IPYieldToken.sol";
-import "../../interfaces/IPBulkSellerFactory.sol";
 import "../../interfaces/IPBulkSeller.sol";
 import "../../core/libraries/Errors.sol";
 
 // solhint-disable no-empty-blocks
 abstract contract ActionBaseMintRedeem is TokenHelper, KyberSwapHelper {
-    using SafeERC20 for IERC20;
-
     bytes internal constant EMPTY_BYTES = abi.encode();
-    IPBulkSellerFactory public immutable bulkFactory;
 
     /// @dev since this contract will be proxied, it must not contains non-immutable variables
-    constructor(address _kyberScalingLib, address _bulkSellerDirectory)
-        KyberSwapHelper(_kyberScalingLib)
-    {
-        bulkFactory = IPBulkSellerFactory(_bulkSellerDirectory);
-    }
+    constructor(address _kyberScalingLib) KyberSwapHelper(_kyberScalingLib) {}
 
     function _mintSyFromToken(
         address receiver,
@@ -32,26 +24,33 @@ abstract contract ActionBaseMintRedeem is TokenHelper, KyberSwapHelper {
         _transferIn(input.tokenIn, msg.sender, input.netTokenIn);
 
         bool requireSwap = input.tokenIn != input.tokenMintSy;
+
+        uint256 netTokenMintSy;
+
         if (requireSwap) {
             _kyberswap(input.tokenIn, input.netTokenIn, input.kyberRouter, input.kybercall);
+            netTokenMintSy = _selfBalance(input.tokenMintSy);
+        } else {
+            netTokenMintSy = input.netTokenIn;
         }
 
-        uint256 tokenMintSyBal = _selfBalance(input.tokenMintSy);
-        if (input.useBulk) {
-            address bulk = bulkFactory.get(input.tokenMintSy, SY);
+        if (input.bulk != address(0)) {
+            _transferOut(input.tokenMintSy, input.bulk, netTokenMintSy);
 
-            _transferOut(input.tokenMintSy, bulk, tokenMintSyBal);
-
-            netSyOut = IPBulkSeller(bulk).swapExactTokenForSy(receiver, tokenMintSyBal, minSyOut);
+            netSyOut = IPBulkSeller(input.bulk).swapExactTokenForSy(
+                receiver,
+                netTokenMintSy,
+                minSyOut
+            );
         } else {
-            uint256 netNative = input.tokenMintSy == NATIVE ? tokenMintSyBal : 0;
+            uint256 netNative = input.tokenMintSy == NATIVE ? netTokenMintSy : 0;
 
             _safeApproveInf(input.tokenMintSy, SY);
 
             netSyOut = IStandardizedYield(SY).deposit{ value: netNative }(
                 receiver,
                 input.tokenMintSy,
-                tokenMintSyBal,
+                netTokenMintSy,
                 minSyOut
             );
         }
@@ -65,16 +64,15 @@ abstract contract ActionBaseMintRedeem is TokenHelper, KyberSwapHelper {
         bool doPull
     ) internal returns (uint256 netTokenOut) {
         if (doPull) {
-            IERC20(SY).safeTransferFrom(msg.sender, _syOrBulk(SY, output), netSyIn);
+            _transferFrom(IERC20(SY), msg.sender, _syOrBulk(SY, output), netSyIn);
         }
 
         bool requireSwap = output.tokenRedeemSy != output.tokenOut;
         address receiverRedeemSy = requireSwap ? address(this) : receiver;
         uint256 netTokenRedeemed;
 
-        if (output.useBulk) {
-            address bulk = bulkFactory.get(output.tokenRedeemSy, SY);
-            netTokenRedeemed = IPBulkSeller(bulk).swapExactSyForToken(
+        if (output.bulk != address(0)) {
+            netTokenRedeemed = IPBulkSeller(output.bulk).swapExactSyForToken(
                 receiverRedeemSy,
                 netSyIn,
                 0
@@ -119,7 +117,7 @@ abstract contract ActionBaseMintRedeem is TokenHelper, KyberSwapHelper {
         address SY = IPYieldToken(YT).SY();
 
         if (doPull) {
-            IERC20(SY).safeTransferFrom(msg.sender, YT, netSyIn);
+            _transferFrom(IERC20(SY), msg.sender, YT, netSyIn);
         }
 
         netPyOut = IPYieldToken(YT).mintPY(receiver, receiver);
@@ -130,16 +128,14 @@ abstract contract ActionBaseMintRedeem is TokenHelper, KyberSwapHelper {
         address receiver,
         address YT,
         uint256 netPyIn,
-        uint256 minSyOut,
-        bool doPull
+        uint256 minSyOut
     ) internal returns (uint256 netSyOut) {
         address PT = IPYieldToken(YT).PT();
 
-        if (doPull) {
-            bool needToBurnYt = (!IPYieldToken(YT).isExpired());
-            IERC20(PT).safeTransferFrom(msg.sender, YT, netPyIn);
-            if (needToBurnYt) IERC20(YT).safeTransferFrom(msg.sender, YT, netPyIn);
-        }
+        _transferFrom(IERC20(PT), msg.sender, YT, netPyIn);
+
+        bool needToBurnYt = (!IPYieldToken(YT).isExpired());
+        if (needToBurnYt) _transferFrom(IERC20(YT), msg.sender, YT, netPyIn);
 
         netSyOut = IPYieldToken(YT).redeemPY(receiver);
         if (netSyOut < minSyOut) revert Errors.RouterInsufficientSyOut(netSyOut, minSyOut);
@@ -147,17 +143,17 @@ abstract contract ActionBaseMintRedeem is TokenHelper, KyberSwapHelper {
 
     function _syOrBulk(address SY, TokenOutput memory output)
         internal
-        view
+        pure
         returns (address addr)
     {
-        return (output.useBulk ? bulkFactory.get(output.tokenRedeemSy, SY) : SY);
+        return output.bulk != address(0) ? output.bulk : SY;
     }
 
     function _wrapTokenOutput(
         address tokenOut,
         uint256 minTokenOut,
-        bool useBulk
+        address bulk
     ) internal pure returns (TokenOutput memory) {
-        return TokenOutput(tokenOut, minTokenOut, tokenOut, address(0), EMPTY_BYTES, useBulk);
+        return TokenOutput(tokenOut, minTokenOut, tokenOut, bulk, address(0), EMPTY_BYTES);
     }
 }

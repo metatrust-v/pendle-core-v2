@@ -6,17 +6,13 @@ import "../interfaces/IPMarket.sol";
 import "./base/CallbackHelper.sol";
 
 /// @dev All swap actions will fail if market is expired
-contract ActionSwapPTYT is IPActionSwapPTYT, CallbackHelper {
+contract ActionSwapPTYT is IPActionSwapPTYT, CallbackHelper, TokenHelper {
     using MarketMathCore for MarketState;
     using MarketApproxPtInLib for MarketState;
     using MarketApproxPtOutLib for MarketState;
     using Math for uint256;
     using Math for int256;
-    using SafeERC20 for IERC20;
     using PYIndexLib for IPYieldToken;
-    using SafeERC20 for IStandardizedYield;
-    using SafeERC20 for IPYieldToken;
-    using SafeERC20 for IPPrincipalToken;
 
     /// @dev since this contract will be proxied, it must not contains non-immutable variables
     constructor() //solhint-disable-next-line no-empty-blocks
@@ -44,7 +40,7 @@ contract ActionSwapPTYT is IPActionSwapPTYT, CallbackHelper {
         (, IPPrincipalToken PT, IPYieldToken YT) = IPMarket(market).readTokens();
         MarketState memory state = IPMarket(market).readState();
 
-        PT.safeTransferFrom(msg.sender, market, exactPtIn);
+        _transferFrom(IERC20(PT), msg.sender, market, exactPtIn);
 
         uint256 totalPtToSwap;
         (netYtOut, totalPtToSwap, netSyFee) = state.approxSwapExactPtForYt(
@@ -85,7 +81,7 @@ contract ActionSwapPTYT is IPActionSwapPTYT, CallbackHelper {
         (, , IPYieldToken YT) = IPMarket(market).readTokens();
         MarketState memory state = IPMarket(market).readState();
 
-        YT.safeTransferFrom(msg.sender, address(YT), exactYtIn);
+        _transferFrom(IERC20(YT), msg.sender, address(YT), exactYtIn);
 
         uint256 totalPtSwapped;
         (netPtOut, totalPtSwapped, netSyFee) = state.approxSwapExactYtForPt(

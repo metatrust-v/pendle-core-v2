@@ -14,13 +14,11 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
     using MarketMathCore for MarketState;
     using MarketApproxPtInLib for MarketState;
     using MarketApproxPtOutLib for MarketState;
-    using SafeERC20 for IStandardizedYield;
-    using SafeERC20 for IPYieldToken;
     using PYIndexLib for IPYieldToken;
 
     /// @dev since this contract will be proxied, it must not contains non-immutable variables
-    constructor(address _kyberScalingLib, address _bulkSellerDirectory)
-        ActionBaseMintRedeem(_kyberScalingLib, _bulkSellerDirectory) //solhint-disable-next-line no-empty-blocks
+    constructor(address _kyberScalingLib)
+        ActionBaseMintRedeem(_kyberScalingLib) //solhint-disable-next-line no-empty-blocks
     {}
 
     /**
@@ -42,7 +40,7 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
     ) external returns (uint256 netYtOut, uint256 netSyFee) {
         (IStandardizedYield SY, , IPYieldToken YT) = IPMarket(market).readTokens();
 
-        SY.safeTransferFrom(msg.sender, address(YT), exactSyIn);
+        _transferFrom(IERC20(SY), msg.sender, address(YT), exactSyIn);
 
         (netYtOut, netSyFee) = _swapExactSyForYt(
             receiver,
@@ -74,7 +72,7 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
     ) external returns (uint256 netSyOut, uint256 netSyFee) {
         (IStandardizedYield SY, , IPYieldToken YT) = IPMarket(market).readTokens();
 
-        YT.safeTransferFrom(msg.sender, address(YT), exactYtIn);
+        _transferFrom(IERC20(YT), msg.sender, address(YT), exactYtIn);
 
         (netSyOut, netSyFee) = _swapExactYtForSy(receiver, market, SY, YT, exactYtIn, minSyOut);
 
@@ -140,7 +138,7 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
 
         if (netYtIn > maxYtIn) revert Errors.RouterExceededLimitYtIn(netYtIn, maxYtIn);
 
-        YT.safeTransferFrom(msg.sender, address(YT), netYtIn);
+        _transferFrom(IERC20(YT), msg.sender, address(YT), netYtIn);
 
         (, netSyFee) = IPMarket(market).swapSyForExactPt(
             address(YT),
@@ -199,7 +197,7 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
     ) external returns (uint256 netTokenOut, uint256 netSyFee) {
         (IStandardizedYield SY, , IPYieldToken YT) = IPMarket(market).readTokens();
 
-        YT.safeTransferFrom(msg.sender, address(YT), netYtIn);
+        _transferFrom(IERC20(YT), msg.sender, address(YT), netYtIn);
 
         uint256 netSyOut;
 

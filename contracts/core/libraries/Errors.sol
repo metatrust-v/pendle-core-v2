@@ -13,7 +13,7 @@ library Errors {
     error BulkInsufficientSyReceived(uint256 actualBalance, uint256 requiredBalance);
     error BulkNotMaintainer();
     error BulkNotAdmin();
-    error BulkSellerAlreadyExisted(address token, address SY, address bulkSeller);
+    error BulkSellerAlreadyExisted(address token, address SY, address bulk);
     error BulkSellerInvalidToken(address token, address SY);
     error BulkBadRateTokenToSy(uint256 actualRate, uint256 currentRate, uint256 eps);
     error BulkBadRateSyToToken(uint256 actualRate, uint256 currentRate, uint256 eps);
@@ -65,7 +65,6 @@ library Errors {
     error RouterExceededLimitYtIn(uint256 actualYtIn, uint256 limitYtIn);
     error RouterInsufficientSyRepay(uint256 actualSyRepay, uint256 requiredSyRepay);
     error RouterInsufficientPtRepay(uint256 actualPtRepay, uint256 requiredPtRepay);
-    error RouterBulkSellerNotFound(address token, address SY);
     error RouterNotAllSyUsed(uint256 netSyDesired, uint256 netSyUsed);
 
     error RouterTimeRangeZero();
@@ -123,6 +122,7 @@ library Errors {
     error VEPositionNotExpired();
     error VEZeroPosition();
     error VEZeroSlope(uint128 bias, uint128 slope);
+    error VEReceiveOldSupply(uint256 msgTime);
 
     error GCNotPendleMarket(address caller);
     error GCNotVotingController(address caller);
