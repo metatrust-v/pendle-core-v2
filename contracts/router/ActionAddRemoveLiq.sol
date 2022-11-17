@@ -7,14 +7,13 @@ import "../interfaces/IPMarket.sol";
 import "../core/libraries/Errors.sol";
 
 /**
- * @dev If market is expired, all actions will fail, except for the following:
+ * @dev If market is expired, all actions will revert, except for the following:
  * - removeLiquidityDualSyAndPt()
  * - removeLiquidityDualTokenAndPt()
  * - removeLiquiditySingleSy()
  * - removeLiquiditySingleToken()
- * This is because swapping and providing liquidity are not allowed on an expired market.
+ * This is because swapping and adding liquidity are not allowed on an expired market.
  */
-
 contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
     using Math for uint256;
     using Math for int256;
@@ -34,7 +33,7 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
      * @dev Will mint as much LP as possible given no more than `netSyDesired` and `netPtDesired`,
      * while not changing the market's price
      * @dev Only the necessary SY/PT amount will be transferred
-     * @dev Fails if market is expired
+     * @dev Reverts if market is expired
      */
     function addLiquidityDualSyAndPt(
         address receiver,
@@ -76,14 +75,15 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
     }
 
     /**
-     * @notice Adds liquidity to SY/PT market using PT and any ERC20 token
-     * @dev Input token is first swapped to SY-mintable token, then SY is minted from such
-     * Finally the SY/PT pair is added to the market
+     * @notice Adds liquidity to SY/PT market using PT + any token.
+     * @dev Input token is first swapped to SY-mintable token using Kyber, then SY is minted from 
+     * such. Finally the SY/PT pair is added to the market
      * @param input data for input token, see {`./kyberswap/KyberSwapHelper.sol`}
      * @param netPtDesired maximum PT to be used
      * @dev Only the necessary PT amount will be transferred
-     * @dev Fails if TokenInput.netTokenIn = netTokenUsed (i.e. all SY minted must be used)
-     * @dev Fails if market is expired
+     * @dev All SY minted must be used, otherwise the call will revert. Therefore it is recommended
+     * that `netPtDesired` is slightly higher than actual expected.
+     * @dev Reverts if market is expired
      */
     function addLiquidityDualTokenAndPt(
         address receiver,
@@ -143,8 +143,9 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
      * @notice Swaps partial PT to SY, then use them to add liquidity to SY/PT pair
      * @param netPtIn amount of PT to be transferred in from caller
      * @param guessPtSwapToSy approximate info for the swap
+     * @return netLpOut actual LP output, will not be lower than `minLpOut`
      * @return netSyFee amount of SY fee incurred from the swap
-     * @dev Fails if market is expired
+     * @dev Reverts if market is expired
      */
     function addLiquiditySinglePt(
         address receiver,
@@ -187,8 +188,9 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
      * @notice Swaps partial SY to PT, then use them to add liquidity to SY/PT pair
      * @param netSyIn amount of SY to be transferred in from caller
      * @param guessPtReceivedFromSy approx. output PT from the swap
+     * @return netLpOut actual LP output, will not be lower than `minLpOut`
      * @return netSyFee amount of SY fee incurred from the swap
-     * @dev Fails if market is expired
+     * @dev Reverts if market is expired
      */
     function addLiquiditySingleSy(
         address receiver,
@@ -216,16 +218,13 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
     }
 
     /**
-     * @notice Adds liquidity using a single token input.
-     * @dev Inner workings of this function:
-        - (If needed) input token is swapped to SY-mintable token
-        - SY is minted from resulting tokens
-        - Partial SY is swapped to PT using the market itself
-        - The resulting SY/PT amount is used to add liquidity.
-     * @param guessPtReceivedFromSy approximate PT output for the swap
+     * @notice Adds liquidity using a single token input. The input token is first swapped through 
+     * Kyberswap to a SY-mintable token, the rest is the same as `addLiquiditySingleSy()`
+     * @param guessPtReceivedFromSy approximate PT output for the SY-to-PT swap
      * @param input data for input token, see {`./kyberswap/KyberSwapHelper.sol`}
+     * @return netLpOut actual LP output, will not be lower than `minLpOut`
      * @return netSyFee amount of SY fee incurred from the swap
-     * @dev Fails if market is expired
+     * @dev Reverts if market is expired
      */
     function addLiquiditySingleToken(
         address receiver,
@@ -290,7 +289,7 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
 
     /**
      * @notice Burns LP token to remove SY/PT liquidity, then redeems SY, finally (if needed)
-     * swaps to desired output token
+     * swaps SY redeemings through Kyberswap to desired output token.
      * @param netLpToRemove amount of LP to be burned from caller
      * @param output data for desired output token, see {`./kyberswap/KyberSwapHelper.sol`}
      * @dev Will work even if market is expired
@@ -334,8 +333,9 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
      * @notice Removes SY/PT liquidity, then swaps all resulting SY to return only PT
      * @param netLpToRemove amount of LP to be burned from caller
      * @param guessPtReceivedFromSy approximate info for the swap
+     * @return netPtOut total PT output, will not be lower than `minPtOut`
      * @return netSyFee amount of SY fee incurred from the swap
-     * @dev Fails if market is expired
+     * @dev Reverts if market is expired
      */
     function removeLiquiditySinglePt(
         address receiver,
@@ -377,6 +377,7 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
      * @notice Removes SY/PT liquidity, then converts all resulting PT to return only SY
      * @dev Conversion is done with market swap if not expired, or with PT redeeming if expired
      * @param netLpToRemove amount of LP to be burned from caller
+     * @return netSyOut total SY output, will not be lower than `minSyOut`
      * @return netSyFee amount of SY fee incurred from the swap
      * @dev Will work even if market is expired
      */
@@ -398,12 +399,12 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
     /**
      * @notice Removes SY/PT liquidity, then converts all to desired output token.
      * @dev inner workings of this function:
-        - SY/PT liquidity is removed
-        - If market is not expired, swaps PT to SY, else burns PT to redeem SY
-        - Redeems assets by burning SY
-        - (If needed) swaps resulting assets to output token
+        - Removes SY/PT liquidity to only SY (see `removeLiquiditySingleSy()`)
+        - Burns SY to redeem SY-mintable tokens
+        - (If needed) swaps resulting tokens to desired output token using Kyberswap
      * @param netLpToRemove amount of LP to be burned from caller
      * @param output data for desired output token, see {`./kyberswap/KyberSwapHelper.sol`}
+     * @return netTokenOut total token output, will not be lower than `output.minTokenOut`
      * @return netSyFee amount of SY fee incurred from the swap
      * @dev Will work even if market is expired
      */

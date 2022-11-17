@@ -7,7 +7,7 @@ import "../interfaces/IPActionSwapYT.sol";
 import "../interfaces/IPMarket.sol";
 import "../core/libraries/Errors.sol";
 
-/// @dev All swap actions will fail if market is expired
+/// @dev All swap actions will revert if market is expired
 contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
     using Math for uint256;
     using Math for int256;
@@ -25,10 +25,12 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
      * @notice swap exact SY to YT with the help of flashswaps & YT tokenization / redemption
      * @dev inner working of this function:
      - `exactSyIn` SY is transferred to YT contract
-     - `market.swapExactPtForSy` is called, which will transfer SY directly to YT contract & callback is invoked.
-        Note that now we owe PT
-     - in callback, all SY in YT contract is used to mint PT + YT, with PT used to pay back the loan, and YT
-        transferred to the receiver
+     - `market.swapExactPtForSy` is called, which will transfer more SY directly to YT contract & 
+       callback is invoked. Note that now we owe PT
+     - in callback, all SY in YT contract is used to mint PT + YT, with all PT used to pay back the 
+       loan, and all YT transferred to the receiver
+     * @param exactSyIn will always consume this amount of SY for as much YT as possible
+     * @param guessYtOut approximation data for total YT output
      * @dev this function works in conjunction with ActionCallback
      */
     function swapExactSyForYt(
@@ -58,10 +60,11 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
      * @notice swap exact YT to SY with the help of flashswaps & YT tokenization / redemption
      * @dev inner working of this function:
      - `exactYtIn` YT is transferred to YT contract
-     - `market.swapSyForExactPt` is called, which will transfer PT directly to YT contract & callback is invoked.
-        Note that now we owe SY
-     - in callback, all PT + YT in YT contract is used to redeem SY. A portion of SY is used to payback the loan,
-        the rest is transferred to the `receiver`
+     - `market.swapSyForExactPt` is called, which will transfer PT directly to YT contract & 
+       callback is invoked. Note that now we owe SY.
+     - In callback, all PT + YT in YT contract is used to redeem SY. A portion of SY is used to 
+       payback the loan, the rest is transferred to the `receiver`
+     * @param exactYtIn will consume exactly this much YT for as much SY as possible
      * @dev this function works in conjunction with ActionCallback
      */
     function swapExactYtForSy(
@@ -82,10 +85,11 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
     /**
      * @notice swap SY to exact YT with the help of flashswaps & YT tokenization / redemption
      * @dev inner working of this function:
-     - `market.swapExactPtForSy` is called, which will transfer SY directly to YT contract & callback is invoked.
-        Note that now we owe PT
-     - in callback, we will pull in more SY as needed & mint all SY to PT + YT. PT is then used to payback the loan
-        while YT is transferred to the user
+     - `market.swapExactPtForSy` is called, which will transfer SY directly to YT contract & 
+       callback is invoked. Note that now we owe PT
+     - In callback, we will pull in more SY as needed from caller & mint all SY to PT + YT. PT is 
+       then used to payback the loan, while YT is transferred to `receiver`
+     * @param exactYtOut will output exactly this amount of YT, no approximation is used
      * @dev this function works in conjunction with ActionCallback
      */
     function swapSyForExactYt(
@@ -112,11 +116,12 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
     /**
      * @notice swap YT to exact SY with the help of flashswaps & YT tokenization / redemption
      * @dev inner working of this function:
-     - transfer `netYtIn` (received from approx function) to YT contract
-     - `market.swapSyForExactPt` is called, which will transfer PT directly to YT contract & callback is invoked.
-        Note that now we owe SY
-     - in callback, we will redeem all PT + YT to get SY. A portion of it is used to payback the loan. The rest is
-        transferred to `receiver`
+     - Approximates `netYtIn` using the data from `guessYtIn`
+     - Pulls `netYtIn` amount of YT from caller
+     - `market.swapSyForExactPt` is called, which will transfer PT directly to YT contract & 
+       callback is invoked. Note that now we owe SY
+     - In callback, we will redeem all PT + YT to get SY. A portion of it is used to payback the 
+       loan. The rest is transferred to `receiver`
      * @dev this function works in conjunction with ActionCallback
      */
     function swapYtForExactSy(
@@ -150,9 +155,9 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
     }
 
     /**
-     * @notice swaps any ERC20 token to YT
-     * @dev this function swaps token for SY-mintable token first, then mints SY
-     * finally swaps SY to YT (see `swapSyForExactYt()`)
+     * @notice swaps any token to YT
+     * @dev this function swaps token for SY-mintable token first through Kyberswap, then mints SY
+     * from such, finally swaps SY to YT (see `swapSyForExactYt()`)
      */
     function swapExactTokenForYt(
         address receiver,
@@ -186,8 +191,8 @@ contract ActionSwapYT is IPActionSwapYT, ActionBaseMintRedeem, CallbackHelper {
 
     /**
      * @notice swaps YT to a given token
-     * @dev the function first swaps YT to SY (see `swapExactYtForSy()`) then redeems SY 
-     * assets, finally swaps said asset to desired output token using Uniswap forks
+     * @dev the function first swaps YT to SY (see `swapExactYtForSy()`), then redeems SY,
+     * finally swaps resulting tokens to desired output token using Kyberswap
      */
     function swapExactYtForToken(
         address receiver,
