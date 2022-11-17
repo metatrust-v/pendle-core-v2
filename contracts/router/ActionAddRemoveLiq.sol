@@ -333,7 +333,7 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
     /**
      * @notice Removes SY/PT liquidity, then swaps all resulting SY to return only PT
      * @param netLpToRemove amount of LP to be burned from caller
-     * @param guessPtOut approximate info for the swap only (not for the total PT)
+     * @param guessPtReceivedFromSy approximate info for the swap
      * @return netSyFee amount of SY fee incurred from the swap
      * @dev Fails if market is expired
      */
@@ -342,7 +342,7 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
         address market,
         uint256 netLpToRemove,
         uint256 minPtOut,
-        ApproxParams calldata guessPtOut
+        ApproxParams calldata guessPtReceivedFromSy
     ) external returns (uint256 netPtOut, uint256 netSyFee) {
         (, , IPYieldToken YT) = IPMarket(market).readTokens();
 
@@ -353,7 +353,7 @@ contract ActionAddRemoveLiq is IPActionAddRemoveLiq, ActionBaseMintRedeem {
             YT.newIndex(),
             syFromBurn,
             block.timestamp,
-            guessPtOut
+            guessPtReceivedFromSy
         );
 
         if (ptFromBurn + ptFromSwap < minPtOut)
