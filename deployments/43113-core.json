@@ -4,18 +4,20 @@
         "chainId": 43113,
         "treasury": "0x243b7CFD29AcAF9cDe98C1958902FAA3B1F095D5",
         "governance": "0x1FcCC097db89A86Bfc474A1028F93958295b1Fb7",
-        "pendle": "0x808507121b80c02388fad14726482e061b8da827",
-        "lzEndpoint": "0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706"
+        "pendle": "0xB7609dec1C926204c3B67345cbCd54bc4aa7a940",
+        "lzEndpoint": "0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706",
+        "wrappedNative": "0xe43a7aD7C09d8fAE3ADe7361f0b847b23adD5094"
     },
-    "splitter": "0x718Bfb977A2f327edC41bf8e615f1206a57F9Eea",
-    "PENDLE": "0x808507121b80c02388fad14726482e061b8da827",
-    "yieldContractFactory": "0x56966bbe5FdC4e76febb7eb3a5E892d9c39De46c",
-    "marketFactory": "0x59cD89c89dF47BA43B134F55D2E734E03aC62871",
-    "bulkSellerFactory": "0x5e2e7Dd7364cB8b73d69A50276B7cAC5aD165420",
-    "router": "0xf637E80aEF8ed8d257d189967ADeE5C6b18Ea776",
-    "routerStatic": "0x81EAcd9D16CbA337ec35F0960468C49AD3c0Ea91",
-    "vePendle": "0x8B859D03A23Cf74f973657C8594B071dE3Bc17c4",
-    "senderEndpoint": "0x49eb5784b9D2360e123Acb8366C01A5469960D68",
-    "votingController": "0xb8Dec786A995376BDb0aeAF0D5ce9A27577495ca",
-    "gaugeController": "0xC66Bd01662E1Ab9FF0BeAd18E8b2e187ab4FaA1B"
+    "splitter": "0x315A059EB986507A2a6085726643228401ea5e78",
+    "PENDLE": "0xB7609dec1C926204c3B67345cbCd54bc4aa7a940",
+    "yieldContractFactory": "0xe189c0F1EABDD23AB7DcA0d7657FF60c8f137356",
+    "marketFactory": "0x24265d37C87d3ffE64D6B0274c168945d44D1ba2",
+    "bulkSellerFactory": "0x137404E334a80fa741AD03d8965ee4b5b8A20259",
+    "bulkSellerOffchain": "0x85C369B1aD9A981DCf4Fd8F00F74cB783cacec34",
+    "router": "0x17ae363f142517b593d9A71282BAb8CA6bb4eA51",
+    "routerStatic": "0x2F308CaE3A9e6018A571958656cC4Fd0B954144F",
+    "vePendle": "0xB20E3c268C993BC3c9Bc1C1cc5D7491F2268cD91",
+    "senderEndpoint": "0x86bD575c36e236386284C035ffeBE66CB6ecd2DD",
+    "votingController": "0x40ea97a7E9A4A0520229d1bbdf4D82E36b1a5475",
+    "gaugeController": "0x90Fa61ea34f61e31e9471CEB0ED22b12bBf4263E"
 }
