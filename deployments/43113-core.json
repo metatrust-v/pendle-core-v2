@@ -5,17 +5,18 @@
         "treasury": "0x243b7CFD29AcAF9cDe98C1958902FAA3B1F095D5",
         "governance": "0x1FcCC097db89A86Bfc474A1028F93958295b1Fb7",
         "pendle": "0x808507121b80c02388fad14726482e061b8da827",
-        "lzEndpoint": "0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706"
+        "lzEndpoint": "0x93f54D755A063cE7bB9e6Ac47Eccc8e33411d706",
+        "wrappedNative": "0xe43a7aD7C09d8fAE3ADe7361f0b847b23adD5094"
     },
-    "splitter": "0x718Bfb977A2f327edC41bf8e615f1206a57F9Eea",
+    "splitter": "0x4B3B9f8f65E1c3fde4073874c2C93a1760F11035",
     "PENDLE": "0x808507121b80c02388fad14726482e061b8da827",
-    "yieldContractFactory": "0x56966bbe5FdC4e76febb7eb3a5E892d9c39De46c",
-    "marketFactory": "0x59cD89c89dF47BA43B134F55D2E734E03aC62871",
-    "bulkSellerFactory": "0x5e2e7Dd7364cB8b73d69A50276B7cAC5aD165420",
-    "router": "0xf637E80aEF8ed8d257d189967ADeE5C6b18Ea776",
-    "routerStatic": "0x81EAcd9D16CbA337ec35F0960468C49AD3c0Ea91",
-    "vePendle": "0x8B859D03A23Cf74f973657C8594B071dE3Bc17c4",
-    "senderEndpoint": "0x49eb5784b9D2360e123Acb8366C01A5469960D68",
-    "votingController": "0xb8Dec786A995376BDb0aeAF0D5ce9A27577495ca",
-    "gaugeController": "0xC66Bd01662E1Ab9FF0BeAd18E8b2e187ab4FaA1B"
+    "yieldContractFactory": "0xD3DC187247539380C3AAbFdb2D09c341910fFE83",
+    "marketFactory": "0x74D8b7eC36C0ff4157bD359B6D3Ab82a5d741B8E",
+    "bulkSellerFactory": "0x640bDc3daF9cFDb33CC67e46180A4E6c0495D0f4",
+    "router": "0x5334471de92CDBeB4245d3a3B1aF93b4DfDa8cC9",
+    "routerStatic": "0xd1dCaC6f75361A7C734863BC17B126EcB873192C",
+    "vePendle": "0x2d7e1Ab594E218eBd473bBE3aF57fAD5541F10f9",
+    "senderEndpoint": "0x33D7a94070A697E5CAe134A409ef42cfDba4F3b1",
+    "votingController": "0xdc8D6a5Db65287af491199244459e5C57d62f3f8",
+    "gaugeController": "0xd7D67E0b7DcF4665222809868512cAf6ac99C736"
 }
