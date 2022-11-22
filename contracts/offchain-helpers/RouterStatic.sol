@@ -23,7 +23,7 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
     using BulkSellerMathCore for BulkSellerState;
 
     uint128 public constant MAX_LOCK_TIME = 104 weeks;
-    uint128 public constant MIN_LOCK_TIME = 1 weeks;
+    uint128 public constant MIN_LOCK_TIME = 1 days;
 
     struct TokenAmount {
         address token;
