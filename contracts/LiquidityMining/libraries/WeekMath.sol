@@ -3,7 +3,7 @@
 pragma solidity 0.8.17;
 
 library WeekMath {
-    uint128 internal constant WEEK = 7 days;
+    uint128 internal constant WEEK = 1 days;
 
     function getWeekStartTimestamp(uint128 timestamp) internal pure returns (uint128) {
         return (timestamp / WEEK) * WEEK;
