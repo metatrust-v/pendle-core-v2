@@ -10,18 +10,8 @@ import "../libraries/BaseSplitCodeFactory.sol";
 import "../libraries/Errors.sol";
 import "../libraries/BoringOwnableUpgradeable.sol";
 
-import "./PendleMarket.sol";
-import "./PendleGauge.sol";
-
 contract PendleMarketFactory is BoringOwnableUpgradeable, IPMarketFactory {
     using EnumerableSet for EnumerableSet.AddressSet;
-
-    struct MarketConfig {
-        address treasury;
-        uint88 lnFeeRateRoot;
-        uint8 reserveFeePercent;
-        // 1 SLOT = 256 bits
-    }
 
     address public immutable marketCreationCodeContractA;
     uint256 public immutable marketCreationCodeSizeA;
@@ -31,14 +21,20 @@ contract PendleMarketFactory is BoringOwnableUpgradeable, IPMarketFactory {
     address public immutable yieldContractFactory;
     uint256 public immutable maxLnFeeRateRoot;
     uint8 public constant maxReserveFeePercent = 100;
+    int256 public constant minInitialAnchor = Math.IONE;
+
+    address public treasury;
+    FeeConfig public defaultFee;
+    /// 1 SLOT
+
+    // router -> overriddenFee
+    mapping(address => FeeConfig) public overriddenFee;
 
     // PT -> scalarRoot -> initialAnchor
     mapping(address => mapping(int256 => mapping(int256 => address))) internal markets;
     EnumerableSet.AddressSet internal allMarkets;
     address public vePendle;
     address public gaugeController;
-
-    MarketConfig public marketConfig;
 
     constructor(
         address _yieldContractFactory,
@@ -58,23 +54,22 @@ contract PendleMarketFactory is BoringOwnableUpgradeable, IPMarketFactory {
 
     function initialize(
         address _treasury,
-        uint88 _lnFeeRateRoot,
-        uint8 _reserveFeePercent,
+        uint80 _defaultLnFeeRateRoot,
+        uint8 _defaultReserveFeePercent,
         address newVePendle,
         address newGaugeController
     ) external initializer {
         __BoringOwnable_init();
         setTreasury(_treasury);
-        setlnFeeRateRoot(_lnFeeRateRoot);
-        setReserveFeePercent(_reserveFeePercent);
+        setDefaultFee(_defaultLnFeeRateRoot, _defaultReserveFeePercent);
 
         vePendle = newVePendle;
         gaugeController = newGaugeController;
     }
 
     /**
-     * @notice Create a market between PT and its corresponding SY
-     * with scalar & anchor config. Anyone is allowed to create a market on their own.
+     * @notice Create a market between PT and its corresponding SY with scalar & anchor config.
+     * Anyone is allowed to create a market on their own.
      */
     function createNewMarket(
         address PT,
@@ -87,6 +82,9 @@ contract PendleMarketFactory is BoringOwnableUpgradeable, IPMarketFactory {
 
         if (markets[PT][scalarRoot][initialAnchor] != address(0))
             revert Errors.MarketFactoryMarketExists();
+
+        if (initialAnchor < minInitialAnchor)
+            revert Errors.MarketFactoryInitialAnchorTooLow(initialAnchor, minInitialAnchor);
 
         market = BaseSplitCodeFactory._create2(
             0,
@@ -105,43 +103,71 @@ contract PendleMarketFactory is BoringOwnableUpgradeable, IPMarketFactory {
         emit CreateNewMarket(market, PT, scalarRoot, initialAnchor);
     }
 
+    function getMarketConfig(address router)
+        external
+        view
+        returns (
+            address _treasury,
+            uint80 _lnFeeRateRoot,
+            uint8 _reserveFeePercent
+        )
+    {
+        (_treasury, _lnFeeRateRoot, _reserveFeePercent) = (
+            treasury,
+            defaultFee.lnFeeRateRoot,
+            defaultFee.reserveFeePercent
+        );
+
+        FeeConfig memory over = overriddenFee[router];
+        if (over.active) {
+            (_lnFeeRateRoot, _reserveFeePercent) = (over.lnFeeRateRoot, over.reserveFeePercent);
+        }
+    }
+
     /// @dev for gas-efficient verification of market
     function isValidMarket(address market) external view returns (bool) {
         return allMarkets.contains(market);
     }
 
-    function treasury() external view returns (address) {
-        return marketConfig.treasury;
-    }
-
     function setTreasury(address newTreasury) public onlyOwner {
-        if (newTreasury == address(0)) revert Errors.MFactoryZeroTreasury();
+        if (newTreasury == address(0)) revert Errors.MarketFactoryZeroTreasury();
 
-        marketConfig.treasury = newTreasury;
+        treasury = newTreasury;
         _emitNewMarketConfigEvent();
     }
 
-    function setlnFeeRateRoot(uint88 newLnFeeRateRoot) public onlyOwner {
+    function setDefaultFee(uint80 newLnFeeRateRoot, uint8 newReserveFeePercent) public onlyOwner {
+        _verifyFeeConfig(newLnFeeRateRoot, newReserveFeePercent);
+        defaultFee = FeeConfig(newLnFeeRateRoot, newReserveFeePercent, true);
+        _emitNewMarketConfigEvent();
+    }
+
+    function setOverriddenFee(
+        address router,
+        uint80 newLnFeeRateRoot,
+        uint8 newReserveFeePercent
+    ) public onlyOwner {
+        _verifyFeeConfig(newLnFeeRateRoot, newReserveFeePercent);
+        overriddenFee[router] = FeeConfig(newLnFeeRateRoot, newReserveFeePercent, true);
+        emit SetOverriddenFee(router, newLnFeeRateRoot, newReserveFeePercent);
+    }
+
+    function unsetOverriddenFee(address router) external onlyOwner {
+        delete overriddenFee[router];
+        emit UnsetOverriddenFee(router);
+    }
+
+    function _verifyFeeConfig(uint80 newLnFeeRateRoot, uint8 newReserveFeePercent) internal view {
         if (newLnFeeRateRoot > maxLnFeeRateRoot)
-            revert Errors.MFactoryLnFeeRateRootTooHigh(newLnFeeRateRoot, maxLnFeeRateRoot);
-
-        marketConfig.lnFeeRateRoot = newLnFeeRateRoot;
-        _emitNewMarketConfigEvent();
-    }
-
-    function setReserveFeePercent(uint8 newReserveFeePercent) public onlyOwner {
+            revert Errors.MarketFactoryLnFeeRateRootTooHigh(newLnFeeRateRoot, maxLnFeeRateRoot);
         if (newReserveFeePercent > maxReserveFeePercent)
-            revert Errors.MFactoryReserveFeePercentTooHigh(
+            revert Errors.MarketFactoryReserveFeePercentTooHigh(
                 newReserveFeePercent,
                 maxReserveFeePercent
             );
-
-        marketConfig.reserveFeePercent = newReserveFeePercent;
-        _emitNewMarketConfigEvent();
     }
 
     function _emitNewMarketConfigEvent() internal {
-        MarketConfig memory local = marketConfig;
-        emit NewMarketConfig(local.treasury, local.lnFeeRateRoot, local.reserveFeePercent);
+        emit NewMarketConfig(treasury, defaultFee.lnFeeRateRoot, defaultFee.reserveFeePercent);
     }
 }
