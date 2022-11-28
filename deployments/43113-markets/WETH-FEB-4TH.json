@@ -1,0 +1,11 @@
+{
+    "name": "SY Benqi WETH",
+    "SY": "0xBb4C4cEcafAA16911b98C29650bdC37dbc14cA0e",
+    "YT": "0xCf51520AaCec976a6144a4584eacbFa6EC25Ad8D",
+    "PT": "0x491BecB8976b7540Dfd809c758e514f4296D585d",
+    "market": "0x2ad1F05C047fb08ACFA5a3C5BEb793bb4500e1da",
+    "expiry": 1675468800,
+    "bulkSeller": "0xED4403ef6f7Dfa260676CE330a6d3E38324385ff",
+    "scalarRoot": "62000000000000000000",
+    "initAnchor": "1012600000000000000"
+}
