@@ -22,8 +22,8 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
     using VeBalanceLib for LockedPosition;
     using BulkSellerMathCore for BulkSellerState;
 
-    uint128 public constant MAX_LOCK_TIME = 104 weeks;
-    uint128 public constant MIN_LOCK_TIME = 1 weeks;
+    uint128 internal constant MAX_LOCK_TIME = 104 weeks;
+    uint128 internal constant MIN_LOCK_TIME = 1 weeks;
 
     struct TokenAmount {
         address token;
@@ -79,17 +79,6 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
         __BoringOwnable_init();
     }
 
-    function getDefaultApproxParams() public pure returns (ApproxParams memory) {
-        return
-            ApproxParams({
-                guessMin: 0,
-                guessMax: type(uint256).max,
-                guessOffchain: 0,
-                maxIteration: 256,
-                eps: 1e14
-            });
-    }
-
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     // ============= SYSTEM INFO =============
@@ -117,21 +106,7 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
         }
     }
 
-    function getPendleTokenType(address token)
-        external
-        view
-        returns (
-            bool isPT,
-            bool isYT,
-            bool isMarket
-        )
-    {
-        if (yieldContractFactory.isPT(token)) isPT = true;
-        else if (yieldContractFactory.isYT(token)) isYT = true;
-        else if (marketFactory.isValidMarket(token)) isMarket = true;
-    }
-
-    function getPY(address py) public view returns (address pt, address yt) {
+    function getPY(address py) internal view returns (address pt, address yt) {
         if (yieldContractFactory.isYT(py)) {
             pt = IPYieldToken(py).PT();
             yt = py;
@@ -157,7 +132,7 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
         pt = address(PT);
         sy = address(SY);
         state = _market.readState(address(this));
-        impliedYield = getPtImpliedYield(market);
+        impliedYield = MarketMathStatic.getPtImpliedYield(market);
         exchangeRate = MarketMathStatic.getExchangeRate(market);
     }
 
@@ -260,14 +235,18 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
         userMarketInfo.assetBalance.amount = (userSy * SY.exchangeRate()) / Math.ONE;
     }
 
-    function hasPYPosition(UserPYInfo calldata userPYInfo) public pure returns (bool hasPosition) {
-        hasPosition = (userPYInfo.ytBalance > 0 ||
-            userPYInfo.ptBalance > 0 ||
-            userPYInfo.unclaimedInterest.amount > 0 ||
-            userPYInfo.unclaimedRewards.length > 0);
-    }
-
     // ============= MARKET ACTIONS =============
+
+    function getDefaultApproxParams() internal pure returns (ApproxParams memory) {
+        return
+            ApproxParams({
+                guessMin: 0,
+                guessMax: type(uint256).max,
+                guessOffchain: 0,
+                maxIteration: 256,
+                eps: 1e14
+            });
+    }
 
     function addLiquidityDualSyAndPtStatic(
         address market,
@@ -581,28 +560,6 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
             MarketMathStatic.swapYtForExactSyStatic(market, exactSyOut, getDefaultApproxParams());
     }
 
-    function swapExactYtForBaseTokenStatic(
-        address market,
-        uint256 exactYtIn,
-        address baseToken,
-        address bulk
-    )
-        external
-        returns (
-            uint256 netBaseTokenOut,
-            uint256 netSyFee,
-            uint256 priceImpact
-        )
-    {
-        uint256 netSyOut;
-        (netSyOut, netSyFee, priceImpact) = MarketMathStatic.swapExactYtForSyStatic(
-            market,
-            exactYtIn
-        );
-
-        netBaseTokenOut = previewRedeemStatic(getSyMarket(market), baseToken, netSyOut, bulk);
-    }
-
     function swapExactBaseTokenForYtStatic(
         address market,
         address baseToken,
@@ -716,17 +673,6 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
         return mintPYFromSyStatic(YT, amountSy);
     }
 
-    function redeemPYToBaseStatic(
-        address YT,
-        uint256 amountPYToRedeem,
-        address baseToken,
-        address bulk
-    ) external returns (uint256 amountBaseToken) {
-        IStandardizedYield SY = IStandardizedYield(IPYieldToken(YT).SY());
-        uint256 amountSy = redeemPYToSyStatic(YT, amountPYToRedeem);
-        return previewRedeemStatic(SY, baseToken, amountSy, bulk);
-    }
-
     function previewDepositStatic(
         IStandardizedYield SY,
         address baseToken,
@@ -755,20 +701,12 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
         }
     }
 
-    function getPtImpliedYield(address market) public view returns (int256) {
-        return MarketMathStatic.getPtImpliedYield(market);
-    }
-
-    function pyIndex(address market) public returns (PYIndex index) {
-        return MarketMathStatic.pyIndex(market);
-    }
-
     function getExchangeRate(address market) public returns (uint256) {
         return getTradeExchangeRateIncludeFee(market, 0);
     }
 
     function getTradeExchangeRateIncludeFee(address market, int256 netPtOut)
-        public
+        internal
         returns (uint256)
     {
         return MarketMathStatic.getTradeExchangeRateIncludeFee(market, netPtOut);
@@ -781,29 +719,13 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
         return MarketMathStatic.calcPriceImpactPt(market, netPtOut);
     }
 
-    // either but not both pyToken or market must be != 0
-    function getTokensInOut(address pyToken, address market)
-        public
-        view
-        returns (address[] memory tokensIn, address[] memory tokensOut)
-    {
-        if (pyToken != address(0)) {
-            // SY interface is shared between pt & yt
-            IStandardizedYield SY = IStandardizedYield(IPPrincipalToken(pyToken).SY());
-            return (SY.getTokensIn(), SY.getTokensOut());
-        } else {
-            (IStandardizedYield SY, , ) = IPMarket(market).readTokens();
-            return (SY.getTokensIn(), SY.getTokensOut());
-        }
-    }
-
     function getAmountTokenToMintSy(
         IStandardizedYield SY,
         address tokenIn,
         address bulk,
         uint256 netSyOut
     ) public view returns (uint256 netTokenIn) {
-        uint256 pivotAmount = 10 ** IERC20Metadata(tokenIn).decimals();
+        uint256 pivotAmount = 10**IERC20Metadata(tokenIn).decimals();
 
         uint256 low = pivotAmount;
         {
@@ -838,7 +760,7 @@ contract RouterStatic is Initializable, BoringOwnableUpgradeable, UUPSUpgradeabl
         assert(netTokenIn > 0);
     }
 
-    function getSyMarket(address market) public view returns (IStandardizedYield) {
+    function getSyMarket(address market) internal view returns (IStandardizedYield) {
         (IStandardizedYield SY, , ) = IPMarket(market).readTokens();
         return SY;
     }
