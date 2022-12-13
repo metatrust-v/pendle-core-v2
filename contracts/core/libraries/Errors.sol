@@ -111,6 +111,8 @@ library Errors {
     error SYCurveInvalidPid();
     error SYCurve3crvPoolNotFound();
 
+    error SYBalancerInvalidPid();
+
     // Liquidity Mining
     error VCInactivePool(address pool);
     error VCPoolAlreadyActive(address pool);
